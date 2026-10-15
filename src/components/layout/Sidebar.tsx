@@ -122,6 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'lancamentos', title: 'Digitação de Lançamentos', icon: BookOpen, shortcut: 'F2' },
           { id: 'lotes', title: 'Gestão de Lotes', icon: Layers },
           { id: 'ativoImobilizado', title: 'Ativo Imobilizado & Depreciação', icon: Archive, badge: 'CPC 27' },
+          { id: 'inventarioPatrimonial', title: 'Inventário & Baixas CPC 27', icon: Archive, badge: 'LAUDO' },
           { id: 'zeramento', title: 'Encerramento de Período (ARE)', icon: FileCheck2 }
         ]
       },
@@ -169,6 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'notasFiscais', title: 'Importador XML & Notas', icon: FileText, badge: 'XML' },
           { id: 'nfse', title: 'NFS-e Nacional / DPS', icon: Receipt, badge: 'DPS' },
           { id: 'ciap', title: 'CIAP Bloco G (Ativo Permanente)', icon: Layers, badge: '1/48' },
+          { id: 'lcdpr', title: 'Livro Caixa Rural (LCDPR)', icon: BookOpen, badge: 'RURAL' },
           { id: 'cartoes', title: 'Vendas Cartões & Operadoras', icon: CreditCard, badge: '1600' },
           { id: 'retencoes', title: 'Retenções na Fonte (DARF)', icon: Receipt, badge: 'REINF' },
           { id: 'reinf', title: 'EFD-Reinf em XML (v2.01)', icon: FileCode, badge: 'XML' },
@@ -204,6 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         items: [
           { id: 'calculoFolha', title: 'Cálculo da Folha & Holerites', icon: Calculator, badge: 'A4' },
           { id: 'esocial', title: 'Central eSocial XML (S-1200/1210)', icon: FileCode, badge: 'eSocial' },
+          { id: 'dctfWeb', title: 'DCTFWeb & DARF Previdenciário', icon: FileCheck2, badge: 'S-1299' },
           { id: 'provisoesFolha', title: 'Provisões de Férias e 13º', icon: Layers, badge: 'CPC' },
           { id: 'colaboradores', title: 'Cadastro de Empregados e Sócios', icon: Users, badge: 'CLT' }
         ]

@@ -29,7 +29,9 @@ import {
   CreditCard,
   Package,
   Calendar,
-  Share2
+  Share2,
+  Archive,
+  FileCheck2
 } from 'lucide-react';
 
 interface RibbonBarProps {
@@ -66,6 +68,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
       { id: 'planoContas', label: 'Plano de Contas', icon: FolderTree },
       { id: 'lotes', label: 'Lotes (CTLOTE)', icon: Layers },
       { id: 'zeramento', label: 'Zeramento (ARE)', icon: RefreshCw },
+      { id: 'inventarioPatrimonial', label: 'Inventário CPC 27', icon: Archive },
       { id: 'razaoAuxiliar', label: 'Razão Auxiliar (Clientes/Forn)', icon: FileSpreadsheet },
       { id: 'apuracaoTrimestral', label: 'IRPJ & CSLL (Trimestral)', icon: Calculator },
       { id: 'lalur', label: 'LALUR / LACS (Lucro Real)', icon: BookOpen },
@@ -79,6 +82,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
       { id: 'notasFiscais', label: 'Importador XML & NF-e', icon: FileText },
       { id: 'nfse', label: 'NFS-e Nacional / DPS', icon: Receipt },
       { id: 'ciap', label: 'CIAP (Bloco G 1/48)', icon: Layers },
+      { id: 'lcdpr', label: 'Livro Caixa Rural (LCDPR)', icon: BookOpen },
       { id: 'cartoes', label: 'Vendas Cartões (1600)', icon: CreditCard },
       { id: 'retencoes', label: 'Retenções na Fonte (DARF)', icon: Receipt },
       { id: 'reinf', label: 'EFD-Reinf XML (v2.01)', icon: FileCode },
@@ -96,6 +100,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
       { id: 'dashboardFolha', label: 'Dashboard Folha', icon: Users },
       { id: 'calculoFolha', label: 'Processar Folha / Holerites', icon: Calculator },
       { id: 'esocial', label: 'Central eSocial XML', icon: FileCode },
+      { id: 'dctfWeb', label: 'DCTFWeb & DARF', icon: FileCheck2 },
       { id: 'provisoesFolha', label: 'Provisões (Férias/13º)', icon: Layers },
       { id: 'colaboradores', label: 'Empregados e Sócios', icon: Users },
       { id: 'rubricas', label: 'Rubricas & Tabelas INSS/IRRF', icon: Sliders },

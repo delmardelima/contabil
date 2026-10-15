@@ -8305,6 +8305,58 @@ export class DatabaseService {
     return this.imoveisRurais;
   }
 
+  public saveImovelRural(imovel: Partial<ImovelRuralLCDPR> & { empresaId: number; nomeImovel: string; nirf: string }): ImovelRuralLCDPR {
+    let itemSalvo: ImovelRuralLCDPR;
+    if (imovel.id) {
+      const idx = this.imoveisRurais.findIndex(i => i.id === imovel.id);
+      if (idx !== -1) {
+        this.imoveisRurais[idx] = { ...this.imoveisRurais[idx], ...imovel };
+        itemSalvo = this.imoveisRurais[idx];
+      } else {
+        itemSalvo = { ...(imovel as ImovelRuralLCDPR) };
+        this.imoveisRurais.push(itemSalvo);
+      }
+    } else {
+      const novoId = this.imoveisRurais.length > 0 ? Math.max(...this.imoveisRurais.map(i => i.id)) + 1 : 1;
+      const codImovel = String(novoId).padStart(3, '0');
+      itemSalvo = {
+        id: novoId,
+        empresaId: imovel.empresaId,
+        codigoImovel: imovel.codigoImovel || codImovel,
+        nirf: imovel.nirf,
+        codigoIncra: imovel.codigoIncra || '',
+        nomeImovel: imovel.nomeImovel,
+        endereco: imovel.endereco || '',
+        municipio: imovel.municipio || '',
+        uf: imovel.uf || 'SP',
+        codigoIbge: imovel.codigoIbge || '3543402',
+        tipoExploracao: imovel.tipoExploracao || '1',
+        percentualParticipacao: Number(imovel.percentualParticipacao || 100)
+      };
+      this.imoveisRurais.push(itemSalvo);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('IMOVEL_RURAL_LCDPR', 'SALVAMENTO', `Imóvel Rural ${itemSalvo.nomeImovel} (${itemSalvo.nirf}) salvo.`);
+    return itemSalvo;
+  }
+
+  public deleteLancamentoLCDPR(id: number): boolean {
+    const idx = this.lancamentosLcdpr.findIndex(l => l.id === id);
+    if (idx !== -1) {
+      const rem = this.lancamentosLcdpr.splice(idx, 1)[0];
+      const listaAno = this.lancamentosLcdpr.filter(l => l.empresaId === rem.empresaId && l.ano === rem.ano).sort((a, b) => a.data.localeCompare(b.data));
+      let saldo = 0;
+      listaAno.forEach(l => {
+        saldo = Number((saldo + l.valorEntrada - l.valorSaida).toFixed(2));
+        l.saldoProgressivo = saldo;
+      });
+      this.persistSnapshot();
+      this.registrarAuditoria('LANCAMENTO_LCDPR', 'EXCLUSAO', `Lançamento LCDPR ID ${id} excluído com sucesso.`);
+      return true;
+    }
+    return false;
+  }
+
   public getLancamentosLCDPR(empresaId: number, ano: number): LancamentoLCDPR[] {
     return this.lancamentosLcdpr.filter(l => l.empresaId === empresaId && l.ano === ano).sort((a, b) => a.data.localeCompare(b.data));
   }

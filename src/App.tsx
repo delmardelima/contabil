@@ -66,6 +66,8 @@ import { DifalModule } from './components/escrita/DifalModule';
 import { ReinfXmlModule } from './components/escrita/ReinfXmlModule';
 import { NfseModule } from './components/escrita/NfseModule';
 import { CiapModule } from './components/patrimonio/CiapModule';
+import { InventarioPatrimonioModule } from './components/patrimonio/InventarioPatrimonioModule';
+import { LcdprModule } from './components/escrita/LcdprModule';
 
 // Módulos Folha de Pagamento
 import { DashboardFolhaModule } from './components/folha/DashboardFolhaModule';
@@ -74,6 +76,7 @@ import { RubricasTabelasModule } from './components/folha/RubricasTabelasModule'
 import { CalculoFolhaModule } from './components/folha/CalculoFolhaModule';
 import { ProvisoesFolhaModule } from './components/folha/ProvisoesFolhaModule';
 import { ESocialXmlModule } from './components/folha/ESocialXmlModule';
+import { DctfWebModule } from './components/folha/DctfWebModule';
 
 // Módulos Honorários
 import { DashboardHonorariosModule } from './components/honorarios/DashboardHonorariosModule';
@@ -109,7 +112,8 @@ import {
   Package,
   Archive,
   Calendar,
-  Share2
+  Share2,
+  FileCheck2
 } from 'lucide-react';
 
 export interface WorkspaceTab {
@@ -218,6 +222,7 @@ export const App: React.FC = () => {
       case 'auditoria': return { title: 'Auditoria de Saldos', icon: ShieldAlert };
       case 'transporteSaldos': return { title: 'Transporte de Saldos', icon: ArrowRightLeft };
       case 'ativoImobilizado': return { title: 'Ativo Imobilizado & Depreciação', icon: Archive };
+      case 'inventarioPatrimonial': return { title: 'Inventário & Baixas CPC 27', icon: Archive };
       case 'apuracaoTrimestral': return { title: 'Apuração IRPJ & CSLL (Trimestral)', icon: Calculator };
       case 'lalur': return { title: 'LALUR / LACS (Lucro Real)', icon: BookOpen };
       case 'consolidacao': return { title: 'Consolidação Matriz & Filiais (CPC 36)', icon: Share2 };
@@ -228,6 +233,7 @@ export const App: React.FC = () => {
       case 'notasFiscais': return { title: 'Notas Fiscais & XML', icon: FileText };
       case 'nfse': return { title: 'NFS-e Nacional / DPS', icon: Receipt };
       case 'ciap': return { title: 'CIAP Bloco G (Ativo Permanente)', icon: Layers };
+      case 'lcdpr': return { title: 'Livro Caixa Rural (LCDPR)', icon: BookOpen };
       case 'cartoes': return { title: 'Vendas Cartões & Operadoras (1600)', icon: CreditCard };
       case 'retencoes': return { title: 'Retenções na Fonte & DARF', icon: Receipt };
       case 'reinf': return { title: 'EFD-Reinf em XML (v2.01)', icon: FileCode };
@@ -242,6 +248,7 @@ export const App: React.FC = () => {
       case 'dashboardFolha': return { title: 'Dashboard da Folha', icon: Users };
       case 'calculoFolha': return { title: 'Cálculo da Folha & Holerite', icon: Calculator };
       case 'esocial': return { title: 'Central eSocial XML (S-1200/1210)', icon: FileCode };
+      case 'dctfWeb': return { title: 'DCTFWeb & DARF Previdenciário', icon: FileCheck2 };
       case 'provisoesFolha': return { title: 'Provisões Mensais (Férias/13º)', icon: Layers };
       case 'colaboradores': return { title: 'Colaboradores & Sócios', icon: Users };
       case 'rubricas': return { title: 'Rubricas & Tabelas', icon: Sliders };
@@ -939,6 +946,11 @@ export const App: React.FC = () => {
               />
             </div>
 
+            {/* Inventário Patrimonial & Baixas CPC 27 */}
+            <div className={`h-full w-full ${activeTabId === 'inventarioPatrimonial' ? 'block' : 'hidden'}`}>
+              <InventarioPatrimonioModule />
+            </div>
+
             {/* Consolidação Contábil (CPC 36 / Matriz & Filiais) */}
             <div className={`h-full w-full ${activeTabId === 'consolidacao' ? 'block' : 'hidden'}`}>
               <ConsolidacaoModule
@@ -1032,6 +1044,11 @@ export const App: React.FC = () => {
               <CiapModule />
             </div>
 
+            {/* Livro Caixa Digital do Produtor Rural (LCDPR) */}
+            <div className={`h-full w-full ${activeTabId === 'lcdpr' ? 'block' : 'hidden'}`}>
+              <LcdprModule />
+            </div>
+
             {/* Central EFD-Reinf em XML (v2.01.02) */}
             <div className={`h-full w-full ${activeTabId === 'reinf' ? 'block' : 'hidden'}`}>
               <ReinfXmlModule />
@@ -1087,6 +1104,11 @@ export const App: React.FC = () => {
             {/* Central eSocial - Eventos Periódicos S-1200 / S-1210 em XML */}
             <div className={`h-full w-full ${activeTabId === 'esocial' ? 'block' : 'hidden'}`}>
               <ESocialXmlModule />
+            </div>
+
+            {/* Central DCTFWeb & Fechamento Previdenciário S-1299 */}
+            <div className={`h-full w-full ${activeTabId === 'dctfWeb' ? 'block' : 'hidden'}`}>
+              <DctfWebModule />
             </div>
 
             {/* Provisões Mensais de Férias e 13º Salário */}
