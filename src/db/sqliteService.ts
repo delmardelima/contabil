@@ -76,7 +76,19 @@ import {
   ItemDva,
   DemonstracaoDva,
   ItemInventarioEstoque,
-  InventarioEstoqueModelo7
+  InventarioEstoqueModelo7,
+  AnexoSimplesNacional,
+  FaixaSimplesNacional,
+  SegregacaoReceitaPgdas,
+  ApuracaoPgdas,
+  TipoBeneficio,
+  BeneficioPlano,
+  BeneficioColaboradorItem,
+  FechamentoBeneficiosCompetencia,
+  LinhaBalancoSocial,
+  SecaoBalancoSocial,
+  IndicadorCorpoFuncionalIbase,
+  BalancoSocialIbase
 } from '../types/contabil';
 
 const STORAGE_KEYS = {
@@ -2669,6 +2681,190 @@ const SEED_ITENS_INVENTARIO_ESTOQUE: ItemInventarioEstoque[] = [
   }
 ];
 
+const SEED_APURACOES_PGDAS: ApuracaoPgdas[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    competencia: '2026-04',
+    dataVencimento: '2026-05-20',
+    rbt12: 1250000.00,
+    faturamentoMes: 115000.00,
+    folhaSalarios12Meses: 385000.00,
+    fatorR: 0.308,
+    enquadraFatorR: true,
+    segregacoes: [
+      {
+        id: 'SEG-1',
+        anexo: 'ANEXO_III',
+        descricaoAtividade: 'Serviços de Consultoria de TI & Suporte Técnico (Fator R >= 28%)',
+        valorReceitaBruta: 85000.00,
+        valorImuneIsento: 0,
+        valorSubstituicaoTributaria: 0,
+        valorTributavel: 85000.00,
+        aliquotaEfetiva: 0.1315,
+        valorDevido: 11177.50,
+        detalhamentoTributos: {
+          irpj: 447.10,
+          csll: 391.21,
+          cofins: 1432.96,
+          pis: 310.73,
+          cpp: 4851.04,
+          icms: 0,
+          ipi: 0,
+          iss: 3744.46
+        }
+      },
+      {
+        id: 'SEG-2',
+        anexo: 'ANEXO_I',
+        descricaoAtividade: 'Revenda de Peças e Periféricos de Informática no Mercado Interno',
+        valorReceitaBruta: 30000.00,
+        valorImuneIsento: 0,
+        valorSubstituicaoTributaria: 6000.00,
+        valorTributavel: 30000.00,
+        aliquotaEfetiva: 0.0890,
+        valorDevido: 2457.00,
+        detalhamentoTributos: {
+          irpj: 135.14,
+          csll: 85.99,
+          cofins: 312.98,
+          pis: 67.81,
+          cpp: 1019.65,
+          icms: 835.43,
+          ipi: 0,
+          iss: 0
+        }
+      }
+    ],
+    totalDevidoDas: 13634.50,
+    numeroDas: '01.2026.04.88776655.12',
+    codigoBarrasDas: '85870000136-3 34500179202-6 60520260488-8 77665512001-9',
+    qrCodePixDas: '00020126580014br.gov.bcb.pix0136pgdas-arrecadacao-das@receita.fazenda.gov.br520400005303986540813634.505802BR5925RECEITA FEDERAL DO BRASIL6009SAO PAULO62240520DAS20260488776655126304D1B8',
+    statusIntegracaoContabil: true,
+    loteContabilId: 145,
+    dataApuracao: '2026-05-02'
+  }
+];
+
+const SEED_PLANOS_BENEFICIOS: BeneficioPlano[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    tipo: 'VALE_TRANSPORTE',
+    nome: 'SPTrans Bilhete Único Urbano',
+    operadora: 'SPTrans / EMTU',
+    valorFacialUnitario: 5.00,
+    percentualDescontoLegal: 6.0,
+    ativo: true
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    tipo: 'VALE_REFEICAO',
+    nome: 'VR Refeição Flash Card Flex',
+    operadora: 'Flash Benefícios S.A.',
+    valorFacialUnitario: 38.00,
+    percentualDescontoLegal: 10.0,
+    ativo: true
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    tipo: 'PLANO_SAUDE',
+    nome: 'Bradesco Saúde Top Nacional Flex',
+    operadora: 'Bradesco Seguros',
+    valorFacialUnitario: 0,
+    percentualDescontoLegal: 20.0,
+    valorMensalidadeFixa: 480.00,
+    ativo: true
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    tipo: 'PLANO_ODONTO',
+    nome: 'OdontoPrev Dental Corporativo',
+    operadora: 'OdontoPrev',
+    valorFacialUnitario: 0,
+    percentualDescontoLegal: 100.0,
+    valorMensalidadeFixa: 32.50,
+    ativo: true
+  }
+];
+
+const SEED_FECHAMENTOS_BENEFICIOS: FechamentoBeneficiosCompetencia[] = [
+  {
+    competencia: '2026-04',
+    empresaId: 1,
+    totalBeneficiosFornecidos: 2364.00,
+    totalDescontoEmpregados: 546.00,
+    totalCustoEmpresa: 1818.00,
+    totalValeTransporte: 440.00,
+    totalValeRefeicaoAlimentacao: 1672.00,
+    totalPlanosSaudeOdonto: 252.00,
+    itens: [
+      {
+        id: 1,
+        empresaId: 1,
+        colaboradorId: 1,
+        colaboradorNome: 'CARLOS ALBERTO SILVA',
+        planoId: 1,
+        tipo: 'VALE_TRANSPORTE',
+        diasUteisMes: 22,
+        quantidadeDiaria: 2,
+        valorTotalBeneficio: 220.00,
+        descontoColaborador: 210.00,
+        custoEmpregador: 10.00,
+        coparticipacao: 0
+      },
+      {
+        id: 2,
+        empresaId: 1,
+        colaboradorId: 1,
+        colaboradorNome: 'CARLOS ALBERTO SILVA',
+        planoId: 2,
+        tipo: 'VALE_REFEICAO',
+        diasUteisMes: 22,
+        quantidadeDiaria: 1,
+        valorTotalBeneficio: 836.00,
+        descontoColaborador: 83.60,
+        custoEmpregador: 752.40,
+        coparticipacao: 0
+      },
+      {
+        id: 3,
+        empresaId: 1,
+        colaboradorId: 2,
+        colaboradorNome: 'ANA PAULA FERREIRA',
+        planoId: 1,
+        tipo: 'VALE_TRANSPORTE',
+        diasUteisMes: 22,
+        quantidadeDiaria: 2,
+        valorTotalBeneficio: 220.00,
+        descontoColaborador: 168.00,
+        custoEmpregador: 52.00,
+        coparticipacao: 0
+      },
+      {
+        id: 4,
+        empresaId: 1,
+        colaboradorId: 2,
+        colaboradorNome: 'ANA PAULA FERREIRA',
+        planoId: 2,
+        tipo: 'VALE_REFEICAO',
+        diasUteisMes: 22,
+        quantidadeDiaria: 1,
+        valorTotalBeneficio: 836.00,
+        descontoColaborador: 83.60,
+        custoEmpregador: 752.40,
+        coparticipacao: 0
+      }
+    ],
+    statusIntegracaoContabil: true,
+    loteContabilId: 146,
+    fechadoEm: '2026-04-30'
+  }
+];
+
 export class DatabaseService {
   private empresas: Empresa[] = [];
   private contas: ContaContabil[] = [];
@@ -2723,6 +2919,9 @@ export class DatabaseService {
   private lancamentosLcdpr: LancamentoLCDPR[] = [];
   private rescisoesTrct: RescisaoContratual[] = [];
   private itensInventarioEstoque: ItemInventarioEstoque[] = [];
+  private apuracoesPgdas: ApuracaoPgdas[] = [];
+  private planosBeneficios: BeneficioPlano[] = [];
+  private fechamentosBeneficios: FechamentoBeneficiosCompetencia[] = [];
 
   constructor() {
     this.initDatabase();
@@ -2778,6 +2977,9 @@ export class DatabaseService {
         this.lancamentosLcdpr = snap.lancamentosLcdpr || SEED_LANCAMENTOS_LCDPR;
         this.rescisoesTrct = snap.rescisoesTrct || SEED_RESCISOES_TRCT;
         this.itensInventarioEstoque = snap.itensInventarioEstoque || SEED_ITENS_INVENTARIO_ESTOQUE;
+        this.apuracoesPgdas = snap.apuracoesPgdas || SEED_APURACOES_PGDAS;
+        this.planosBeneficios = snap.planosBeneficios || SEED_PLANOS_BENEFICIOS;
+        this.fechamentosBeneficios = snap.fechamentosBeneficios || SEED_FECHAMENTOS_BENEFICIOS;
       } catch (e) {
         this.carregarSeeds();
       }
@@ -2841,6 +3043,9 @@ export class DatabaseService {
     this.lancamentosLcdpr = [...SEED_LANCAMENTOS_LCDPR];
     this.rescisoesTrct = [...SEED_RESCISOES_TRCT];
     this.itensInventarioEstoque = [...SEED_ITENS_INVENTARIO_ESTOQUE];
+    this.apuracoesPgdas = [...SEED_APURACOES_PGDAS];
+    this.planosBeneficios = [...SEED_PLANOS_BENEFICIOS];
+    this.fechamentosBeneficios = [...SEED_FECHAMENTOS_BENEFICIOS];
 
     this.persistSnapshot();
   }
@@ -2890,6 +3095,9 @@ export class DatabaseService {
       lancamentosLcdpr: this.lancamentosLcdpr,
       rescisoesTrct: this.rescisoesTrct,
       itensInventarioEstoque: this.itensInventarioEstoque,
+      apuracoesPgdas: this.apuracoesPgdas,
+      planosBeneficios: this.planosBeneficios,
+      fechamentosBeneficios: this.fechamentosBeneficios,
       timestamp: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEYS.SNAPSHOT, JSON.stringify(snap));
@@ -9062,6 +9270,461 @@ export class DatabaseService {
     contadorLinhas++;
     lines.push(`|H990|${contadorLinhas}|`);
     return lines.join('\r\n');
+  }
+
+  // ==========================================
+  // SIMPLES NACIONAL AVANÇADO & PGDAS-D
+  // ==========================================
+  public getTabelasSimplesNacional(): Record<AnexoSimplesNacional, FaixaSimplesNacional[]> {
+    return {
+      ANEXO_I: [
+        { faixa: 1, limiteInferior: 0, limiteSuperior: 180000, aliquotaNominal: 0.0400, deducao: 0, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 12.74, pis: 2.76, cpp: 41.5, icms: 34.0 } },
+        { faixa: 2, limiteInferior: 180000.01, limiteSuperior: 360000, aliquotaNominal: 0.0730, deducao: 5940, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 12.74, pis: 2.76, cpp: 41.5, icms: 34.0 } },
+        { faixa: 3, limiteInferior: 360000.01, limiteSuperior: 720000, aliquotaNominal: 0.0950, deducao: 13860, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 12.74, pis: 2.76, cpp: 41.5, icms: 34.0 } },
+        { faixa: 4, limiteInferior: 720000.01, limiteSuperior: 1800000, aliquotaNominal: 0.1070, deducao: 22500, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 12.74, pis: 2.76, cpp: 41.5, icms: 34.0 } },
+        { faixa: 5, limiteInferior: 1800000.01, limiteSuperior: 3600000, aliquotaNominal: 0.1430, deducao: 87300, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 12.74, pis: 2.76, cpp: 41.5, icms: 34.0 } },
+        { faixa: 6, limiteInferior: 3600000.01, limiteSuperior: 4800000, aliquotaNominal: 0.1900, deducao: 378000, distribuicao: { irpj: 13.5, csll: 10.0, cofins: 28.27, pis: 6.13, cpp: 42.1, icms: 0 } }
+      ],
+      ANEXO_II: [
+        { faixa: 1, limiteInferior: 0, limiteSuperior: 180000, aliquotaNominal: 0.0450, deducao: 0, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 11.51, pis: 2.49, cpp: 37.5, icms: 32.0, ipi: 7.5 } },
+        { faixa: 2, limiteInferior: 180000.01, limiteSuperior: 360000, aliquotaNominal: 0.0780, deducao: 5940, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 11.51, pis: 2.49, cpp: 37.5, icms: 32.0, ipi: 7.5 } },
+        { faixa: 3, limiteInferior: 360000.01, limiteSuperior: 720000, aliquotaNominal: 0.1000, deducao: 13860, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 11.51, pis: 2.49, cpp: 37.5, icms: 32.0, ipi: 7.5 } },
+        { faixa: 4, limiteInferior: 720000.01, limiteSuperior: 1800000, aliquotaNominal: 0.1120, deducao: 22500, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 11.51, pis: 2.49, cpp: 37.5, icms: 32.0, ipi: 7.5 } },
+        { faixa: 5, limiteInferior: 1800000.01, limiteSuperior: 3600000, aliquotaNominal: 0.1470, deducao: 85500, distribuicao: { irpj: 5.5, csll: 3.5, cofins: 11.51, pis: 2.49, cpp: 37.5, icms: 32.0, ipi: 7.5 } },
+        { faixa: 6, limiteInferior: 3600000.01, limiteSuperior: 4800000, aliquotaNominal: 0.3000, deducao: 720000, distribuicao: { irpj: 8.5, csll: 7.5, cofins: 20.96, pis: 4.54, cpp: 23.5, icms: 0, ipi: 35.0 } }
+      ],
+      ANEXO_III: [
+        { faixa: 1, limiteInferior: 0, limiteSuperior: 180000, aliquotaNominal: 0.0600, deducao: 0, distribuicao: { irpj: 4.0, csll: 3.5, cofins: 12.82, pis: 2.78, cpp: 43.4, iss: 33.5 } },
+        { faixa: 2, limiteInferior: 180000.01, limiteSuperior: 360000, aliquotaNominal: 0.1120, deducao: 9360, distribuicao: { irpj: 4.0, csll: 3.5, cofins: 12.82, pis: 2.78, cpp: 43.4, iss: 33.5 } },
+        { faixa: 3, limiteInferior: 360000.01, limiteSuperior: 720000, aliquotaNominal: 0.1350, deducao: 17640, distribuicao: { irpj: 4.0, csll: 3.5, cofins: 12.82, pis: 2.78, cpp: 43.4, iss: 33.5 } },
+        { faixa: 4, limiteInferior: 720000.01, limiteSuperior: 1800000, aliquotaNominal: 0.1600, deducao: 35640, distribuicao: { irpj: 4.0, csll: 3.5, cofins: 12.82, pis: 2.78, cpp: 43.4, iss: 33.5 } },
+        { faixa: 5, limiteInferior: 1800000.01, limiteSuperior: 3600000, aliquotaNominal: 0.2100, deducao: 125640, distribuicao: { irpj: 4.0, csll: 3.5, cofins: 12.82, pis: 2.78, cpp: 43.4, iss: 33.5 } },
+        { faixa: 6, limiteInferior: 3600000.01, limiteSuperior: 4800000, aliquotaNominal: 0.3300, deducao: 648000, distribuicao: { irpj: 35.0, csll: 15.0, cofins: 16.03, pis: 3.47, cpp: 30.5, iss: 0 } }
+      ],
+      ANEXO_IV: [
+        { faixa: 1, limiteInferior: 0, limiteSuperior: 180000, aliquotaNominal: 0.0450, deducao: 0, distribuicao: { irpj: 18.8, csll: 15.2, cofins: 17.67, pis: 3.83, cpp: 0, iss: 44.5 } },
+        { faixa: 2, limiteInferior: 180000.01, limiteSuperior: 360000, aliquotaNominal: 0.0900, deducao: 8100, distribuicao: { irpj: 18.8, csll: 15.2, cofins: 17.67, pis: 3.83, cpp: 0, iss: 44.5 } },
+        { faixa: 3, limiteInferior: 360000.01, limiteSuperior: 720000, aliquotaNominal: 0.1020, deducao: 12420, distribuicao: { irpj: 18.8, csll: 15.2, cofins: 17.67, pis: 3.83, cpp: 0, iss: 44.5 } },
+        { faixa: 4, limiteInferior: 720000.01, limiteSuperior: 1800000, aliquotaNominal: 0.1400, deducao: 39780, distribuicao: { irpj: 18.8, csll: 15.2, cofins: 17.67, pis: 3.83, cpp: 0, iss: 44.5 } },
+        { faixa: 5, limiteInferior: 1800000.01, limiteSuperior: 3600000, aliquotaNominal: 0.2200, deducao: 183780, distribuicao: { irpj: 18.8, csll: 15.2, cofins: 17.67, pis: 3.83, cpp: 0, iss: 44.5 } },
+        { faixa: 6, limiteInferior: 3600000.01, limiteSuperior: 4800000, aliquotaNominal: 0.3300, deducao: 828000, distribuicao: { irpj: 53.5, csll: 21.5, cofins: 20.55, pis: 4.45, cpp: 0, iss: 0 } }
+      ],
+      ANEXO_V: [
+        { faixa: 1, limiteInferior: 0, limiteSuperior: 180000, aliquotaNominal: 0.1550, deducao: 0, distribuicao: { irpj: 25.0, csll: 15.0, cofins: 14.10, pis: 3.05, cpp: 28.85, iss: 14.0 } },
+        { faixa: 2, limiteInferior: 180000.01, limiteSuperior: 360000, aliquotaNominal: 0.1800, deducao: 4500, distribuicao: { irpj: 23.0, csll: 15.0, cofins: 14.10, pis: 3.05, cpp: 27.85, iss: 17.0 } },
+        { faixa: 3, limiteInferior: 360000.01, limiteSuperior: 720000, aliquotaNominal: 0.1950, deducao: 9900, distribuicao: { irpj: 24.0, csll: 15.0, cofins: 14.10, pis: 3.05, cpp: 23.85, iss: 20.0 } },
+        { faixa: 4, limiteInferior: 720000.01, limiteSuperior: 1800000, aliquotaNominal: 0.2050, deducao: 17100, distribuicao: { irpj: 21.0, csll: 15.0, cofins: 14.10, pis: 3.05, cpp: 23.85, iss: 23.0 } },
+        { faixa: 5, limiteInferior: 1800000.01, limiteSuperior: 3600000, aliquotaNominal: 0.2300, deducao: 62100, distribuicao: { irpj: 23.0, csll: 12.5, cofins: 14.10, pis: 3.05, cpp: 23.85, iss: 23.5 } },
+        { faixa: 6, limiteInferior: 3600000.01, limiteSuperior: 4800000, aliquotaNominal: 0.3050, deducao: 540000, distribuicao: { irpj: 35.0, csll: 15.5, cofins: 16.03, pis: 3.47, cpp: 30.0, iss: 0 } }
+      ]
+    };
+  }
+
+  public getApuracaoPgdas(empresaId: number, competencia: string): ApuracaoPgdas {
+    const encontrada = this.apuracoesPgdas.find(a => a.empresaId === empresaId && a.competencia === competencia);
+    if (encontrada) return encontrada;
+
+    const [anoStr, mesStr] = competencia.split('-');
+    const ano = parseInt(anoStr) || 2026;
+    const mes = parseInt(mesStr) || 4;
+
+    const notas = this.getNotasFiscais(empresaId);
+    let rbt12 = 1250000.00;
+    let folha12 = 385000.00;
+
+    const fatorR = folha12 > 0 ? Number((folha12 / rbt12).toFixed(4)) : 0.308;
+    const enquadraFatorR = fatorR >= 0.28;
+
+    const notasComp = notas.filter(n => n.dataEmissao.startsWith(competencia));
+    const totalSaidas = notasComp.filter(n => n.tipo === 'SAIDA').reduce((acc, n) => acc + n.valorTotal, 0) || 30000.00;
+    const totalServicos = notasComp.filter(n => n.tipo === 'SERVICO').reduce((acc, n) => acc + n.valorTotal, 0) || 85000.00;
+    const faturamentoMes = totalSaidas + totalServicos;
+
+    const tabelas = this.getTabelasSimplesNacional();
+
+    // Segregação 1: Serviços
+    const anexoServico: AnexoSimplesNacional = enquadraFatorR ? 'ANEXO_III' : 'ANEXO_V';
+    const faixaServ = tabelas[anexoServico].find(f => rbt12 >= f.limiteInferior && rbt12 <= f.limiteSuperior) || tabelas[anexoServico][2];
+    const aliqEfetivaServ = Number((((rbt12 * faixaServ.aliquotaNominal) - faixaServ.deducao) / rbt12).toFixed(4));
+    const valorDevidoServ = Number((totalServicos * aliqEfetivaServ).toFixed(2));
+
+    const distServ = faixaServ.distribuicao;
+    const tributosServ = {
+      irpj: Number(((valorDevidoServ * distServ.irpj) / 100).toFixed(2)),
+      csll: Number(((valorDevidoServ * distServ.csll) / 100).toFixed(2)),
+      cofins: Number(((valorDevidoServ * distServ.cofins) / 100).toFixed(2)),
+      pis: Number(((valorDevidoServ * distServ.pis) / 100).toFixed(2)),
+      cpp: Number(((valorDevidoServ * distServ.cpp) / 100).toFixed(2)),
+      icms: 0,
+      ipi: 0,
+      iss: Number(((valorDevidoServ * (distServ.iss || 0)) / 100).toFixed(2))
+    };
+
+    // Segregação 2: Comércio
+    const faixaCom = tabelas.ANEXO_I.find(f => rbt12 >= f.limiteInferior && rbt12 <= f.limiteSuperior) || tabelas.ANEXO_I[2];
+    const aliqEfetivaCom = Number((((rbt12 * faixaCom.aliquotaNominal) - faixaCom.deducao) / rbt12).toFixed(4));
+    const valorDevidoCom = Number((totalSaidas * aliqEfetivaCom).toFixed(2));
+    const distCom = faixaCom.distribuicao;
+    const tributosCom = {
+      irpj: Number(((valorDevidoCom * distCom.irpj) / 100).toFixed(2)),
+      csll: Number(((valorDevidoCom * distCom.csll) / 100).toFixed(2)),
+      cofins: Number(((valorDevidoCom * distCom.cofins) / 100).toFixed(2)),
+      pis: Number(((valorDevidoCom * distCom.pis) / 100).toFixed(2)),
+      cpp: Number(((valorDevidoCom * distCom.cpp) / 100).toFixed(2)),
+      icms: Number(((valorDevidoCom * (distCom.icms || 0)) / 100).toFixed(2)),
+      ipi: 0,
+      iss: 0
+    };
+
+    const segregacoes: SegregacaoReceitaPgdas[] = [
+      {
+        id: `SEG-SERV-${competencia}`,
+        anexo: anexoServico,
+        descricaoAtividade: `Prestação de Serviços Especializados (Fator R ${(fatorR * 100).toFixed(1)}%)`,
+        valorReceitaBruta: totalServicos,
+        valorImuneIsento: 0,
+        valorSubstituicaoTributaria: 0,
+        valorTributavel: totalServicos,
+        aliquotaEfetiva: aliqEfetivaServ,
+        valorDevido: valorDevidoServ,
+        detalhamentoTributos: tributosServ
+      },
+      {
+        id: `SEG-COM-${competencia}`,
+        anexo: 'ANEXO_I',
+        descricaoAtividade: 'Revenda de Mercadorias sem ST no Mercado Interno',
+        valorReceitaBruta: totalSaidas,
+        valorImuneIsento: 0,
+        valorSubstituicaoTributaria: 0,
+        valorTributavel: totalSaidas,
+        aliquotaEfetiva: aliqEfetivaCom,
+        valorDevido: valorDevidoCom,
+        detalhamentoTributos: tributosCom
+      }
+    ];
+
+    const totalDevidoDas = Number((valorDevidoServ + valorDevidoCom).toFixed(2));
+    const proxMes = mes === 12 ? 1 : mes + 1;
+    const proxAno = mes === 12 ? ano + 1 : ano;
+    const dataVenc = `${proxAno}-${String(proxMes).padStart(2, '0')}-20`;
+
+    const novoId = this.apuracoesPgdas.length > 0 ? Math.max(...this.apuracoesPgdas.map(a => a.id)) + 1 : 1;
+    const novaApuracao: ApuracaoPgdas = {
+      id: novoId,
+      empresaId,
+      competencia,
+      dataVencimento: dataVenc,
+      rbt12,
+      faturamentoMes,
+      folhaSalarios12Meses: folha12,
+      fatorR,
+      enquadraFatorR,
+      segregacoes,
+      totalDevidoDas,
+      numeroDas: `01.${ano}.${String(mes).padStart(2, '0')}.${Math.floor(10000000 + Math.random() * 90000000)}.12`,
+      codigoBarrasDas: `85870000${String(Math.floor(totalDevidoDas)).padStart(5, '0')}-3 ${String(Math.floor(Math.random() * 90000000000))}-6 60520260488-8 77665512001-9`,
+      qrCodePixDas: `00020126580014br.gov.bcb.pix0136pgdas-${competencia}@receita.fazenda.gov.br5204000053039865408${totalDevidoDas.toFixed(2)}5802BR5925RECEITA FEDERAL DO BRASIL6009SAO PAULO62240520DAS${competencia}6304D1B8`,
+      statusIntegracaoContabil: false,
+      dataApuracao: new Date().toISOString().substring(0, 10)
+    };
+
+    this.apuracoesPgdas.push(novaApuracao);
+    this.persistSnapshot();
+    return novaApuracao;
+  }
+
+  public salvarApuracaoPgdas(apuracao: ApuracaoPgdas): ApuracaoPgdas {
+    const idx = this.apuracoesPgdas.findIndex(a => a.id === apuracao.id);
+    if (idx !== -1) {
+      this.apuracoesPgdas[idx] = { ...apuracao };
+    } else {
+      this.apuracoesPgdas.push(apuracao);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('PGDAS_D', 'GRAVACAO', `Apuração PGDAS-D ref. ${apuracao.competencia} salva (R$ ${apuracao.totalDevidoDas.toFixed(2)}).`);
+    return apuracao;
+  }
+
+  public integrarPgdasContabil(apuracaoId: number): { sucesso: boolean; loteId: number; mensagem: string } {
+    const apuracao = this.apuracoesPgdas.find(a => a.id === apuracaoId);
+    if (!apuracao) {
+      return { sucesso: false, loteId: 0, mensagem: 'Apuração PGDAS-D não encontrada.' };
+    }
+    if (apuracao.statusIntegracaoContabil) {
+      return { sucesso: true, loteId: apuracao.loteContabilId || 0, mensagem: 'Apuração já integrada na contabilidade.' };
+    }
+
+    const novoLoteId = this.lotes.length > 0 ? Math.max(...this.lotes.map(l => l.id)) + 1 : 1;
+    const contaDespesa = this.contas.find(c => c.nome.toLowerCase().includes('simples nacional') && (c.classificacao.startsWith('3') || c.classificacao.startsWith('4'))) || this.contas[15] || this.contas[0];
+    const contaPassivo = this.contas.find(c => c.nome.toLowerCase().includes('simples nacional a recolher')) || this.contas[16] || this.contas[1];
+
+    const novoLancId = this.lancamentos.length > 0 ? Math.max(...this.lancamentos.map(l => l.id)) + 1 : 1;
+    const lanc: LancamentoContabil = {
+      id: novoLancId,
+      empresaId: apuracao.empresaId,
+      numeroPartida: 1,
+      loteId: novoLoteId,
+      dataLancamento: apuracao.dataVencimento,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: contaDespesa.id,
+      contaCreditoId: contaPassivo.id,
+      valor: apuracao.totalDevidoDas,
+      historicoId: 1,
+      complementoHistorico: `Vlr. ref. apropriação Simples Nacional DAS PGDAS-D ref. comp. ${apuracao.competencia}`,
+      createdAt: new Date().toISOString()
+    };
+
+    this.lancamentos.push(lanc);
+    apuracao.statusIntegracaoContabil = true;
+    apuracao.loteContabilId = novoLoteId;
+
+    this.persistSnapshot();
+    this.registrarAuditoria('PGDAS_D', 'INTEGRACAO_CONTABIL', `Lote nº ${novoLoteId} gerado para apuração PGDAS-D comp. ${apuracao.competencia}.`);
+    return { sucesso: true, loteId: novoLoteId, mensagem: 'Integração contábil do Simples Nacional realizada com sucesso!' };
+  }
+
+  // ==========================================
+  // GESTÃO DE BENEFÍCIOS (VT / VR / SAÚDE)
+  // ==========================================
+  public getPlanosBeneficios(empresaId?: number): BeneficioPlano[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.planosBeneficios.filter(p => p.empresaId === empId);
+  }
+
+  public salvarPlanoBeneficio(plano: BeneficioPlano): BeneficioPlano {
+    const idx = this.planosBeneficios.findIndex(p => p.id === plano.id);
+    if (idx !== -1) {
+      this.planosBeneficios[idx] = { ...plano };
+    } else {
+      plano.id = this.planosBeneficios.length > 0 ? Math.max(...this.planosBeneficios.map(p => p.id)) + 1 : 1;
+      this.planosBeneficios.push(plano);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('BENEFICIOS', 'SALVAMENTO_PLANO', `Plano ${plano.nome} (${plano.tipo}) salvo.`);
+    return plano;
+  }
+
+  public getFechamentoBeneficios(empresaId: number, competencia: string): FechamentoBeneficiosCompetencia {
+    const fechamento = this.fechamentosBeneficios.find(f => f.empresaId === empresaId && f.competencia === competencia);
+    if (fechamento) return fechamento;
+
+    const colaboradores = this.getColaboradores(empresaId).filter(c => c.status === 'ATIVO');
+    const planos = this.getPlanosBeneficios(empresaId).filter(p => p.ativo);
+
+    const planoVt = planos.find(p => p.tipo === 'VALE_TRANSPORTE') || {
+      id: 1, empresaId, tipo: 'VALE_TRANSPORTE' as TipoBeneficio, nome: 'Vale-Transporte Urbano', operadora: 'SPTrans', valorFacialUnitario: 5.00, percentualDescontoLegal: 6.0, ativo: true
+    };
+    const planoVr = planos.find(p => p.tipo === 'VALE_REFEICAO') || {
+      id: 2, empresaId, tipo: 'VALE_REFEICAO' as TipoBeneficio, nome: 'Vale-Refeição Flex', operadora: 'Flash', valorFacialUnitario: 38.00, percentualDescontoLegal: 10.0, ativo: true
+    };
+
+    const diasUteis = 22;
+    const itens: BeneficioColaboradorItem[] = [];
+    let itemId = 1;
+
+    colaboradores.forEach(colab => {
+      const salarioBase = colab.salarioBase || 2500;
+      const totalVt = diasUteis * 2 * planoVt.valorFacialUnitario;
+      const tetoDescontoVt = (salarioBase * planoVt.percentualDescontoLegal) / 100;
+      const descontoVt = Math.min(totalVt, tetoDescontoVt);
+      const custoEmpresaVt = Math.max(0, totalVt - descontoVt);
+
+      itens.push({
+        id: itemId++,
+        empresaId,
+        colaboradorId: colab.id,
+        colaboradorNome: colab.nome,
+        planoId: planoVt.id,
+        tipo: 'VALE_TRANSPORTE',
+        diasUteisMes: diasUteis,
+        quantidadeDiaria: 2,
+        valorTotalBeneficio: totalVt,
+        descontoColaborador: Number(descontoVt.toFixed(2)),
+        custoEmpregador: Number(custoEmpresaVt.toFixed(2)),
+        coparticipacao: 0
+      });
+
+      const totalVr = diasUteis * 1 * planoVr.valorFacialUnitario;
+      const descontoVr = (totalVr * planoVr.percentualDescontoLegal) / 100;
+      const custoEmpresaVr = Math.max(0, totalVr - descontoVr);
+
+      itens.push({
+        id: itemId++,
+        empresaId,
+        colaboradorId: colab.id,
+        colaboradorNome: colab.nome,
+        planoId: planoVr.id,
+        tipo: 'VALE_REFEICAO',
+        diasUteisMes: diasUteis,
+        quantidadeDiaria: 1,
+        valorTotalBeneficio: totalVr,
+        descontoColaborador: Number(descontoVr.toFixed(2)),
+        custoEmpregador: Number(custoEmpresaVr.toFixed(2)),
+        coparticipacao: 0
+      });
+    });
+
+    const totalBeneficiosFornecidos = Number(itens.reduce((acc, i) => acc + i.valorTotalBeneficio, 0).toFixed(2));
+    const totalDescontoEmpregados = Number(itens.reduce((acc, i) => acc + i.descontoColaborador, 0).toFixed(2));
+    const totalCustoEmpresa = Number(itens.reduce((acc, i) => acc + i.custoEmpregador, 0).toFixed(2));
+
+    const totalValeTransporte = Number(itens.filter(i => i.tipo === 'VALE_TRANSPORTE').reduce((acc, i) => acc + i.valorTotalBeneficio, 0).toFixed(2));
+    const totalValeRefeicaoAlimentacao = Number(itens.filter(i => i.tipo === 'VALE_REFEICAO' || i.tipo === 'VALE_ALIMENTACAO').reduce((acc, i) => acc + i.valorTotalBeneficio, 0).toFixed(2));
+    const totalPlanosSaudeOdonto = Number(itens.filter(i => i.tipo === 'PLANO_SAUDE' || i.tipo === 'PLANO_ODONTO').reduce((acc, i) => acc + i.valorTotalBeneficio, 0).toFixed(2));
+
+    const novoFechamento: FechamentoBeneficiosCompetencia = {
+      competencia,
+      empresaId,
+      totalBeneficiosFornecidos,
+      totalDescontoEmpregados,
+      totalCustoEmpresa,
+      totalValeTransporte,
+      totalValeRefeicaoAlimentacao,
+      totalPlanosSaudeOdonto,
+      itens,
+      statusIntegracaoContabil: false,
+      fechadoEm: new Date().toISOString().substring(0, 10)
+    };
+
+    this.fechamentosBeneficios.push(novoFechamento);
+    this.persistSnapshot();
+    return novoFechamento;
+  }
+
+  public salvarFechamentoBeneficios(fechamento: FechamentoBeneficiosCompetencia): void {
+    const idx = this.fechamentosBeneficios.findIndex(f => f.empresaId === fechamento.empresaId && f.competencia === fechamento.competencia);
+    if (idx !== -1) {
+      this.fechamentosBeneficios[idx] = { ...fechamento };
+    } else {
+      this.fechamentosBeneficios.push(fechamento);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('BENEFICIOS', 'FECHAMENTO', `Mapa de benefícios ref. ${fechamento.competencia} salvo com sucesso.`);
+  }
+
+  public integrarBeneficiosContabil(empresaId: number, competencia: string): { sucesso: boolean; loteId: number; mensagem: string } {
+    const fechamento = this.getFechamentoBeneficios(empresaId, competencia);
+    if (fechamento.statusIntegracaoContabil) {
+      return { sucesso: true, loteId: fechamento.loteContabilId || 0, mensagem: 'Benefícios já integrados contabilmente.' };
+    }
+
+    const novoLoteId = this.lotes.length > 0 ? Math.max(...this.lotes.map(l => l.id)) + 1 : 1;
+    const contaDespesaBeneficios = this.contas.find(c => c.nome.toLowerCase().includes('benefícios') || c.classificacao.startsWith('3.01.01') || c.classificacao.startsWith('4.01.01')) || this.contas[10];
+    const contaBeneficiosPagar = this.contas.find(c => c.nome.toLowerCase().includes('benefícios a pagar') || c.classificacao.startsWith('2.01.03')) || this.contas[14];
+
+    const novoLancId = this.lancamentos.length > 0 ? Math.max(...this.lancamentos.map(l => l.id)) + 1 : 1;
+    const lanc: LancamentoContabil = {
+      id: novoLancId,
+      empresaId,
+      numeroPartida: 1,
+      loteId: novoLoteId,
+      dataLancamento: `${competencia}-28`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: contaDespesaBeneficios.id,
+      contaCreditoId: contaBeneficiosPagar.id,
+      valor: fechamento.totalCustoEmpresa,
+      historicoId: 1,
+      complementoHistorico: `Vlr. ref. provisão de custo patronal de benefícios aos colaboradores (VT/VR) comp. ${competencia}`,
+      createdAt: new Date().toISOString()
+    };
+
+    this.lancamentos.push(lanc);
+    fechamento.statusIntegracaoContabil = true;
+    fechamento.loteContabilId = novoLoteId;
+
+    this.persistSnapshot();
+    this.registrarAuditoria('BENEFICIOS', 'INTEGRACAO_CONTABIL', `Lote nº ${novoLoteId} gerado para benefícios ref. ${competencia}.`);
+    return { sucesso: true, loteId: novoLoteId, mensagem: 'Integração contábil de benefícios realizada com sucesso!' };
+  }
+
+  // ==========================================
+  // BALANÇO SOCIAL MODELO IBASE (NBC T 15 / CFC)
+  // ==========================================
+  public getBalancoSocialIbase(empresaId: number, ano: number): BalancoSocialIbase {
+    const dreLinhas = this.gerarDREConsolidada(empresaId);
+    const recLinha = dreLinhas.find(l => l.descricao.includes('RECEITA') || l.descricao.includes('LÍQUIDA'));
+    const receitaLiquida = (recLinha && recLinha.valorConsolidado > 0) ? recLinha.valorConsolidado : 3850000.00;
+    const resLinha = dreLinhas.find(l => l.descricao.includes('RESULTADO') || l.descricao.includes('OPERACIONAL'));
+    const resultadoOperacional = (resLinha && resLinha.valorConsolidado > 0) ? resLinha.valorConsolidado : 780000.00;
+    const folhaPagamentoBruta = 850000.00;
+
+    const calcPercFPB = (v: number) => Number(((v / folhaPagamentoBruta) * 100).toFixed(2));
+    const calcPercRL = (v: number) => Number(((v / receitaLiquida) * 100).toFixed(2));
+
+    const linhasInternos: LinhaBalancoSocial[] = [
+      { codigo: '1.1', descricao: 'Alimentação / Refeição e Cesta Básica (PAT)', valorPeriodo: 48500.00, percentualSobreFolha: calcPercFPB(48500), percentualSobreReceita: calcPercRL(48500) },
+      { codigo: '1.2', descricao: 'Previdência Social Obrigatória (INSS Patronal + GILRAT)', valorPeriodo: 187000.00, percentualSobreFolha: calcPercFPB(187000), percentualSobreReceita: calcPercRL(187000) },
+      { codigo: '1.3', descricao: 'Fundo de Garantia por Tempo de Serviço (FGTS)', valorPeriodo: 68000.00, percentualSobreFolha: calcPercFPB(68000), percentualSobreReceita: calcPercRL(68000) },
+      { codigo: '1.4', descricao: 'Assistência Médica e Odontológica Corporativa', valorPeriodo: 39600.00, percentualSobreFolha: calcPercFPB(39600), percentualSobreReceita: calcPercRL(39600) },
+      { codigo: '1.5', descricao: 'Segurança e Medicina do Trabalho (EPI, PCMSO, PGR)', valorPeriodo: 14200.00, percentualSobreFolha: calcPercFPB(14200), percentualSobreReceita: calcPercRL(14200) },
+      { codigo: '1.6', descricao: 'Educação, Capacitação e Desenvolvimento Profissional', valorPeriodo: 26800.00, percentualSobreFolha: calcPercFPB(26800), percentualSobreReceita: calcPercRL(26800) },
+      { codigo: '1.7', descricao: 'Auxílio-Creche e Suporte à Primeira Infância', valorPeriodo: 8400.00, percentualSobreFolha: calcPercFPB(8400), percentualSobreReceita: calcPercRL(8400) },
+      { codigo: '1.8', descricao: 'Participação nos Lucros ou Resultados (PLR / CLT)', valorPeriodo: 55000.00, percentualSobreFolha: calcPercFPB(55000), percentualSobreReceita: calcPercRL(55000) }
+    ];
+    const totalInternos = Number(linhasInternos.reduce((acc, l) => acc + l.valorPeriodo, 0).toFixed(2));
+
+    const tributosTotais = 512000.00;
+    const linhasExternos: LinhaBalancoSocial[] = [
+      { codigo: '2.1', descricao: 'Projetos Comunitários de Apoio a Escolas e Moradia', valorPeriodo: 35000.00, percentualSobreReceita: calcPercRL(35000) },
+      { codigo: '2.2', descricao: 'Apoio à Cultura, Música e Preservação do Patrimônio', valorPeriodo: 18500.00, percentualSobreReceita: calcPercRL(18500) },
+      { codigo: '2.3', descricao: 'Apoio ao Esporte Amador e Inclusão Juvenil', valorPeriodo: 12000.00, percentualSobreReceita: calcPercRL(12000) },
+      { codigo: '2.4', descricao: 'Total de Tributos e Encargos Recolhidos ao Governo', valorPeriodo: tributosTotais, percentualSobreReceita: calcPercRL(tributosTotais) }
+    ];
+    const totalExternos = Number(linhasExternos.reduce((acc, l) => acc + l.valorPeriodo, 0).toFixed(2));
+
+    const linhasAmbientais: LinhaBalancoSocial[] = [
+      { codigo: '3.1', descricao: 'Investimentos em Eficiência Energética e Energia Solar', valorPeriodo: 42000.00, percentualSobreReceita: calcPercRL(42000) },
+      { codigo: '3.2', descricao: 'Reciclagem, Coleta Seletiva e Descarte Correto de E-Waste', valorPeriodo: 11500.00, percentualSobreReceita: calcPercRL(11500) },
+      { codigo: '3.3', descricao: 'Auditorias e Certificações Ambientais ESG / ISO 14001', valorPeriodo: 16000.00, percentualSobreReceita: calcPercRL(16000) }
+    ];
+    const totalAmbientais = Number(linhasAmbientais.reduce((acc, l) => acc + l.valorPeriodo, 0).toFixed(2));
+
+    const colaboradores = this.getColaboradores(empresaId);
+    const totalColabs = Math.max(1, colaboradores.length);
+
+    const corpoFuncional: IndicadorCorpoFuncionalIbase[] = [
+      { descricao: 'Número total de empregados ao final do período', quantidadeInicio: totalColabs, quantidadeFim: totalColabs, percentualDoTotal: 100 },
+      { descricao: 'Admissões realizadas durante o exercício', quantidadeInicio: 2, quantidadeFim: 2, percentualDoTotal: Number(((2 / totalColabs) * 100).toFixed(1)) },
+      { descricao: 'Desligamentos ocorridos no exercício', quantidadeInicio: 1, quantidadeFim: 1, percentualDoTotal: Number(((1 / totalColabs) * 100).toFixed(1)) },
+      { descricao: 'Participação feminina no quadro de colaboradores', quantidadeInicio: Math.round(totalColabs * 0.45), quantidadeFim: Math.round(totalColabs * 0.45), percentualDoTotal: 45.0 },
+      { descricao: 'Colaboradores negros e pardos', quantidadeInicio: Math.round(totalColabs * 0.38), quantidadeFim: Math.round(totalColabs * 0.38), percentualDoTotal: 38.0 },
+      { descricao: 'Colaboradores com mais de 45 anos de idade', quantidadeInicio: Math.round(totalColabs * 0.25), quantidadeFim: Math.round(totalColabs * 0.25), percentualDoTotal: 25.0 },
+      { descricao: 'Pessoas com Deficiência (PCDs)', quantidadeInicio: Math.max(1, Math.round(totalColabs * 0.05)), quantidadeFim: Math.max(1, Math.round(totalColabs * 0.05)), percentualDoTotal: 5.0 }
+    ];
+
+    return {
+      ano,
+      empresaId,
+      receitaLiquida,
+      resultadoOperacional,
+      folhaPagamentoBruta,
+      indicadoresSociaisInternos: {
+        titulo: '1. INDICADORES SOCIAIS INTERNOS',
+        linhas: linhasInternos,
+        totalSecao: totalInternos,
+        percentualTotalSobreReceita: calcPercRL(totalInternos)
+      },
+      indicadoresSociaisExternos: {
+        titulo: '2. INDICADORES SOCIAIS EXTERNOS',
+        linhas: linhasExternos,
+        totalSecao: totalExternos,
+        percentualTotalSobreReceita: calcPercRL(totalExternos)
+      },
+      indicadoresAmbientais: {
+        titulo: '3. INDICADORES AMBIENTAIS',
+        linhas: linhasAmbientais,
+        totalSecao: totalAmbientais,
+        percentualTotalSobreReceita: calcPercRL(totalAmbientais)
+      },
+      indicadoresCorpoFuncional: corpoFuncional,
+      informacoesCidadania: {
+        regrasDisseminadas: true,
+        dialogoSindical: true,
+        previdenciaPrivadaInstituida: true,
+        participacaoLucrosInstituida: true
+      },
+      geradoEm: new Date().toISOString()
+    };
   }
 }
 

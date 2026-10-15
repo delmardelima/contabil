@@ -33,7 +33,8 @@ import {
   Archive,
   FileCheck2,
   Boxes,
-  UserMinus
+  UserMinus,
+  Heart
 } from 'lucide-react';
 
 interface RibbonBarProps {
@@ -76,6 +77,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
       { id: 'lalur', label: 'LALUR / LACS (Lucro Real)', icon: BookOpen },
       { id: 'consolidacao', label: 'Consolidação (CPC 36)', icon: Share2 },
       { id: 'dmplDva', label: 'DMPL & DVA (CPC 26)', icon: Share2 },
+      { id: 'balancoSocial', label: 'Balanço Social (ESG)', icon: Heart },
       { id: 'auditoria', label: 'Auditoria & Saldos', icon: ShieldAlert },
       { id: 'redeBackup', label: 'Rede & Backup', icon: Network }
     ];
@@ -84,6 +86,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
       { id: 'dashboardFiscal', label: 'Dashboard Fiscal', icon: Receipt },
       { id: 'notasFiscais', label: 'Importador XML & NF-e', icon: FileText },
       { id: 'nfse', label: 'NFS-e Nacional / DPS', icon: Receipt },
+      { id: 'pgdas', label: 'PGDAS-D (Simples)', icon: Calculator },
       { id: 'ciap', label: 'CIAP (Bloco G 1/48)', icon: Layers },
       { id: 'inventarioEstoque', label: 'Inventário Mod 7 (Bloco H)', icon: Boxes },
       { id: 'lcdpr', label: 'Livro Caixa Rural (LCDPR)', icon: BookOpen },
@@ -103,6 +106,7 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
     topTabs = [
       { id: 'dashboardFolha', label: 'Dashboard Folha', icon: Users },
       { id: 'calculoFolha', label: 'Processar Folha / Holerites', icon: Calculator },
+      { id: 'beneficios', label: 'Gestão Benefícios (VT/VR)', icon: CreditCard },
       { id: 'rescisao', label: 'Rescisão Contratual (TRCT)', icon: UserMinus },
       { id: 'esocial', label: 'Central eSocial XML', icon: FileCode },
       { id: 'dctfWeb', label: 'DCTFWeb & DARF', icon: FileCheck2 },

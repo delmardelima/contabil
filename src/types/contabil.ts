@@ -1789,6 +1789,162 @@ export interface InventarioEstoqueModelo7 {
   geradoEm: string;
 }
 
+// ----------------------------------------------------
+// SIMPLES NACIONAL AVANÇADO & PGDAS-D (LC 123/2006 & CGSN 140/2018)
+// ----------------------------------------------------
+export type AnexoSimplesNacional = 'ANEXO_I' | 'ANEXO_II' | 'ANEXO_III' | 'ANEXO_IV' | 'ANEXO_V';
+
+export interface FaixaSimplesNacional {
+  faixa: number; // 1 a 6
+  limiteInferior: number;
+  limiteSuperior: number;
+  aliquotaNominal: number; // ex: 0.04 (4%)
+  deducao: number; // ex: 5940.00
+  distribuicao: {
+    irpj: number; // % sobre o total
+    csll: number;
+    cofins: number;
+    pis: number;
+    cpp: number;
+    icms?: number;
+    ipi?: number;
+    iss?: number;
+  };
+}
+
+export interface SegregacaoReceitaPgdas {
+  id: string;
+  anexo: AnexoSimplesNacional;
+  descricaoAtividade: string;
+  valorReceitaBruta: number;
+  valorImuneIsento: number;
+  valorSubstituicaoTributaria: number; // ST ICMS ou Monofásico PIS/COFINS
+  valorTributavel: number;
+  aliquotaEfetiva: number;
+  valorDevido: number;
+  detalhamentoTributos: {
+    irpj: number;
+    csll: number;
+    cofins: number;
+    pis: number;
+    cpp: number;
+    icms: number;
+    ipi: number;
+    iss: number;
+  };
+}
+
+export interface ApuracaoPgdas {
+  id: number;
+  empresaId: number;
+  competencia: string; // YYYY-MM
+  dataVencimento: string; // dia 20 do mês subsequente
+  rbt12: number; // Receita Bruta dos últimos 12 meses
+  faturamentoMes: number;
+  folhaSalarios12Meses: number; // Para cálculo do Fator R
+  fatorR: number; // folhaSalarios12Meses / rbt12
+  enquadraFatorR: boolean; // >= 0.28 vai p/ Anexo III, < 0.28 vai p/ Anexo V
+  segregacoes: SegregacaoReceitaPgdas[];
+  totalDevidoDas: number;
+  numeroDas: string;
+  codigoBarrasDas: string;
+  qrCodePixDas: string;
+  statusIntegracaoContabil: boolean;
+  loteContabilId?: number;
+  dataApuracao: string;
+}
+
+// ----------------------------------------------------
+// GESTÃO DE BENEFÍCIOS & VALE-TRANSPORTE / REFEIÇÃO (LEI 7.418/1985 & CLT)
+// ----------------------------------------------------
+export type TipoBeneficio = 'VALE_TRANSPORTE' | 'VALE_REFEICAO' | 'VALE_ALIMENTACAO' | 'PLANO_SAUDE' | 'PLANO_ODONTO' | 'SEGURO_VIDA';
+
+export interface BeneficioPlano {
+  id: number;
+  empresaId: number;
+  tipo: TipoBeneficio;
+  nome: string;
+  operadora: string;
+  valorFacialUnitario: number; // Ex: R$ 5,00 por passagem ou R$ 35,00 por dia de VR
+  percentualDescontoLegal: number; // Ex: 6% para VT, até 20% para VR, 0 a 100% coparticipação
+  valorMensalidadeFixa?: number; // Para convênio médico/odonto
+  ativo: boolean;
+}
+
+export interface BeneficioColaboradorItem {
+  id: number;
+  empresaId: number;
+  colaboradorId: number;
+  colaboradorNome: string;
+  planoId: number;
+  tipo: TipoBeneficio;
+  diasUteisMes: number;
+  quantidadeDiaria: number; // ex: 2 passagens/dia
+  valorTotalBeneficio: number; // dias * qtd * valorFacial
+  descontoColaborador: number; // Limitado a 6% do salário base para VT
+  custoEmpregador: number; // valorTotalBeneficio - descontoColaborador
+  coparticipacao: number;
+}
+
+export interface FechamentoBeneficiosCompetencia {
+  competencia: string; // YYYY-MM
+  empresaId: number;
+  totalBeneficiosFornecidos: number;
+  totalDescontoEmpregados: number;
+  totalCustoEmpresa: number;
+  totalValeTransporte: number;
+  totalValeRefeicaoAlimentacao: number;
+  totalPlanosSaudeOdonto: number;
+  itens: BeneficioColaboradorItem[];
+  statusIntegracaoContabil: boolean;
+  loteContabilId?: number;
+  fechadoEm: string;
+}
+
+// ----------------------------------------------------
+// BALANÇO SOCIAL MODELO IBASE & SUSTENTABILIDADE / ESG (NBC T 15 / CFC)
+// ----------------------------------------------------
+export interface LinhaBalancoSocial {
+  codigo: string;
+  descricao: string;
+  valorPeriodo: number;
+  percentualSobreFolha?: number; // % F.P.B.
+  percentualSobreReceita?: number; // % R.L.
+}
+
+export interface SecaoBalancoSocial {
+  titulo: string;
+  linhas: LinhaBalancoSocial[];
+  totalSecao: number;
+  percentualTotalSobreReceita?: number;
+}
+
+export interface IndicadorCorpoFuncionalIbase {
+  descricao: string;
+  quantidadeInicio: number;
+  quantidadeFim: number;
+  percentualDoTotal: number;
+}
+
+export interface BalancoSocialIbase {
+  ano: number;
+  empresaId: number;
+  receitaLiquida: number;
+  resultadoOperacional: number;
+  folhaPagamentoBruta: number;
+  indicadoresSociaisInternos: SecaoBalancoSocial;
+  indicadoresSociaisExternos: SecaoBalancoSocial;
+  indicadoresAmbientais: SecaoBalancoSocial;
+  indicadoresCorpoFuncional: IndicadorCorpoFuncionalIbase[];
+  informacoesCidadania: {
+    regrasDisseminadas: boolean;
+    dialogoSindical: boolean;
+    previdenciaPrivadaInstituida: boolean;
+    participacaoLucrosInstituida: boolean;
+  };
+  geradoEm: string;
+}
+
 
 
 

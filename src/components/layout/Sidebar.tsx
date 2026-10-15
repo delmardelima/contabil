@@ -37,7 +37,8 @@ import {
   Calendar,
   Share2,
   Boxes,
-  UserMinus
+  UserMinus,
+  Heart
 } from 'lucide-react';
 
 export interface NavItem {
@@ -150,6 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'lalur', title: 'LALUR / LACS (Lucro Real)', icon: BookOpen, badge: 'REAL' },
           { id: 'consolidacao', title: 'Consolidação (CPC 36)', icon: Share2, badge: 'CONSOL' },
           { id: 'dmplDva', title: 'DMPL & DVA (CPC 26/09)', icon: Share2, badge: 'CPC' },
+          { id: 'balancoSocial', title: 'Balanço Social (IBASE / ESG)', icon: Heart, badge: 'ESG' },
           { id: 'livros', title: 'Livro Diário & Razão Analítico', icon: BookOpen },
           { id: 'documentStudio', title: 'Document Studio (Termos A4)', icon: FileSpreadsheet }
         ]
@@ -172,6 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         items: [
           { id: 'notasFiscais', title: 'Importador XML & Notas', icon: FileText, badge: 'XML' },
           { id: 'nfse', title: 'NFS-e Nacional / DPS', icon: Receipt, badge: 'DPS' },
+          { id: 'pgdas', title: 'PGDAS-D (Simples Nacional)', icon: Calculator, badge: 'DAS' },
           { id: 'ciap', title: 'CIAP Bloco G (Ativo Permanente)', icon: Layers, badge: '1/48' },
           { id: 'inventarioEstoque', title: 'Inventário Estoques (Mod 7)', icon: Boxes, badge: 'BLOCO H' },
           { id: 'lcdpr', title: 'Livro Caixa Rural (LCDPR)', icon: BookOpen, badge: 'RURAL' },
@@ -209,6 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         title: 'PROCESSAMENTO DA FOLHA',
         items: [
           { id: 'calculoFolha', title: 'Cálculo da Folha & Holerites', icon: Calculator, badge: 'A4' },
+          { id: 'beneficios', title: 'Gestão Benefícios (VT/VR)', icon: CreditCard, badge: 'VT 6%' },
           { id: 'rescisao', title: 'Rescisão Contratual & TRCT', icon: UserMinus, badge: 'TRCT' },
           { id: 'esocial', title: 'Central eSocial XML (S-1200/1210)', icon: FileCode, badge: 'eSocial' },
           { id: 'dctfWeb', title: 'DCTFWeb & DARF Previdenciário', icon: FileCheck2, badge: 'S-1299' },
