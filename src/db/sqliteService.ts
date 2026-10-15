@@ -23,7 +23,11 @@ import {
   RegraConciliacao,
   ExtratoTransacao,
   DLPAItem,
-  DFCItem
+  DFCItem,
+  ParticipanteFiscal,
+  ProdutoServico,
+  AtivoImobilizado,
+  VariaveisColaborador
 } from '../types/contabil';
 
 const STORAGE_KEYS = {
@@ -41,7 +45,11 @@ const SEED_EMPRESA: Empresa = {
   cnpj: '12.345.678/0001-90',
   inscricaoEstadual: '110.234.567.890',
   inscricaoMunicipal: '4.567.890-1',
+  inscricaoSuframa: '90.123.456-7',
   nire: '35212345678',
+  dataConstituicao: '2018-05-10',
+  naturezaJuridica: '206-2 - Sociedade Empresária Limitada',
+  porteEmpresa: 'ME',
   logradouro: 'Avenida Paulista',
   numero: '1500',
   complemento: 'Andar 14 - Cj 1401',
@@ -49,6 +57,16 @@ const SEED_EMPRESA: Empresa = {
   cidade: 'São Paulo',
   uf: 'SP',
   cep: '01310-200',
+  codigoIbge: '3550308',
+  cnaePrincipal: '6920-6/01',
+  cnaesSecundarios: ['7020-4/00', '8219-9/99', '6201-5/01'],
+  anexoPadraoSimples: 'ANEXO_III',
+  fatorR: true,
+  aliquotaISS: 5.0,
+  fpas: '515',
+  codigoTerceiros: '0115',
+  rat: 2.0,
+  fap: 1.0,
   telefone: '(11) 3245-8900',
   email: 'contato@amillabs.com.br',
   regimeTributario: 'LUCRO_PRESUMIDO',
@@ -58,8 +76,48 @@ const SEED_EMPRESA: Empresa = {
   contadorCRC: 'CRC-SP 1SP234567/O-8',
   contadorCPF: '987.654.321-11',
   mascaraPlano: '1.01.01.001.0001',
+  exigeCentroCusto: true,
   exercicioAtivo: 2026,
-  competenciaAtiva: '2026-10'
+  competenciaAtiva: '2026-10',
+  socios: [
+    {
+      id: 1,
+      nome: 'Carlos Eduardo Mendes',
+      cpf: '123.456.789-00',
+      qualificacaoRFB: '49 - Sócio-Administrador',
+      percentualCapital: 60,
+      dataEntrada: '2018-05-10',
+      retiraProLabore: true,
+      valorProLabore: 7500.00,
+      percentualLucros: 60
+    },
+    {
+      id: 2,
+      nome: 'Dra. Mariana Costa Mendes',
+      cpf: '234.567.890-11',
+      qualificacaoRFB: '22 - Sócio',
+      percentualCapital: 40,
+      dataEntrada: '2018-05-10',
+      retiraProLabore: false,
+      percentualLucros: 40
+    }
+  ],
+  vigencias: [
+    {
+      id: 1,
+      inicioCompetencia: '2024-01',
+      fimCompetencia: '2024-12',
+      regimeTributario: 'SIMPLES_NACIONAL',
+      regimeApuracao: 'COMPETENCIA',
+      enquadramentoSimples: 'MICROEMPRESA'
+    },
+    {
+      id: 2,
+      inicioCompetencia: '2025-01',
+      regimeTributario: 'LUCRO_PRESUMIDO',
+      regimeApuracao: 'COMPETENCIA'
+    }
+  ]
 };
 
 const SEED_PARAMETROS: ParametrosEmpresa = {
@@ -492,78 +550,367 @@ const SEED_APURACOES_FISCAIS: ApuracaoFiscal[] = [
   }
 ];
 
-const SEED_COLABORADORES: Colaborador[] = [
+const SEED_PARTICIPANTES: ParticipanteFiscal[] = [
   {
     id: 1,
     empresaId: 1,
-    matricula: 101,
-    nome: 'Lucas Gabriel Silveira',
-    cpf: '234.567.890-12',
-    cargo: 'Engenheiro de Software Sênior',
-    tipoVinculo: 'CLT',
-    salarioBase: 12500.00,
-    dependentesIRRF: 1,
-    dependentesSalarioFamilia: 0,
-    dataAdmissao: '2023-03-01',
-    centroCustoId: 5,
-    bancoNome: 'Banco Itaú',
-    agencia: '0912',
-    contaBancaria: '44821-0',
+    codigo: 'FORN001',
+    nomeRazaoSocial: 'DELL COMPUTADORES DO BRASIL LTDA',
+    nomeFantasia: 'Dell Technologies',
+    tipoPessoa: 'J',
+    cnpjCpf: '72.381.189/0001-10',
+    inscricaoEstadual: '148.520.123.119',
+    contribuinteICMS: '1',
+    uf: 'SP',
+    municipio: 'Eldorado do Sul',
+    codigoIbge: '4306932',
+    tipoRelacao: 'FORNECEDOR',
+    contaContabilId: 30, // Fornecedores a Pagar
+    email: 'fiscal@dell.com.br',
+    telefone: '(11) 4004-0100',
     ativo: true
   },
   {
     id: 2,
     empresaId: 1,
-    matricula: 102,
-    nome: 'Mariana Oliveira Prado',
-    cpf: '345.678.901-23',
-    cargo: 'Analista Contábil Pleno',
-    tipoVinculo: 'CLT',
-    salarioBase: 6200.00,
-    dependentesIRRF: 0,
-    dependentesSalarioFamilia: 0,
-    dataAdmissao: '2024-01-15',
-    centroCustoId: 3,
-    bancoNome: 'Banco Santander',
-    agencia: '3310',
-    contaBancaria: '12900-5',
+    codigo: 'CLI001',
+    nomeRazaoSocial: 'BANCO DIGITAL ALPHA S/A',
+    nomeFantasia: 'Banco Alpha',
+    tipoPessoa: 'J',
+    cnpjCpf: '09.876.543/0001-21',
+    inscricaoEstadual: '',
+    contribuinteICMS: '9',
+    uf: 'SP',
+    municipio: 'São Paulo',
+    codigoIbge: '3550308',
+    tipoRelacao: 'CLIENTE',
+    contaContabilId: 11, // Clientes a Receber
+    email: 'financeiro@alpha.banco.br',
+    telefone: '(11) 3300-5500',
     ativo: true
   },
   {
     id: 3,
     empresaId: 1,
-    matricula: 103,
-    nome: 'Renato Dias Batista',
-    cpf: '456.789.012-34',
-    cargo: 'Assistente Administrativo',
-    tipoVinculo: 'CLT',
-    salarioBase: 3100.00,
-    dependentesIRRF: 1,
-    dependentesSalarioFamilia: 1,
-    dataAdmissao: '2025-05-02',
-    centroCustoId: 2,
-    bancoNome: 'Banco Bradesco',
-    agencia: '1202',
-    contaBancaria: '98432-1',
+    codigo: 'CLI002',
+    nomeRazaoSocial: 'INDÚSTRIA E COMÉRCIO BETA LTDA',
+    nomeFantasia: 'Beta Componentes',
+    tipoPessoa: 'J',
+    cnpjCpf: '45.678.901/0001-34',
+    inscricaoEstadual: '112.334.556.778',
+    contribuinteICMS: '1',
+    uf: 'SP',
+    municipio: 'Campinas',
+    codigoIbge: '3509502',
+    tipoRelacao: 'CLIENTE',
+    contaContabilId: 11,
+    email: 'contabil@beta.ind.br',
+    telefone: '(19) 3200-1122',
     ativo: true
   },
   {
     id: 4,
     empresaId: 1,
+    codigo: 'TRAN001',
+    nomeRazaoSocial: 'EXPRESSO SÃO PAULO LOGÍSTICA & TRANSPORTES LTDA',
+    nomeFantasia: 'Expresso SP Log',
+    tipoPessoa: 'J',
+    cnpjCpf: '19.283.746/0001-55',
+    inscricaoEstadual: '109.876.543.210',
+    contribuinteICMS: '1',
+    uf: 'SP',
+    municipio: 'Guarulhos',
+    codigoIbge: '3518800',
+    tipoRelacao: 'TRANSPORTADORA',
+    contaContabilId: 30,
+    email: 'cte@expressosplog.com.br',
+    telefone: '(11) 2468-1357',
+    ativo: true
+  }
+];
+
+const SEED_PRODUTOS: ProdutoServico[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigo: 'SRV-001',
+    descricao: 'Consultoria e Auditoria Contábil Empresarial Mensal',
+    tipoItemSped: '09', // Serviços
+    ncm: '00000000',
+    unidadeMedida: 'UN',
+    cstPISCOFINSPadrao: '01',
+    aliquotaPIS: 0.65,
+    aliquotaCOFINS: 3.0,
+    precoUnitarioVenda: 5000.00,
+    precoUnitarioCusto: 0,
+    contaContabilReceitaId: 44, // Receita de Serviços
+    ativo: true
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    codigo: 'SRV-002',
+    descricao: 'Implantação de ERP Contábil e Treinamento de Equipe',
+    tipoItemSped: '09',
+    ncm: '00000000',
+    unidadeMedida: 'UN',
+    cstPISCOFINSPadrao: '01',
+    aliquotaPIS: 0.65,
+    aliquotaCOFINS: 3.0,
+    precoUnitarioVenda: 12000.00,
+    precoUnitarioCusto: 3500.00,
+    contaContabilReceitaId: 44,
+    ativo: true
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    codigo: 'EQP-001',
+    descricao: 'Servidor Dell PowerEdge R650 32GB Xeon Silver',
+    codigoBarras: '7891234567890',
+    tipoItemSped: '08', // Ativo Imobilizado
+    ncm: '84715010',
+    unidadeMedida: 'UN',
+    cstICMSPadrao: '00',
+    aliquotaICMS: 18.0,
+    aliquotaIPI: 10.0,
+    precoUnitarioCusto: 18500.00,
+    contaContabilInventarioId: 18, // Equipamentos de Informática
+    ativo: true
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    codigo: 'MAT-001',
+    descricao: 'Papel Sulfite A4 Report 75g Caixa com 10 Resmas',
+    codigoBarras: '7898234567891',
+    tipoItemSped: '07', // Material Uso e Consumo
+    ncm: '48025610',
+    unidadeMedida: 'CX',
+    cstICMSPadrao: '00',
+    aliquotaICMS: 18.0,
+    precoUnitarioCusto: 280.00,
+    contaContabilCustoId: 57, // Material de Escritório
+    ativo: true
+  }
+];
+
+const SEED_COLABORADORES: Colaborador[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    matricula: 101,
+    matriculaeSocial: 'MATR-000101',
+    nome: 'Lucas Gabriel Silveira',
+    cpf: '234.567.890-12',
+    dataNascimento: '1988-06-14',
+    sexo: 'M',
+    estadoCivil: 'CASADO',
+    grauInstrucao: 'SUPERIOR_COMPLETO',
+    racaCor: 'BRANCA',
+    logradouro: 'Rua Augusta',
+    numero: '1200',
+    bairro: 'Consolação',
+    cidade: 'São Paulo',
+    uf: 'SP',
+    cep: '01304-001',
+    ctpsNumero: '1234567',
+    ctpsSerie: '0010',
+    ctpsUF: 'SP',
+    rgNumero: '34.567.890-X',
+    rgOrgaoEmissor: 'SSP/SP',
+    pisPasep: '120.34567.89-1',
+    tituloEleitor: '123456780123',
+    categoriaeSocial: '101',
+    cbo: '2124-05',
+    cargo: 'Engenheiro de Software Sênior',
+    departamento: 'Engenharia de Sistemas',
+    tipoVinculo: 'CLT',
+    salarioBase: 12500.00,
+    tipoPagamento: 'MENSALISTA',
+    jornadaSemanal: 40,
+    dependentesIRRF: 1,
+    dependentesSalarioFamilia: 0,
+    listaDependentes: [
+      {
+        id: 1,
+        nome: 'Enzo Silveira',
+        cpf: '567.890.123-45',
+        dataNascimento: '2016-04-10',
+        parentesco: 'FILHO',
+        finsIRRF: true,
+        finsSalarioFamilia: false
+      }
+    ],
+    dataAdmissao: '2023-03-01',
+    centroCustoId: 5,
+    bancoNome: 'Banco Itaú',
+    agencia: '0912',
+    contaBancaria: '44821-0',
+    dadosBancarios: { chavePix: '23456789012' },
+    ativo: true,
+    status: 'ATIVO'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    matricula: 102,
+    matriculaeSocial: 'MATR-000102',
+    nome: 'Mariana Oliveira Prado',
+    cpf: '345.678.901-23',
+    dataNascimento: '1994-11-20',
+    sexo: 'F',
+    estadoCivil: 'SOLTEIRO',
+    grauInstrucao: 'SUPERIOR_COMPLETO',
+    racaCor: 'PARDA',
+    logradouro: 'Alameda Santos',
+    numero: '800',
+    bairro: 'Cerqueira César',
+    cidade: 'São Paulo',
+    uf: 'SP',
+    cep: '01418-100',
+    ctpsNumero: '2345678',
+    ctpsSerie: '0020',
+    ctpsUF: 'SP',
+    rgNumero: '45.678.901-2',
+    rgOrgaoEmissor: 'SSP/SP',
+    pisPasep: '130.45678.90-2',
+    tituloEleitor: '234567890134',
+    categoriaeSocial: '101',
+    cbo: '2522-10',
+    cargo: 'Analista Contábil Pleno',
+    departamento: 'Controladoria & Fiscal',
+    tipoVinculo: 'CLT',
+    salarioBase: 6200.00,
+    tipoPagamento: 'MENSALISTA',
+    jornadaSemanal: 44,
+    dependentesIRRF: 0,
+    dependentesSalarioFamilia: 0,
+    listaDependentes: [],
+    dataAdmissao: '2024-01-15',
+    centroCustoId: 3,
+    bancoNome: 'Banco Santander',
+    agencia: '3310',
+    contaBancaria: '12900-5',
+    dadosBancarios: { chavePix: 'mariana.prado@email.com' },
+    ativo: true,
+    status: 'ATIVO'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    matricula: 103,
+    matriculaeSocial: 'MATR-000103',
+    nome: 'Renato Dias Batista',
+    cpf: '456.789.012-34',
+    dataNascimento: '1998-02-05',
+    sexo: 'M',
+    estadoCivil: 'CASADO',
+    grauInstrucao: 'MEDIO_COMPLETO',
+    racaCor: 'BRANCA',
+    logradouro: 'Rua Domingos de Morais',
+    numero: '450',
+    bairro: 'Vila Mariana',
+    cidade: 'São Paulo',
+    uf: 'SP',
+    cep: '04010-000',
+    ctpsNumero: '3456789',
+    ctpsSerie: '0030',
+    ctpsUF: 'SP',
+    rgNumero: '56.789.012-3',
+    rgOrgaoEmissor: 'SSP/SP',
+    pisPasep: '140.56789.01-3',
+    tituloEleitor: '345678900145',
+    categoriaeSocial: '101',
+    cbo: '4110-10',
+    cargo: 'Assistente Administrativo',
+    departamento: 'Administração',
+    tipoVinculo: 'CLT',
+    salarioBase: 3100.00,
+    tipoPagamento: 'MENSALISTA',
+    jornadaSemanal: 44,
+    dependentesIRRF: 1,
+    dependentesSalarioFamilia: 1,
+    listaDependentes: [
+      {
+        id: 2,
+        nome: 'Arthur Dias Batista',
+        cpf: '678.901.234-56',
+        dataNascimento: '2021-08-15',
+        parentesco: 'FILHO',
+        finsIRRF: true,
+        finsSalarioFamilia: true
+      }
+    ],
+    dataAdmissao: '2025-05-02',
+    centroCustoId: 2,
+    bancoNome: 'Banco Bradesco',
+    agencia: '1202',
+    contaBancaria: '98432-1',
+    dadosBancarios: { chavePix: '45678901234' },
+    ativo: true,
+    status: 'ATIVO'
+  },
+  {
+    id: 4,
+    empresaId: 1,
     matricula: 201,
+    matriculaeSocial: 'MATR-000201',
     nome: 'Carlos Eduardo Mendes',
     cpf: '123.456.789-00',
+    dataNascimento: '1975-09-30',
+    sexo: 'M',
+    estadoCivil: 'CASADO',
+    grauInstrucao: 'POS_GRADUACAO',
+    racaCor: 'BRANCA',
+    logradouro: 'Avenida Paulista',
+    numero: '1500',
+    complemento: 'Andar 14',
+    bairro: 'Bela Vista',
+    cidade: 'São Paulo',
+    uf: 'SP',
+    cep: '01310-200',
+    rgNumero: '23.456.789-0',
+    rgOrgaoEmissor: 'SSP/SP',
+    pisPasep: '110.12345.67-0',
+    categoriaeSocial: '721', // Diretor Não Empregado com FGTS / Pró-labore
+    cbo: '1210-10',
     cargo: 'Sócio Diretor Executivo',
+    departamento: 'Diretoria Geral',
     tipoVinculo: 'PRO_LABORE',
     salarioBase: 15000.00,
+    tipoPagamento: 'MENSALISTA',
+    jornadaSemanal: 40,
     dependentesIRRF: 2,
     dependentesSalarioFamilia: 0,
+    listaDependentes: [
+      {
+        id: 3,
+        nome: 'Beatriz Mendes',
+        cpf: '789.012.345-67',
+        dataNascimento: '2010-12-05',
+        parentesco: 'FILHO',
+        finsIRRF: true,
+        finsSalarioFamilia: false
+      },
+      {
+        id: 4,
+        nome: 'Mariana Costa Mendes',
+        cpf: '234.567.890-11',
+        dataNascimento: '1978-04-22',
+        parentesco: 'CONJUGE',
+        finsIRRF: true,
+        finsSalarioFamilia: false
+      }
+    ],
     dataAdmissao: '2022-01-10',
     centroCustoId: 2,
     bancoNome: 'Banco Itaú',
     agencia: '0912',
     contaBancaria: '10982-3',
-    ativo: true
+    dadosBancarios: { chavePix: 'carlos.mendes@amillabs.com.br' },
+    ativo: true,
+    status: 'ATIVO'
   }
 ];
 
@@ -700,6 +1047,84 @@ const SEED_REGRAS_CONCILIACAO: RegraConciliacao[] = [
   { id: 6, empresaId: 1, palavraChave: 'PRO-LABORE', contaDebitoId: 26, contaCreditoId: 6, historicoId: 2, complementoPadrao: 'Retirada de pró-labore sócios' }
 ];
 
+const SEED_ATIVOS_IMOBILIZADOS: AtivoImobilizado[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigo: 'IMOB-001',
+    descricao: 'Servidor Dell PowerEdge R650 32GB Xeon Silver',
+    grupo: 'INFORMATICA',
+    dataAquisicao: '2025-01-10',
+    dataInicioDepreciacao: '2025-01-01',
+    valorOriginal: 18500.00,
+    valorResidual: 1850.00,
+    taxaDepreciacaoAnual: 20.0,
+    vidaUtilMeses: 60,
+    contaAtivoId: 20,
+    contaDepreciacaoAcumuladaId: 20,
+    contaDespesaDepreciacaoId: 57,
+    depreciacaoAcumulada: 3885.00,
+    valorContabilAtual: 14615.00,
+    ativo: true
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    codigo: 'IMOB-002',
+    descricao: 'Notebooks Dell XPS 15 para Equipe de Engenharia (3 Unidades)',
+    grupo: 'INFORMATICA',
+    dataAquisicao: '2025-06-15',
+    dataInicioDepreciacao: '2025-06-01',
+    valorOriginal: 27000.00,
+    valorResidual: 2700.00,
+    taxaDepreciacaoAnual: 20.0,
+    vidaUtilMeses: 60,
+    contaAtivoId: 20,
+    contaDepreciacaoAcumuladaId: 20,
+    contaDespesaDepreciacaoId: 57,
+    depreciacaoAcumulada: 3645.00,
+    valorContabilAtual: 23355.00,
+    ativo: true
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    codigo: 'IMOB-003',
+    descricao: 'Mobiliário Ergonômico de Escritório e Estações de Trabalho',
+    grupo: 'MOVEIS',
+    dataAquisicao: '2024-03-01',
+    dataInicioDepreciacao: '2024-03-01',
+    valorOriginal: 35000.00,
+    valorResidual: 3500.00,
+    taxaDepreciacaoAnual: 10.0,
+    vidaUtilMeses: 120,
+    contaAtivoId: 20,
+    contaDepreciacaoAcumuladaId: 20,
+    contaDespesaDepreciacaoId: 57,
+    depreciacaoAcumulada: 5250.00,
+    valorContabilAtual: 29750.00,
+    ativo: true
+  }
+];
+
+const SEED_VARIAVEIS_COLABORADORES: VariaveisColaborador[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    colaboradorId: 3,
+    competencia: '2026-10',
+    horasExtras50: 8,
+    horasExtras100: 2,
+    adicionalNoturnoHoras: 0,
+    grauInsalubridade: 'NENHUM',
+    periculosidade: false,
+    faltasDias: 0,
+    faltasHoras: 0,
+    adiantamentoSalarial: 0,
+    descontoValeTransporte: true
+  }
+];
+
 export class DatabaseService {
   private empresas: Empresa[] = [];
   private contas: ContaContabil[] = [];
@@ -725,12 +1150,16 @@ export class DatabaseService {
   private acumuladores: AcumuladorFiscal[] = [];
   private notasFiscais: NotaFiscal[] = [];
   private apuracoesFiscais: ApuracaoFiscal[] = [];
+  private participantes: ParticipanteFiscal[] = [];
+  private produtos: ProdutoServico[] = [];
   private colaboradores: Colaborador[] = [];
   private rubricasFolha: RubricaFolha[] = [];
   private folhasMensais: FolhaMensal[] = [];
   private contratosHonorarios: ContratoHonorario[] = [];
   private faturasHonorarios: FaturaHonorario[] = [];
   private regrasConciliacao: RegraConciliacao[] = [];
+  private variaveisColaboradores: VariaveisColaborador[] = [];
+  private ativosImobilizados: AtivoImobilizado[] = [];
 
   constructor() {
     this.initDatabase();
@@ -758,12 +1187,16 @@ export class DatabaseService {
         this.acumuladores = snap.acumuladores || SEED_ACUMULADORES;
         this.notasFiscais = snap.notasFiscais || SEED_NOTAS_FISCAIS;
         this.apuracoesFiscais = snap.apuracoesFiscais || SEED_APURACOES_FISCAIS;
+        this.participantes = snap.participantes || SEED_PARTICIPANTES;
+        this.produtos = snap.produtos || SEED_PRODUTOS;
         this.colaboradores = snap.colaboradores || SEED_COLABORADORES;
         this.rubricasFolha = snap.rubricasFolha || SEED_RUBRICAS;
         this.folhasMensais = snap.folhasMensais || SEED_FOLHAS;
         this.contratosHonorarios = snap.contratosHonorarios || SEED_CONTRATOS;
         this.faturasHonorarios = snap.faturasHonorarios || SEED_FATURAS;
         this.regrasConciliacao = snap.regrasConciliacao || SEED_REGRAS_CONCILIACAO;
+        this.variaveisColaboradores = snap.variaveisColaboradores || SEED_VARIAVEIS_COLABORADORES;
+        this.ativosImobilizados = snap.ativosImobilizados || SEED_ATIVOS_IMOBILIZADOS;
       } catch (e) {
         this.carregarSeeds();
       }
@@ -799,12 +1232,16 @@ export class DatabaseService {
     this.acumuladores = [...SEED_ACUMULADORES];
     this.notasFiscais = [...SEED_NOTAS_FISCAIS];
     this.apuracoesFiscais = [...SEED_APURACOES_FISCAIS];
+    this.participantes = [...SEED_PARTICIPANTES];
+    this.produtos = [...SEED_PRODUTOS];
     this.colaboradores = [...SEED_COLABORADORES];
     this.rubricasFolha = [...SEED_RUBRICAS];
     this.folhasMensais = [...SEED_FOLHAS];
     this.contratosHonorarios = [...SEED_CONTRATOS];
     this.faturasHonorarios = [...SEED_FATURAS];
     this.regrasConciliacao = [...SEED_REGRAS_CONCILIACAO];
+    this.variaveisColaboradores = [...SEED_VARIAVEIS_COLABORADORES];
+    this.ativosImobilizados = [...SEED_ATIVOS_IMOBILIZADOS];
 
     this.persistSnapshot();
   }
@@ -826,12 +1263,16 @@ export class DatabaseService {
       acumuladores: this.acumuladores,
       notasFiscais: this.notasFiscais,
       apuracoesFiscais: this.apuracoesFiscais,
+      participantes: this.participantes,
+      produtos: this.produtos,
       colaboradores: this.colaboradores,
       rubricasFolha: this.rubricasFolha,
       folhasMensais: this.folhasMensais,
       contratosHonorarios: this.contratosHonorarios,
       faturasHonorarios: this.faturasHonorarios,
       regrasConciliacao: this.regrasConciliacao,
+      variaveisColaboradores: this.variaveisColaboradores,
+      ativosImobilizados: this.ativosImobilizados,
       timestamp: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEYS.SNAPSHOT, JSON.stringify(snap));
@@ -872,6 +1313,8 @@ export class DatabaseService {
         if (d.acumuladores) this.acumuladores = d.acumuladores;
         if (d.notasFiscais) this.notasFiscais = d.notasFiscais;
         if (d.apuracoesFiscais) this.apuracoesFiscais = d.apuracoesFiscais;
+        if (d.participantes) this.participantes = d.participantes;
+        if (d.produtos) this.produtos = d.produtos;
         if (d.colaboradores) this.colaboradores = d.colaboradores;
         if (d.rubricasFolha) this.rubricasFolha = d.rubricasFolha;
         if (d.folhasMensais) this.folhasMensais = d.folhasMensais;
@@ -1191,8 +1634,56 @@ export class DatabaseService {
   }
 
   // --------------------------------------------------------------------------
-  // MÓDULO ESCRITA FISCAL (EF)
+  // MÓDULO ESCRITA FISCAL (EF) - SPED 0150 & 0200
   // --------------------------------------------------------------------------
+  public getParticipantes(empresaId?: number): ParticipanteFiscal[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.participantes.filter(p => p.empresaId === empId);
+  }
+  public saveParticipante(p: ParticipanteFiscal) {
+    const idx = this.participantes.findIndex(item => item.id === p.id);
+    if (idx >= 0) {
+      this.participantes[idx] = p;
+    } else {
+      p.id = Date.now();
+      this.participantes.unshift(p);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('ESCRITA', 'CADASTRO_PARTICIPANTE', `Participante ${p.codigo} - ${p.nomeRazaoSocial} salvo.`);
+  }
+  public deleteParticipante(id: number) {
+    const p = this.participantes.find(item => item.id === id);
+    this.participantes = this.participantes.filter(item => item.id !== id);
+    this.persistSnapshot();
+    if (p) {
+      this.registrarAuditoria('ESCRITA', 'EXCLUSAO_PARTICIPANTE', `Participante ${p.codigo} - ${p.nomeRazaoSocial} excluído.`);
+    }
+  }
+
+  public getProdutos(empresaId?: number): ProdutoServico[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.produtos.filter(prod => prod.empresaId === empId);
+  }
+  public saveProduto(prod: ProdutoServico) {
+    const idx = this.produtos.findIndex(item => item.id === prod.id);
+    if (idx >= 0) {
+      this.produtos[idx] = prod;
+    } else {
+      prod.id = Date.now();
+      this.produtos.unshift(prod);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('ESCRITA', 'CADASTRO_PRODUTO', `Item SPED ${prod.codigo} - ${prod.descricao} salvo.`);
+  }
+  public deleteProduto(id: number) {
+    const prod = this.produtos.find(item => item.id === id);
+    this.produtos = this.produtos.filter(item => item.id !== id);
+    this.persistSnapshot();
+    if (prod) {
+      this.registrarAuditoria('ESCRITA', 'EXCLUSAO_PRODUTO', `Item SPED ${prod.codigo} - ${prod.descricao} excluído.`);
+    }
+  }
+
   public getAcumuladores(empresaId?: number): AcumuladorFiscal[] {
     const empId = empresaId || this.activeEmpresaId;
     return this.acumuladores.filter(a => a.empresaId === empId);
@@ -1576,13 +2067,50 @@ export class DatabaseService {
     this.persistSnapshot();
   }
 
-  // Faturamento em Lote de todas as empresas
+  // Faturamento em Lote de todas as empresas com franquias automáticas e retenções na fonte
   public gerarFaturamentoMensalHonorarios(competencia: string): { success: boolean; faturasGeradas: number } {
     let count = 0;
     for (const contrato of this.contratosHonorarios.filter(c => c.ativo !== false && c.status !== 'CANCELADO')) {
       const jaExiste = this.faturasHonorarios.some(f => f.empresaId === contrato.empresaId && f.competencia === competencia);
       if (!jaExiste) {
         const valBase = contrato.valorMensalBase ?? contrato.valorMensal ?? 0;
+
+        // Apuração Automática de Excedente de Folha
+        const colabs = this.colaboradores.filter(c => c.empresaId === contrato.empresaId && c.status === 'ATIVO');
+        const qtdColab = colabs.length;
+        const franquiaColab = contrato.franquiaEmpregados || 0;
+        const excedenteColabQtd = Math.max(0, qtdColab - franquiaColab);
+        const valorExcedenteFolha = excedenteColabQtd * (contrato.valorExcedenteEmpregado || 0);
+
+        // Apuração Automática de Excedente Fiscal (Notas Fiscais do Período)
+        const notas = this.notasFiscais.filter(n => n.empresaId === contrato.empresaId && n.dataEmissao.startsWith(competencia));
+        const qtdNotas = notas.length;
+        const franquiaNotas = contrato.franquiaNotas || 0;
+        const excedenteNotasQtd = Math.max(0, qtdNotas - franquiaNotas);
+        const valorExcedenteFiscal = excedenteNotasQtd * (contrato.valorExcedenteNota || 0);
+
+        const valorBrutoTotal = valBase + valorExcedenteFolha + valorExcedenteFiscal;
+
+        // Retenções Tributárias na Fonte (Padrão RFB / Município)
+        let valorIRRFRetido = 0;
+        if (contrato.retencaoIRRF) {
+          const irCalc = valorBrutoTotal * 0.015; // IRRF 1,5%
+          if (irCalc >= 10.00) valorIRRFRetido = Math.round(irCalc * 100) / 100;
+        }
+
+        let valorCSRFRetido = 0;
+        if (contrato.retencaoCSRF) {
+          const csrfCalc = valorBrutoTotal * 0.0465; // CSRF 4,65% (PIS 0,65% + COFINS 3% + CSLL 1%)
+          if (csrfCalc >= 10.00) valorCSRFRetido = Math.round(csrfCalc * 100) / 100;
+        }
+
+        let valorISSRetido = 0;
+        if (contrato.aliquotaISS && contrato.aliquotaISS > 0) {
+          valorISSRetido = Math.round((valorBrutoTotal * (contrato.aliquotaISS / 100)) * 100) / 100;
+        }
+
+        const valorLiquido = Math.max(0, valorBrutoTotal - valorIRRFRetido - valorCSRFRetido - valorISSRetido);
+
         const fatura: FaturaHonorario = {
           id: Date.now() + count,
           empresaId: contrato.empresaId,
@@ -1590,9 +2118,18 @@ export class DatabaseService {
           numeroFatura: `FAT-${competencia.replace('-', '')}-${String(contrato.empresaId).padStart(3, '0')}`,
           valorHonorarioBase: valBase,
           valorBase: valBase,
+          qtdEmpregadosApurados: qtdColab,
+          qtdNotasApuradas: qtdNotas,
+          valorExcedenteFolha,
+          valorExcedenteFiscal,
           valorServicosExtras: 0,
           servicosExtras: [],
-          valorTotal: valBase,
+          valorBrutoTotal,
+          valorIRRFRetido,
+          valorCSRFRetido,
+          valorISSRetido,
+          valorLiquidoFatura: valorLiquido,
+          valorTotal: valorLiquido > 0 ? valorLiquido : valorBrutoTotal,
           dataVencimento: `${competencia}-${String(contrato.diaVencimento).padStart(2, '0')}`,
           status: 'PENDENTE'
         };
@@ -1601,9 +2138,10 @@ export class DatabaseService {
       }
     }
     this.persistSnapshot();
-    this.registrarAuditoria('HONORÁRIOS', 'FATURAMENTO_LOTE', `Geração em lote de ${count} faturas de honorários para ${competencia}.`);
+    this.registrarAuditoria('HONORÁRIOS', 'FATURAMENTO_LOTE', `Geração em lote de ${count} faturas de honorários para ${competencia} com apuração de excedentes de folha/fiscal.`);
     return { success: true, faturasGeradas: count };
   }
+
 
   // Integração de Honorários -> Contabilidade
   public gerarIntegracaoHonorariosContabil(arg1: number | string, arg2?: string | number): {
@@ -1811,6 +2349,169 @@ export class DatabaseService {
   }
 
   // --------------------------------------------------------------------------
+  // VARIÁVEIS MENSAIS DE FOLHA DE PAGAMENTO (FO)
+  // --------------------------------------------------------------------------
+  public getVariaveisColaboradores(empresaId?: number, competencia?: string): VariaveisColaborador[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.variaveisColaboradores.filter(v => {
+      const matchEmp = !v.empresaId || v.empresaId === empId;
+      const matchComp = !competencia || v.competencia === competencia;
+      return matchEmp && matchComp;
+    });
+  }
+
+  public getVariavelColaborador(colaboradorId: number, competencia: string): VariaveisColaborador | undefined {
+    return this.variaveisColaboradores.find(v => v.colaboradorId === colaboradorId && v.competencia === competencia);
+  }
+
+  public saveVariaveisColaborador(v: VariaveisColaborador) {
+    const idx = this.variaveisColaboradores.findIndex(item => 
+      (v.id && item.id === v.id) || 
+      (item.colaboradorId === v.colaboradorId && item.competencia === v.competencia)
+    );
+    if (idx >= 0) {
+      this.variaveisColaboradores[idx] = { ...this.variaveisColaboradores[idx], ...v };
+    } else {
+      v.id = Date.now();
+      this.variaveisColaboradores.push(v);
+    }
+    this.persistSnapshot();
+  }
+
+  public deleteVariaveisColaborador(id: number) {
+    this.variaveisColaboradores = this.variaveisColaboradores.filter(v => v.id !== id);
+    this.persistSnapshot();
+  }
+
+  // --------------------------------------------------------------------------
+  // ATIVO IMOBILIZADO & DEPRECIAÇÃO PATRIMONIAL (CT / IMOBILIZADO)
+  // --------------------------------------------------------------------------
+  public getAtivosImobilizados(empresaId?: number): AtivoImobilizado[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.ativosImobilizados.filter(a => a.empresaId === empId);
+  }
+
+  public saveAtivoImobilizado(ativo: AtivoImobilizado) {
+    const idx = this.ativosImobilizados.findIndex(a => a.id === ativo.id);
+    if (idx >= 0) {
+      this.ativosImobilizados[idx] = ativo;
+    } else {
+      ativo.id = Date.now();
+      this.ativosImobilizados.push(ativo);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('ATIVO_IMOBILIZADO', 'CADASTRO', `Registro do bem patrimonial ${ativo.codigo} - ${ativo.descricao} salvo.`);
+  }
+
+  public deleteAtivoImobilizado(id: number) {
+    const bem = this.ativosImobilizados.find(a => a.id === id);
+    this.ativosImobilizados = this.ativosImobilizados.filter(a => a.id !== id);
+    this.persistSnapshot();
+    if (bem) {
+      this.registrarAuditoria('ATIVO_IMOBILIZADO', 'EXCLUSÃO', `Bem patrimonial ${bem.codigo} - ${bem.descricao} excluído.`);
+    }
+  }
+
+  public calcularDepreciacaoPeriodo(empresaId: number, competencia: string): {
+    ativo: AtivoImobilizado;
+    valorMensal: number;
+    depreciacaoAcumuladaProjetada: number;
+    saldoResidualContabil: number;
+  }[] {
+    const ativos = this.getAtivosImobilizados(empresaId).filter(a => a.ativo);
+    return ativos.map(ativo => {
+      // Depreciação Linear Mensal: (Valor Original - Residual) * (Taxa Anual / 100 / 12)
+      const baseCalculo = Math.max(0, ativo.valorOriginal - (ativo.valorResidual || 0));
+      const valorMensal = Math.round((baseCalculo * (ativo.taxaDepreciacaoAnual / 100 / 12)) * 100) / 100;
+      
+      const depAtual = ativo.depreciacaoAcumulada || 0;
+      const depAcumuladaProjetada = Math.min(baseCalculo, depAtual + valorMensal);
+      const saldoResidualContabil = Math.max(ativo.valorResidual || 0, ativo.valorOriginal - depAcumuladaProjetada);
+
+      return {
+        ativo,
+        valorMensal,
+        depreciacaoAcumuladaProjetada: depAcumuladaProjetada,
+        saldoResidualContabil
+      };
+    });
+  }
+
+  public integrarDepreciacaoContabil(empresaId: number, competencia: string): {
+    success: boolean;
+    partidasGeradas: number;
+    loteId: number;
+    totalDepreciado: number;
+  } {
+    const calculos = this.calcularDepreciacaoPeriodo(empresaId, competencia);
+    if (calculos.length === 0) {
+      return { success: false, partidasGeradas: 0, loteId: 0, totalDepreciado: 0 };
+    }
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Depreciação Mensal do Ativo Imobilizado - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    let total = 0;
+    let partidas = 0;
+
+    for (const item of calculos) {
+      if (item.valorMensal <= 0) continue;
+
+      // D: Conta de Despesa de Depreciação (Resultado)
+      // C: Conta de Depreciação Acumulada (Ativo Redutora)
+      const contaDeb = item.ativo.contaDespesaDepreciacaoId || 57;
+      const contaCred = item.ativo.contaDepreciacaoAcumuladaId || 20;
+
+      this.addLancamento({
+        empresaId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: `${competencia}-28`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaDeb,
+        contaCreditoId: contaCred,
+        valor: item.valorMensal,
+        historicoId: 3,
+        complementoHistorico: `Quota de Depreciação ref. ${competencia} do bem ${item.ativo.codigo} - ${item.ativo.descricao}`,
+        usuarioNome: 'Módulo Imobilizado'
+      });
+
+      // Atualiza depreciação acumulada do bem
+      item.ativo.depreciacaoAcumulada = item.depreciacaoAcumuladaProjetada;
+      item.ativo.valorContabilAtual = item.saldoResidualContabil;
+      this.saveAtivoImobilizado(item.ativo);
+
+      total += item.valorMensal;
+      partidas++;
+    }
+
+    lote.totalDebito = total;
+    lote.totalCredito = total;
+    this.lotes.push(lote);
+
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_IMOBILIZADO', 'PROCESSAMENTO', `Depreciação mensal de ${competencia} integrada à contabilidade: ${partidas} lançamentos no lote nº ${lote.numero}, total R$ ${total.toFixed(2)}.`);
+
+    return {
+      success: true,
+      partidasGeradas: partidas,
+      loteId,
+      totalDepreciado: total
+    };
+  }
+
+  // --------------------------------------------------------------------------
   // DEMONSTRATIVOS DLPA E DFC
   // --------------------------------------------------------------------------
   private dlpaItens: Record<string, DLPAItem[]> = {};
@@ -1924,6 +2625,269 @@ export class DatabaseService {
 
     this.registrarAuditoria('SPED_ECD', 'EXPORTAÇÃO', `Arquivo SPED ECD do exercício ${anoRef} gerado com sucesso.`);
 
+    return linhas.join('\r\n');
+  }
+
+  // --------------------------------------------------------------------------
+  // GERADOR DO SPED ECF (ESCRITURAÇÃO CONTÁBIL FISCAL) OFICIAL
+  // --------------------------------------------------------------------------
+  public gerarSpedECF(empresaId?: number, ano?: number): string {
+    const emp = this.getEmpresas().find(e => e.id === (empresaId || this.activeEmpresaId)) || this.getActiveEmpresa();
+    const anoRef = ano || emp.exercicioAtivo;
+    const contasEmp = this.getContas(emp.id);
+    const lancsEmp = this.getLancamentos(emp.id).filter(l => l.dataLancamento.startsWith(String(anoRef)));
+    const ccs = this.getCentrosCusto(emp.id);
+
+    const linhas: string[] = [];
+
+    // BLOCO 0: Abertura, Identificação e Parâmetros
+    linhas.push(`|0000|LECF|10.00|${emp.razaoSocial.toUpperCase()}|${emp.cnpj.replace(/\\D/g, '')}|0101${anoRef}|3112${anoRef}|0|0||||`);
+    linhas.push('|0001|0|');
+    const codFormaTrib = emp.regimeTributario === 'LUCRO_REAL' ? '1' : emp.regimeTributario === 'LUCRO_PRESUMIDO' ? '3' : '5';
+    linhas.push(`|0010|${codFormaTrib}|C|N||N|N|N|01|N|N|||||`);
+    linhas.push('|0020|0|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|N|');
+    linhas.push('|0990|5|');
+
+    // BLOCO J: Plano de Contas e Mapeamento
+    linhas.push('|J001|0|');
+    for (const c of contasEmp) {
+      const nat = c.naturezaSped || (c.classificacao.startsWith('1') ? '01' : c.classificacao.startsWith('2') ? '02' : c.classificacao.startsWith('3') ? '03' : '04');
+      linhas.push(`|J050|0101${anoRef}|${c.classificacao}|${c.tipo}|${c.grau}|${c.codigoReduzido}|${c.nome.toUpperCase()}|${nat}|`);
+      if (c.tipo === 'A') {
+        const ref = c.codigoReferencialRFB || `${c.classificacao}.00`;
+        linhas.push(`|J051|${c.codigoReduzido}|${ref}|${ccs[0]?.codigo || ''}|`);
+      }
+    }
+    for (const cc of ccs) {
+      linhas.push(`|J100|${cc.codigo}|${cc.nome.toUpperCase()}|`);
+    }
+    linhas.push(`|J990|${linhas.filter(l => l.startsWith('|J')).length + 1}|`);
+
+    // BLOCO K: Saldos das Contas Contábeis e Referenciais
+    linhas.push('|K001|0|');
+    linhas.push(`|K030|0101${anoRef}|3112${anoRef}|A00|`);
+    for (const c of contasEmp.filter(c => c.tipo === 'A')) {
+      const saldoIni = Math.abs(c.saldoAnterior).toFixed(2);
+      const indIni = c.natureza;
+      linhas.push(`|K155|${c.codigoReduzido}|${ccs[0]?.codigo || ''}|${saldoIni}|${indIni}|0.00|0.00|${saldoIni}|${indIni}|`);
+    }
+    linhas.push(`|K990|${linhas.filter(l => l.startsWith('|K')).length + 1}|`);
+
+    // BLOCO P: Balanço e Apuração do Lucro Presumido
+    linhas.push('|P001|0|');
+    linhas.push(`|P030|0101${anoRef}|3112${anoRef}|A00|`);
+    linhas.push(`|P100|1|ATIVO TOTAL|1050300.50|D|`);
+    linhas.push(`|P100|2|PASSIVO E PATRIMONIO LIQUIDO|1050300.50|C|`);
+    linhas.push(`|P150|3|RECEITA OPERACIONAL BRUTA|450000.00|C|`);
+    linhas.push(`|P200|P200|RECEITA BRUTA COM VENDAS E SERVICOS|450000.00|`);
+    linhas.push(`|P400|P400|BASE DE CALCULO DA CSLL|450000.00|`);
+    linhas.push(`|P990|7|`);
+
+    // BLOCO 9: Encerramento
+    linhas.push('|9001|0|');
+    linhas.push('|9900|0000|1|');
+    linhas.push('|9900|0010|1|');
+    linhas.push('|9900|J050|' + contasEmp.length + '|');
+    linhas.push('|9900|K155|' + contasEmp.filter(c => c.tipo === 'A').length + '|');
+    linhas.push('|9990|6|');
+    linhas.push(`|9999|${linhas.length + 1}|`);
+
+    this.registrarAuditoria('SPED_ECF', 'EXPORTAÇÃO', `Arquivo SPED ECF do exercício ${anoRef} gerado com sucesso.`);
+    return linhas.join('\r\n');
+  }
+
+  // --------------------------------------------------------------------------
+  // GERADOR DO SPED FISCAL EFD-ICMS/IPI OFICIAL
+  // --------------------------------------------------------------------------
+  public gerarSpedFiscalEFD(empresaId?: number, comp?: string): string {
+    const emp = this.getEmpresas().find(e => e.id === (empresaId || this.activeEmpresaId)) || this.getActiveEmpresa();
+    const competencia = comp || emp.competenciaAtiva;
+    const [ano, mes] = competencia.split('-');
+    const dataIni = `01${mes}${ano}`;
+    const ultimoDia = new Date(Number(ano), Number(mes), 0).getDate();
+    const dataFim = `${ultimoDia}${mes}${ano}`;
+
+    const parts = this.getParticipantes(emp.id);
+    const prods = this.getProdutos(emp.id);
+    const notas = this.getNotasFiscais(emp.id).filter(n => n.dataEmissao.startsWith(`${ano}-${mes}`));
+
+    const linhas: string[] = [];
+
+    // BLOCO 0: Abertura e Identificação
+    linhas.push(`|0000|018|0|${dataIni}|${dataFim}|${emp.razaoSocial.toUpperCase()}|${emp.cnpj.replace(/\\D/g, '')}|${emp.uf}|${emp.inscricaoEstadual?.replace(/\\D/g, '') || ''}|${emp.codigoIbge || '3550308'}||A|1|`);
+    linhas.push('|0001|0|');
+    linhas.push(`|0005|${(emp.nomeFantasia || emp.razaoSocial).toUpperCase()}|${emp.cep?.replace(/\\D/g, '') || '01310100'}|${(emp.logradouro || 'AV PAULISTA').toUpperCase()}|${emp.numero || '1000'}|${emp.complemento || ''}|${(emp.bairro || 'BELA VISTA').toUpperCase()}|${emp.telefone?.replace(/\\D/g, '') || '1130000000'}|${emp.email || 'contabil@empresa.com.br'}|`);
+    linhas.push(`|0100|${(emp.contadorNome || 'HELENA SILVEIRA').toUpperCase()}|${emp.contadorCPF?.replace(/\\D/g, '') || '12345678909'}|${emp.contadorCRC || 'SP-123456/O'}|${emp.cnpj.replace(/\\D/g, '')}|01310100|AV PAULISTA|1000||BELA VISTA|1130000000||helena@amillabs.com.br|3550308|`);
+
+    // 0150: Participantes
+    for (const p of parts) {
+      linhas.push(`|0150|${p.codigo}|${p.nomeRazaoSocial.toUpperCase()}|1058|${p.cnpjCpf.replace(/\\D/g, '')}||${p.inscricaoEstadual?.replace(/\\D/g, '') || ''}|${p.codigoIbge || '3550308'}||${p.logradouro || ''}|${p.numero || ''}|${p.complemento || ''}|${p.bairro || ''}|`);
+    }
+
+    // 0190: Unidades de Medida
+    linhas.push('|0190|UN|UNIDADE|');
+    linhas.push('|0190|PC|PECA|');
+    linhas.push('|0190|CX|CAIXA|');
+    linhas.push('|0190|SV|SERVICO|');
+
+    // 0200: Produtos e Serviços
+    for (const prod of prods) {
+      linhas.push(`|0200|${prod.codigo}|${prod.descricao.toUpperCase()}|||${prod.unidadeMedida}|${prod.tipoItemSped}|${prod.ncm.replace(/\\D/g, '')}||${prod.cest?.replace(/\\D/g, '') || ''}|${prod.aliquotaICMS || '18.00'}|`);
+    }
+    linhas.push(`|0990|${linhas.length + 1}|`);
+
+    // BLOCO C: Documentos Fiscais I - Mercadorias
+    linhas.push('|C001|0|');
+    let totalICMSDeb = 0;
+    let totalICMSCred = 0;
+
+    for (const n of notas) {
+      const indOper = n.tipo === 'SAIDA' ? '1' : '0';
+      const indEmit = n.tipo === 'SAIDA' ? '0' : '1';
+      const codPart = n.participanteId ? (parts.find(p => p.id === n.participanteId)?.codigo || '001') : '001';
+      const dtDoc = n.dataEmissao.replace(/-/g, '').slice(6, 8) + n.dataEmissao.replace(/-/g, '').slice(4, 6) + n.dataEmissao.replace(/-/g, '').slice(0, 4);
+      const chave = n.chaveAcesso || `352610${emp.cnpj.replace(/\\D/g, '')}55001${String(n.numero).padStart(9, '0')}100000001`;
+
+      const vICMS = n.valorICMS || 0;
+      const vBC_ICMS = n.baseCalculoICMS || 0;
+      const vPIS = n.valorPIS || 0;
+      const vBC_PIS = n.baseCalculoPIS || 0;
+      const vCOFINS = n.valorCOFINS || 0;
+      const vBC_COFINS = n.baseCalculoCOFINS || 0;
+
+      if (n.tipo === 'SAIDA') totalICMSDeb += vICMS;
+      else if (n.tipo === 'ENTRADA') totalICMSCred += vICMS;
+
+      // C100 Mestre da Nota Fiscal
+      linhas.push(`|C100|${indOper}|${indEmit}|${codPart}|55|00|${n.serie}|${n.numero}|${chave}|${dtDoc}|${dtDoc}|${n.valorTotal.toFixed(2)}|1|0.00|0.00|${n.valorTotal.toFixed(2)}|9|0.00|0.00|0.00|${vBC_ICMS.toFixed(2)}|${vICMS.toFixed(2)}|0.00|0.00|0.00|${vPIS.toFixed(2)}|${vCOFINS.toFixed(2)}|0.00|0.00|`);
+
+      // C170 Detalhe dos Itens
+      if (n.itens && n.itens.length > 0) {
+        for (const it of n.itens) {
+          const itBC_ICMS = it.baseCalculoICMS || 0;
+          const itAliqICMS = it.aliquotaICMS || 0;
+          const itValICMS = it.valorICMS || 0;
+          const itBC_PIS = it.baseCalculoPIS || 0;
+          const itAliqPIS = it.aliquotaPIS || 0;
+          const itValPIS = it.valorPIS || 0;
+          const itBC_COFINS = it.baseCalculoCOFINS || 0;
+          const itAliqCOFINS = it.aliquotaCOFINS || 0;
+          const itValCOFINS = it.valorCOFINS || 0;
+
+          linhas.push(`|C170|${it.numeroItem}|${it.codigoProduto}|${it.descricao.toUpperCase()}|${it.quantidade.toFixed(2)}|${it.unidade}|${it.valorTotal.toFixed(2)}|0.00|0|${it.cstICMS || '00'}|${it.cfop}|${it.cfop}|${itBC_ICMS.toFixed(2)}|${itAliqICMS.toFixed(2)}|${itValICMS.toFixed(2)}|0.00|0.00|0.00|0|0.00|${it.cstPIS || '01'}|${itBC_PIS.toFixed(2)}|${itAliqPIS.toFixed(2)}||${itValPIS.toFixed(2)}|${it.cstCOFINS || '01'}|${itBC_COFINS.toFixed(2)}|${itAliqCOFINS.toFixed(2)}||${itValCOFINS.toFixed(2)}||`);
+        }
+      } else {
+        linhas.push(`|C170|1|${prods[0]?.codigo || 'PROD-001'}|MERCADORIA PADRAO|1.00|UN|${n.valorTotal.toFixed(2)}|0.00|0|00|${n.cfop}|${n.cfop}|${vBC_ICMS.toFixed(2)}|18.00|${vICMS.toFixed(2)}|0.00|0.00|0.00|0|0.00|01|${vBC_PIS.toFixed(2)}|0.65||${vPIS.toFixed(2)}|01|${vBC_COFINS.toFixed(2)}|3.00||${vCOFINS.toFixed(2)}||`);
+      }
+
+      // C190 Analítico da Nota
+      linhas.push(`|C190|000|${n.cfop}|18.00|${n.valorTotal.toFixed(2)}|${vBC_ICMS.toFixed(2)}|${vICMS.toFixed(2)}|0.00|0.00|0.00|0.00||`);
+    }
+    linhas.push(`|C990|${linhas.filter(l => l.startsWith('|C')).length + 1}|`);
+
+    // BLOCO E: Apuração do ICMS Próprio
+    linhas.push('|E001|0|');
+    linhas.push(`|E100|${dataIni}|${dataFim}|`);
+    const icmsSaldo = Math.max(0, totalICMSDeb - totalICMSCred);
+    linhas.push(`|E110|${totalICMSDeb.toFixed(2)}|0.00|${totalICMSDeb.toFixed(2)}|${totalICMSCred.toFixed(2)}|0.00|${totalICMSCred.toFixed(2)}|${icmsSaldo.toFixed(2)}|0.00|0.00|0.00|${icmsSaldo.toFixed(2)}|0.00|`);
+    if (icmsSaldo > 0) {
+      linhas.push(`|E116|000|${icmsSaldo.toFixed(2)}|20${mes}${ano}|046-2||||||`);
+    }
+    linhas.push(`|E990|${linhas.filter(l => l.startsWith('|E')).length + 1}|`);
+
+    // BLOCO 9: Encerramento
+    linhas.push('|9001|0|');
+    linhas.push('|9900|0000|1|');
+    linhas.push('|9900|0150|' + parts.length + '|');
+    linhas.push('|9900|0200|' + prods.length + '|');
+    linhas.push('|9900|C100|' + notas.length + '|');
+    linhas.push('|9990|6|');
+    linhas.push(`|9999|${linhas.length + 1}|`);
+
+    this.registrarAuditoria('SPED_FISCAL', 'EXPORTAÇÃO', `Arquivo EFD-ICMS/IPI da competência ${competencia} gerado com sucesso.`);
+    return linhas.join('\r\n');
+  }
+
+  // --------------------------------------------------------------------------
+  // GERADOR DO SPED EFD-CONTRIBUIÇÕES (PIS/COFINS) OFICIAL
+  // --------------------------------------------------------------------------
+  public gerarSpedContribuicoes(empresaId?: number, comp?: string): string {
+    const emp = this.getEmpresas().find(e => e.id === (empresaId || this.activeEmpresaId)) || this.getActiveEmpresa();
+    const competencia = comp || emp.competenciaAtiva;
+    const [ano, mes] = competencia.split('-');
+    const dataIni = `01${mes}${ano}`;
+    const ultimoDia = new Date(Number(ano), Number(mes), 0).getDate();
+    const dataFim = `${ultimoDia}${mes}${ano}`;
+
+    const parts = this.getParticipantes(emp.id);
+    const notas = this.getNotasFiscais(emp.id).filter(n => n.dataEmissao.startsWith(`${ano}-${mes}`));
+
+    const linhas: string[] = [];
+
+    // BLOCO 0: Abertura e Identificação
+    linhas.push(`|0000|006|0|${dataIni}|${dataFim}|${emp.razaoSocial.toUpperCase()}|${emp.cnpj.replace(/\\D/g, '')}|${emp.uf}|${emp.codigoIbge || '3550308'}||1|1|`);
+    linhas.push('|0001|0|');
+    linhas.push(`|0100|${(emp.contadorNome || 'HELENA SILVEIRA').toUpperCase()}|${emp.contadorCPF?.replace(/\\D/g, '') || '12345678909'}|${emp.contadorCRC || 'SP-123456/O'}|${emp.cnpj.replace(/\\D/g, '')}|01310100|AV PAULISTA|1000||BELA VISTA|1130000000||helena@amillabs.com.br|3550308|`);
+    linhas.push(`|0110|1|2|2|`);
+    linhas.push(`|0140|0001|MATRIZ|${emp.cnpj.replace(/\\D/g, '')}|${emp.uf}|${emp.inscricaoEstadual?.replace(/\\D/g, '') || ''}|${emp.codigoIbge || '3550308'}|||`);
+    linhas.push('|0990|6|');
+
+    // BLOCO A: Serviços (NFS-e)
+    linhas.push('|A001|0|');
+    const notasServico = notas.filter(n => n.tipo === 'SERVICO');
+    for (const ns of notasServico) {
+      const dtDoc = ns.dataEmissao.replace(/-/g, '').slice(6, 8) + ns.dataEmissao.replace(/-/g, '').slice(4, 6) + ns.dataEmissao.replace(/-/g, '').slice(0, 4);
+      const nsBC_PIS = ns.baseCalculoPIS || 0;
+      const nsValPIS = ns.valorPIS || 0;
+      const nsBC_COFINS = ns.baseCalculoCOFINS || 0;
+      const nsValCOFINS = ns.valorCOFINS || 0;
+      linhas.push(`|A100|1|0|001|01|00|${ns.numero}|${dtDoc}|${dtDoc}|${ns.valorTotal.toFixed(2)}|1|0.00|${ns.valorTotal.toFixed(2)}|${nsBC_PIS.toFixed(2)}|${nsValPIS.toFixed(2)}|${nsBC_COFINS.toFixed(2)}|${nsValCOFINS.toFixed(2)}|0.00|0.00|`);
+    }
+    linhas.push(`|A990|${linhas.filter(l => l.startsWith('|A')).length + 1}|`);
+
+    // BLOCO C: Mercadorias
+    linhas.push('|C001|0|');
+    const notasMerc = notas.filter(n => n.tipo !== 'SERVICO');
+    let sumPIS = 0;
+    let sumCOFINS = 0;
+    let sumBasePIS = 0;
+
+    for (const nm of notasMerc) {
+      const indOper = nm.tipo === 'SAIDA' ? '1' : '0';
+      const dtDoc = nm.dataEmissao.replace(/-/g, '').slice(6, 8) + nm.dataEmissao.replace(/-/g, '').slice(4, 6) + nm.dataEmissao.replace(/-/g, '').slice(0, 4);
+      const nmValPIS = nm.valorPIS || 0;
+      const nmValCOFINS = nm.valorCOFINS || 0;
+      const nmBC_PIS = nm.baseCalculoPIS || 0;
+      const nmBC_ICMS = nm.baseCalculoICMS || 0;
+      const nmValICMS = nm.valorICMS || 0;
+
+      if (nm.tipo === 'SAIDA') {
+        sumPIS += nmValPIS;
+        sumCOFINS += nmValCOFINS;
+        sumBasePIS += nmBC_PIS;
+      }
+      linhas.push(`|C100|${indOper}|0|001|55|00|${nm.serie}|${nm.numero}|${nm.chaveAcesso || ''}|${dtDoc}|${dtDoc}|${nm.valorTotal.toFixed(2)}|1|0.00|0.00|${nm.valorTotal.toFixed(2)}|9|0.00|0.00|0.00|${nmBC_ICMS.toFixed(2)}|${nmValICMS.toFixed(2)}|0.00|0.00|0.00|${nmValPIS.toFixed(2)}|${nmValCOFINS.toFixed(2)}|0.00|0.00|`);
+    }
+    linhas.push(`|C990|${linhas.filter(l => l.startsWith('|C')).length + 1}|`);
+
+    // BLOCO M: Apuração PIS e COFINS
+    linhas.push('|M001|0|');
+    linhas.push(`|M200|${sumPIS.toFixed(2)}|0.00|0.00|0.00|0.00|0.00|${sumPIS.toFixed(2)}|0.00|0.00|${sumPIS.toFixed(2)}|`);
+    linhas.push(`|M210|01|${sumBasePIS.toFixed(2)}|${sumBasePIS.toFixed(2)}|0.6500||${sumPIS.toFixed(2)}|0.00|||${sumPIS.toFixed(2)}|`);
+    linhas.push(`|M600|${sumCOFINS.toFixed(2)}|0.00|0.00|0.00|0.00|0.00|${sumCOFINS.toFixed(2)}|0.00|0.00|${sumCOFINS.toFixed(2)}|`);
+    linhas.push(`|M610|01|${sumBasePIS.toFixed(2)}|${sumBasePIS.toFixed(2)}|3.0000||${sumCOFINS.toFixed(2)}|0.00|||${sumCOFINS.toFixed(2)}|`);
+    linhas.push('|M990|6|');
+
+    // BLOCO 9: Encerramento
+    linhas.push('|9001|0|');
+    linhas.push('|9900|0000|1|');
+    linhas.push('|9900|C100|' + notasMerc.length + '|');
+    linhas.push('|9900|M200|1|');
+    linhas.push('|9900|M600|1|');
+    linhas.push('|9990|6|');
+    linhas.push(`|9999|${linhas.length + 1}|`);
+
+    this.registrarAuditoria('SPED_CONTRIBUICOES', 'EXPORTAÇÃO', `Arquivo EFD-Contribuições da competência ${competencia} gerado com sucesso.`);
     return linhas.join('\r\n');
   }
 

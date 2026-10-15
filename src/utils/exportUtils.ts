@@ -3,23 +3,34 @@
  */
 
 export function exportToCSV(
-  filename: string,
-  arg1: string[] | (string | number)[][],
-  arg2: string[] | (string | number)[][]
+  arg1: string | Record<string, any>[],
+  arg2?: string | string[] | (string | number)[][],
+  arg3?: string[] | (string | number)[][]
 ) {
   // Adiciona BOM UTF-8 (\uFEFF) para que o Microsoft Excel no Windows reconheça acentuação correta
   const BOM = '\uFEFF';
 
+  let filename = 'relatorio.csv';
   let headers: string[] = [];
   let rows: (string | number)[][] = [];
 
-  // Suporte flexível para (filename, headers, rows) ou (filename, rows, headers)
-  if (Array.isArray(arg1) && arg1.length > 0 && typeof arg1[0] === 'string' && !Array.isArray(arg1[0])) {
-    headers = arg1 as string[];
-    rows = (arg2 || []) as (string | number)[][];
-  } else {
-    rows = (arg1 || []) as (string | number)[][];
-    headers = (arg2 || []) as string[];
+  if (Array.isArray(arg1) && typeof arg2 === 'string') {
+    // Chamada: exportToCSV(dataObjects, filename)
+    filename = arg2;
+    if (arg1.length > 0) {
+      headers = Object.keys(arg1[0]);
+      rows = arg1.map(obj => headers.map(h => obj[h] ?? ''));
+    }
+  } else if (typeof arg1 === 'string') {
+    // Chamada: exportToCSV(filename, headers, rows) ou exportToCSV(filename, rows, headers)
+    filename = arg1;
+    if (Array.isArray(arg2) && arg2.length > 0 && typeof arg2[0] === 'string' && !Array.isArray(arg2[0])) {
+      headers = arg2 as string[];
+      rows = (arg3 || []) as (string | number)[][];
+    } else {
+      rows = (arg2 || []) as (string | number)[][];
+      headers = (arg3 || []) as string[];
+    }
   }
   
   const csvContent = [

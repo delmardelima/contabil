@@ -26,10 +26,10 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
     const rows: (string | number)[][] = items.map(i => [
       i.ordem,
       i.descricao,
-      i.tipoLinha,
-      i.operacao,
+      i.tipoLinha || 'CONTA',
+      i.operacao || 'SOMA',
       i.operacao === 'SUBTRAI' ? -i.valor : i.valor,
-      i.analiseVerticalPerc.toFixed(2) + '%'
+      ((i.analiseVerticalPerc ?? 0).toFixed(2)) + '%'
     ]);
     exportToCSV(`DRE_Dedutiva_${new Date().toISOString().split('T')[0]}`, rows, headers);
   };
@@ -129,7 +129,7 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
 
               return (
                 <tr
-                  key={item.id}
+                  key={item.id ?? item.ordem}
                   className={`transition-colors ${
                     isTotalGeral
                       ? 'bg-emerald-950/20 font-bold text-neutral-100 text-sm border-t-2 border-emerald-500/40'
@@ -153,7 +153,7 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
                     <span className={`px-2 py-0.5 rounded font-mono font-medium text-[11px] ${
                       isTotalGeral ? 'bg-emerald-500/20 text-emerald-400' : 'bg-neutral-800 text-neutral-400'
                     }`}>
-                      {item.analiseVerticalPerc.toFixed(2)}%
+                      {(item.analiseVerticalPerc ?? 0).toFixed(2)}%
                     </span>
                   </td>
                 </tr>

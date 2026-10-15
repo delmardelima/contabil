@@ -55,10 +55,10 @@ export const UsuariosModule: React.FC = () => {
   };
 
   const filteredLogs = auditoriaLogs.filter(log => 
-    log.usuarioNome.toLowerCase().includes(buscaAuditoria.toLowerCase()) ||
-    log.modulo.toLowerCase().includes(buscaAuditoria.toLowerCase()) ||
-    log.acao.toLowerCase().includes(buscaAuditoria.toLowerCase()) ||
-    log.descricao.toLowerCase().includes(buscaAuditoria.toLowerCase())
+    (log.usuarioNome || '').toLowerCase().includes(buscaAuditoria.toLowerCase()) ||
+    (log.modulo || '').toLowerCase().includes(buscaAuditoria.toLowerCase()) ||
+    (log.acao || '').toLowerCase().includes(buscaAuditoria.toLowerCase()) ||
+    (log.descricao || log.detalhes || '').toLowerCase().includes(buscaAuditoria.toLowerCase())
   );
 
   return (

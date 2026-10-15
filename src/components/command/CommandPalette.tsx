@@ -27,7 +27,8 @@ import {
   DollarSign,
   Receipt,
   Calculator,
-  CreditCard
+  CreditCard,
+  Archive
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -88,6 +89,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     { id: 'redeBackup', label: 'Rede Local LAN & Backup (.bak)', icon: Network },
     { id: 'auditoria', label: 'Auditoria de Saldos Invertidos & Furos', icon: ShieldAlert },
     { id: 'transporteSaldos', label: 'Transporte de Saldos Patrimoniais Anual', icon: ArrowRightLeft },
+    { id: 'ativoImobilizado', label: 'Ativo Imobilizado & Depreciação Mensal (CPC 27)', icon: Archive },
 
     // Escrita Fiscal
     { id: 'dashboardFiscal', label: 'Dashboard Fiscal & Faturamento', icon: Receipt },

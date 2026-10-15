@@ -1,5 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ContaContabil, HistoricoPadrao, LancamentoContabil, PartidaMultiplaItem, CentroCusto, LoteContabil, LancamentoPadrao } from '../../types/contabil';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { 
+  ContaContabil, 
+  HistoricoPadrao, 
+  LancamentoContabil, 
+  PartidaMultiplaItem, 
+  CentroCusto, 
+  LoteContabil, 
+  LancamentoPadrao,
+  RateioCentroCusto 
+} from '../../types/contabil';
 import { dbService } from '../../db/sqliteService';
 import { 
   Plus, 
@@ -16,9 +25,18 @@ import {
   PieChart,
   Repeat,
   Save,
-  Check
+  Check,
+  CheckSquare,
+  Square,
+  Split,
+  ChevronDown,
+  ChevronRight,
+  Info,
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportUtils';
+import { formatCurrency, formatPercent } from '../../utils/formatters';
 
 interface LancamentosModuleProps {
   contas: ContaContabil[];
@@ -62,6 +80,20 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
   const [loteId, setLoteId] = useState<number>(lotes[0]?.id || 1);
   const [erroMsg, setErroMsg] = useState<string>('');
 
+  // Rateio Gerencial Multi-Centros de Custo (Partida Simples)
+  const [habilitarRateio, setHabilitarRateio] = useState<boolean>(false);
+  const [rateios, setRateios] = useState<RateioCentroCusto[]>(() => {
+    if (centrosCusto.length >= 2) {
+      return [
+        { id: 1, centroCustoId: centrosCusto[0].id, percentual: 50, valor: 0 },
+        { id: 2, centroCustoId: centrosCusto[1].id, percentual: 50, valor: 0 }
+      ];
+    } else if (centrosCusto.length === 1) {
+      return [{ id: 1, centroCustoId: centrosCusto[0].id, percentual: 100, valor: 0 }];
+    }
+    return [];
+  });
+
   // Partida Múltipla Grade
   const [multiplasItens, setMultiplasItens] = useState<PartidaMultiplaItem[]>([
     { id: '1', tipo: 'DEBITO', contaId: 0, valor: 0, complemento: '' },
@@ -75,6 +107,22 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
   const [editValor, setEditValor] = useState<string>('');
   const [editComplemento, setEditComplemento] = useState<string>('');
   const [editData, setEditData] = useState<string>('');
+  const [editCentroCustoId, setEditCentroCustoId] = useState<number>(0);
+  const [editHabilitarRateio, setEditHabilitarRateio] = useState<boolean>(false);
+  const [editRateios, setEditRateios] = useState<RateioCentroCusto[]>([]);
+
+  // Modal Detalhes do Rateio de um Lançamento
+  const [detalheRateioLanc, setDetalheRateioLanc] = useState<LancamentoContabil | null>(null);
+
+  // Seleção e Exclusão em Lote
+  const [selecionados, setSelecionados] = useState<number[]>([]);
+
+  // Modal F2 (Busca Rápida de Contas e Históricos)
+  const [showF2Modal, setShowF2Modal] = useState<boolean>(false);
+  const [f2Tipo, setF2Tipo] = useState<'DEBITO' | 'CREDITO' | 'HISTORICO'>('DEBITO');
+  const [f2Query, setF2Query] = useState<string>('');
+  const [f2SelectedIndex, setF2SelectedIndex] = useState<number>(0);
+  const f2InputRef = useRef<HTMLInputElement>(null);
 
   // Modal F11 (Contas e Históricos Recentes)
   const [showF11Modal, setShowF11Modal] = useState<boolean>(false);
@@ -90,17 +138,57 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
   const inputComplRef = useRef<HTMLInputElement>(null);
 
   // Contas analíticas
-  const contasAnaliticas = contas.filter(c => c.tipo === 'A');
+  const contasAnaliticas = useMemo(() => contas.filter(c => c.tipo === 'A'), [contas]);
 
   // Encontrar conta selecionada no form
   const contaDebitoObj = contas.find(c => c.codigoReduzido.toString() === codDebito || c.classificacao === codDebito);
   const contaCreditoObj = contas.find(c => c.codigoReduzido.toString() === codCredito || c.classificacao === codCredito);
   const historicoObj = historicos.find(h => h.codigo.toString() === codHistorico);
 
-  // Escuta tecla F11 globalmente dentro do módulo
+  // Parse do valor numérico da partida
+  const valorNumPartida = useMemo(() => {
+    const val = parseFloat(valor.replace(/\./g, '').replace(',', '.'));
+    return isNaN(val) ? 0 : val;
+  }, [valor]);
+
+  // Recalcular valores de rateio quando valor da partida ou % do rateio mudar
+  useEffect(() => {
+    if (habilitarRateio && valorNumPartida > 0) {
+      setRateios(prev => prev.map(r => ({
+        ...r,
+        valor: parseFloat(((valorNumPartida * (r.percentual || 0)) / 100).toFixed(2))
+      })));
+    }
+  }, [valorNumPartida, habilitarRateio]);
+
+  // Totais do Rateio Atual
+  const totalPercRateio = useMemo(() => {
+    return rateios.reduce((s, r) => s + (Number(r.percentual) || 0), 0);
+  }, [rateios]);
+
+  const totalValorRateio = useMemo(() => {
+    return rateios.reduce((s, r) => s + (Number(r.valor) || 0), 0);
+  }, [rateios]);
+
+  const rateioBalanceado = Math.abs(totalPercRateio - 100) < 0.05;
+
+  // Escuta teclas de atalho: F2 (Busca Rápida), F8 (Rateio), F11 (Frequentes)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F11') {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        // Determina contexto do F2
+        if (document.activeElement === inputCreditoRef.current) {
+          abrirF2('CREDITO');
+        } else if (document.activeElement === inputHistRef.current) {
+          abrirF2('HISTORICO');
+        } else {
+          abrirF2('DEBITO');
+        }
+      } else if (e.key === 'F8') {
+        e.preventDefault();
+        setHabilitarRateio(prev => !prev);
+      } else if (e.key === 'F11') {
         e.preventDefault();
         setShowF11Modal(prev => !prev);
       }
@@ -108,6 +196,52 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+
+  const abrirF2 = (tipo: 'DEBITO' | 'CREDITO' | 'HISTORICO') => {
+    setF2Tipo(tipo);
+    setF2Query('');
+    setF2SelectedIndex(0);
+    setShowF2Modal(true);
+    setTimeout(() => f2InputRef.current?.focus(), 80);
+  };
+
+  // Filtragem dos itens para o Modal F2
+  const f2ItensFiltrados = useMemo(() => {
+    const q = f2Query.trim().toLowerCase();
+    if (f2Tipo === 'HISTORICO') {
+      if (!q) return historicos;
+      return historicos.filter(h => 
+        h.codigo.toString().includes(q) || 
+        h.descricao.toLowerCase().includes(q)
+      );
+    } else {
+      if (!q) return contasAnaliticas;
+      return contasAnaliticas.filter(c => 
+        c.codigoReduzido.toString().includes(q) || 
+        c.classificacao.toLowerCase().includes(q) || 
+        c.nome.toLowerCase().includes(q)
+      );
+    }
+  }, [f2Tipo, f2Query, historicos, contasAnaliticas]);
+
+  const handleSelectF2Item = (item: ContaContabil | HistoricoPadrao) => {
+    if (f2Tipo === 'DEBITO') {
+      const c = item as ContaContabil;
+      setCodDebito(c.codigoReduzido.toString());
+      setShowF2Modal(false);
+      setTimeout(() => inputCreditoRef.current?.focus(), 50);
+    } else if (f2Tipo === 'CREDITO') {
+      const c = item as ContaContabil;
+      setCodCredito(c.codigoReduzido.toString());
+      setShowF2Modal(false);
+      setTimeout(() => inputValorRef.current?.focus(), 50);
+    } else if (f2Tipo === 'HISTORICO') {
+      const h = item as HistoricoPadrao;
+      setCodHistorico(h.codigo.toString());
+      setShowF2Modal(false);
+      setTimeout(() => inputComplRef.current?.focus(), 50);
+    }
+  };
 
   // Aplicação Rápida de Lançamento Padrão
   const handleAplicarLancamentoPadrao = (padraoId: number) => {
@@ -122,6 +256,59 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
     if (cCred) setCodCredito(cCred.codigoReduzido.toString());
     if (h) setCodHistorico(h.codigo.toString());
     if (p.complementoPadrao) setComplemento(p.complementoPadrao);
+  };
+
+  // Funções de Rateio Multi-Centros
+  const handleAddLinhaRateio = () => {
+    const defaultCC = centrosCusto.find(cc => !rateios.some(r => r.centroCustoId === cc.id)) || centrosCusto[0];
+    if (!defaultCC) {
+      alert('Nenhum Centro de Custo disponível para adicionar.');
+      return;
+    }
+    const novo: RateioCentroCusto = {
+      id: Date.now(),
+      centroCustoId: defaultCC.id,
+      percentual: 0,
+      valor: 0
+    };
+    setRateios([...rateios, novo]);
+  };
+
+  const handleRemoveLinhaRateio = (id: string | number) => {
+    if (rateios.length <= 1) {
+      alert('O rateio precisa de pelo menos 1 linha.');
+      return;
+    }
+    setRateios(rateios.filter(r => r.id !== id));
+  };
+
+  const handleDistribuirIgualmenteRateio = () => {
+    if (rateios.length === 0) return;
+    const percIgual = parseFloat((100 / rateios.length).toFixed(2));
+    const resto = parseFloat((100 - (percIgual * (rateios.length - 1))).toFixed(2));
+
+    const atualizados = rateios.map((r, idx) => {
+      const p = idx === rateios.length - 1 ? resto : percIgual;
+      const v = valorNumPartida > 0 ? parseFloat(((valorNumPartida * p) / 100).toFixed(2)) : 0;
+      return { ...r, percentual: p, valor: v };
+    });
+    setRateios(atualizados);
+  };
+
+  const handlePercentualRateioChange = (id: string | number, novoPerc: number) => {
+    setRateios(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const v = valorNumPartida > 0 ? parseFloat(((valorNumPartida * novoPerc) / 100).toFixed(2)) : 0;
+      return { ...r, percentual: novoPerc, valor: v };
+    }));
+  };
+
+  const handleValorRateioChange = (id: string | number, novoVal: number) => {
+    setRateios(prev => prev.map(r => {
+      if (r.id !== id) return r;
+      const p = valorNumPartida > 0 ? parseFloat(((novoVal / valorNumPartida) * 100).toFixed(2)) : 0;
+      return { ...r, percentual: p, valor: novoVal };
+    }));
   };
 
   // Gravar Partida Simples
@@ -150,6 +337,18 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
       return;
     }
 
+    // Validação de Rateio
+    if (habilitarRateio) {
+      if (rateios.length === 0) {
+        setErroMsg('Adicione ao menos um Centro de Custo no rateio.');
+        return;
+      }
+      if (!rateioBalanceado) {
+        setErroMsg(`O rateio de Centros de Custo deve somar 100% (atual: ${totalPercRateio.toFixed(2)}%).`);
+        return;
+      }
+    }
+
     onAddLancamento({
       empresaId,
       numeroPartida: lancamentos.length + 1,
@@ -159,7 +358,8 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
       contaDebitoId: contaDebitoObj.id,
       contaCreditoId: contaCreditoObj.id,
       valor: numValor,
-      centroCustoId: centroCustoId || undefined,
+      centroCustoId: !habilitarRateio && centroCustoId ? centroCustoId : undefined,
+      rateios: habilitarRateio ? JSON.parse(JSON.stringify(rateios)) : undefined,
       historicoId: historicoObj?.id,
       complementoHistorico: complemento
     });
@@ -190,7 +390,6 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
 
     // Casos de Decomposição: 1:N (1 Débito para N Créditos), N:1 (N Débitos para 1 Crédito), ou N:N
     if (debitos.length === 1) {
-      // 1:N
       const debUnico = debitos[0];
       for (const c of creditos) {
         onAddLancamento({
@@ -207,7 +406,6 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
         });
       }
     } else if (creditos.length === 1) {
-      // N:1
       const credUnico = creditos[0];
       for (const d of debitos) {
         onAddLancamento({
@@ -224,27 +422,27 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
         });
       }
     } else {
-      // N:N genérico
-      for (let i = 0; i < Math.max(debitos.length, creditos.length); i++) {
-        const d = debitos[i % debitos.length];
-        const c = creditos[i % creditos.length];
-        const valParcial = Math.min(d.valor, c.valor);
-        onAddLancamento({
-          empresaId,
-          numeroPartida: proximoNumeroPartida,
-          loteId: loteId || undefined,
-          dataLancamento: dataLanc,
-          tipoPartida: 'MULTIPLA',
-          contaDebitoId: d.contaId,
-          contaCreditoId: c.contaId,
-          valor: valParcial,
-          centroCustoId: centroCustoId || undefined,
-          complementoHistorico: d.complemento || c.complemento || 'Partida Múltipla N:N'
-        });
+      // N:N proporção contábil direta
+      for (const d of debitos) {
+        for (const c of creditos) {
+          const valorProporcional = (d.valor * c.valor) / totDeb;
+          onAddLancamento({
+            empresaId,
+            numeroPartida: proximoNumeroPartida,
+            loteId: loteId || undefined,
+            dataLancamento: dataLanc,
+            tipoPartida: 'MULTIPLA',
+            contaDebitoId: d.contaId,
+            contaCreditoId: c.contaId,
+            valor: parseFloat(valorProporcional.toFixed(2)),
+            centroCustoId: d.centroCustoId || c.centroCustoId || centroCustoId || undefined,
+            complementoHistorico: d.complemento || c.complemento || 'Partida Múltipla Composta N:N'
+          });
+        }
       }
     }
 
-    // Reset da grade múltipla
+    setModo('SIMPLES');
     setMultiplasItens([
       { id: '1', tipo: 'DEBITO', contaId: 0, valor: 0, complemento: '' },
       { id: '2', tipo: 'CREDITO', contaId: 0, valor: 0, complemento: '' }
@@ -259,6 +457,9 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
     setEditValor(l.valor.toFixed(2).replace('.', ','));
     setEditComplemento(l.complementoHistorico);
     setEditData(l.dataLancamento);
+    setEditCentroCustoId(l.centroCustoId || 0);
+    setEditHabilitarRateio(!!(l.rateios && l.rateios.length > 0));
+    setEditRateios(l.rateios ? JSON.parse(JSON.stringify(l.rateios)) : []);
   };
 
   const handleSalvarEdicao = () => {
@@ -266,13 +467,23 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
     const valNum = parseFloat(editValor.replace(/\./g, '').replace(',', '.'));
     if (isNaN(valNum) || valNum <= 0) return;
 
+    if (editHabilitarRateio) {
+      const somaPerc = editRateios.reduce((s, r) => s + (Number(r.percentual) || 0), 0);
+      if (Math.abs(somaPerc - 100) > 0.05) {
+        alert(`O rateio deve totalizar 100% (atual: ${somaPerc.toFixed(2)}%).`);
+        return;
+      }
+    }
+
     const atualizado: LancamentoContabil = {
       ...editandoLancamento,
       contaDebitoId: editDebitoId,
       contaCreditoId: editCreditoId,
       valor: valNum,
       complementoHistorico: editComplemento,
-      dataLancamento: editData
+      dataLancamento: editData,
+      centroCustoId: !editHabilitarRateio && editCentroCustoId ? editCentroCustoId : undefined,
+      rateios: editHabilitarRateio ? editRateios : undefined
     };
 
     if (onEditLancamento) {
@@ -294,25 +505,52 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
     }
   };
 
+  // Ações em Lote (Batch Delete)
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelecionados(lancamentosFiltrados.map(l => l.id));
+    } else {
+      setSelecionados([]);
+    }
+  };
+
+  const handleToggleSelectOne = (id: number) => {
+    setSelecionados(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleExcluirLote = () => {
+    if (selecionados.length === 0) return;
+    if (confirm(`Excluir permanentemente as ${selecionados.length} partidas contábeis selecionadas?`)) {
+      for (const id of selecionados) {
+        onDeleteLancamento(id);
+      }
+      setSelecionados([]);
+    }
+  };
+
   // Cálculo DxC de Partida Múltipla
   const totalMultiploDebito = multiplasItens.filter(i => i.tipo === 'DEBITO').reduce((acc, i) => acc + (i.valor || 0), 0);
   const totalMultiploCredito = multiplasItens.filter(i => i.tipo === 'CREDITO').reduce((acc, i) => acc + (i.valor || 0), 0);
   const diferencaMultipla = Math.abs(totalMultiploDebito - totalMultiploCredito);
 
   // Filtragem da lista
-  const lancamentosFiltrados = lancamentos.filter(l => {
-    if (!filtroTexto) return true;
-    const txt = filtroTexto.toLowerCase();
-    const deb = contas.find(c => c.id === l.contaDebitoId)?.nome.toLowerCase() || '';
-    const cred = contas.find(c => c.id === l.contaCreditoId)?.nome.toLowerCase() || '';
-    const compl = l.complementoHistorico.toLowerCase();
-    return deb.includes(txt) || cred.includes(txt) || compl.includes(txt) || l.valor.toString().includes(txt) || l.numeroPartida.toString().includes(txt);
-  });
+  const lancamentosFiltrados = useMemo(() => {
+    return lancamentos.filter(l => {
+      if (!filtroTexto) return true;
+      const txt = filtroTexto.toLowerCase();
+      const deb = contas.find(c => c.id === l.contaDebitoId)?.nome.toLowerCase() || '';
+      const cred = contas.find(c => c.id === l.contaCreditoId)?.nome.toLowerCase() || '';
+      const compl = l.complementoHistorico.toLowerCase();
+      return deb.includes(txt) || cred.includes(txt) || compl.includes(txt) || l.valor.toString().includes(txt) || l.numeroPartida.toString().includes(txt);
+    });
+  }, [lancamentos, filtroTexto, contas]);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#141414] text-neutral-200 overflow-hidden select-none">
-      {/* Top Header do Módulo: Alternador Simples / Múltipla + Indicador DxC */}
-      <div className="px-4 py-2.5 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between">
+      {/* Top Header do Módulo: Alternador Simples / Múltipla + Atalhos */}
+      <div className="px-4 py-2.5 bg-[#181818] border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Tipo de Partida:</span>
           <div className="flex items-center bg-neutral-900 rounded-lg p-0.5 border border-white/10 text-xs">
@@ -338,6 +576,24 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
               <span>Partida Múltipla (1:N / N:N)</span>
             </button>
           </div>
+
+          {/* Toggle Rateio Gerencial */}
+          {modo === 'SIMPLES' && (
+            <button
+              type="button"
+              onClick={() => setHabilitarRateio(prev => !prev)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border flex items-center space-x-1.5 transition-colors ${
+                habilitarRateio 
+                  ? 'bg-purple-600/20 text-purple-300 border-purple-500/40 shadow-sm' 
+                  : 'bg-neutral-800 text-neutral-400 border-white/10 hover:text-neutral-200'
+              }`}
+              title="Ativar/desativar rateio multi-centros de custo (F8)"
+            >
+              <Split className="w-3.5 h-3.5 text-purple-400" />
+              <span>Rateio Multi-Centros</span>
+              <kbd className="bg-black/30 px-1 py-0.2 rounded text-[10px] font-mono border border-white/10">F8</kbd>
+            </button>
+          )}
         </div>
 
         {/* Lançamento Padrão & Atalho F11 */}
@@ -358,11 +614,21 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
           )}
 
           <button
+            onClick={() => abrirF2('DEBITO')}
+            className="flex items-center space-x-1.5 px-2.5 py-1 bg-neutral-800/80 hover:bg-neutral-800 rounded border border-white/10 text-neutral-300 text-xs transition-colors"
+            title="Buscar Conta ou Histórico (F2)"
+          >
+            <Search className="w-3.5 h-3.5 text-blue-400" />
+            <span>Busca Rápida</span>
+            <kbd className="bg-neutral-900 px-1.5 py-0.5 rounded text-[10px] font-mono border border-white/10">F2</kbd>
+          </button>
+
+          <button
             onClick={() => setShowF11Modal(true)}
             className="flex items-center space-x-1.5 px-2.5 py-1 bg-neutral-800/80 hover:bg-neutral-800 rounded border border-white/10 text-neutral-300 text-xs transition-colors"
           >
-            <History className="w-3.5 h-3.5 text-blue-400" />
-            <span>Consultar Frequentes</span>
+            <History className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Frequentes</span>
             <kbd className="bg-neutral-900 px-1.5 py-0.5 rounded text-[10px] font-mono border border-white/10">F11</kbd>
           </button>
         </div>
@@ -370,9 +636,9 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
 
       {/* Formulário Partida Simples */}
       {modo === 'SIMPLES' ? (
-        <form onSubmit={handleGravarSimples} className="p-4 bg-[#1e1e1e] border-b border-white/10">
+        <form onSubmit={handleGravarSimples} className="p-4 bg-[#1c1c1c] border-b border-white/10 space-y-3">
           {erroMsg && (
-            <div className="mb-3 px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded text-xs flex items-center space-x-2">
+            <div className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded text-xs flex items-center space-x-2">
               <AlertTriangle className="w-4 h-4 flex-shrink-0" />
               <span>{erroMsg}</span>
             </div>
@@ -392,7 +658,16 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
 
             {/* 2. Conta Débito */}
             <div className="col-span-3">
-              <label className="block text-[11px] font-medium text-blue-400 mb-1">Conta Débito (Cód / Nome)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-medium text-blue-400">Conta Débito (F2)</label>
+                <button
+                  type="button"
+                  onClick={() => abrirF2('DEBITO')}
+                  className="text-[10px] text-blue-400/80 hover:text-blue-300"
+                >
+                  Pesquisar
+                </button>
+              </div>
               <div className="flex space-x-1.5">
                 <input
                   ref={inputDebitoRef}
@@ -426,7 +701,16 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
 
             {/* 3. Conta Crédito */}
             <div className="col-span-3">
-              <label className="block text-[11px] font-medium text-indigo-400 mb-1">Conta Crédito (Cód / Nome)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-medium text-indigo-400">Conta Crédito (F2)</label>
+                <button
+                  type="button"
+                  onClick={() => abrirF2('CREDITO')}
+                  className="text-[10px] text-indigo-400/80 hover:text-indigo-300"
+                >
+                  Pesquisar
+                </button>
+              </div>
               <div className="flex space-x-1.5">
                 <input
                   ref={inputCreditoRef}
@@ -477,23 +761,48 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
               />
             </div>
 
-            {/* 5. Lote Contábil */}
-            <div className="col-span-2">
-              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Lote</label>
-              <select
-                value={loteId}
-                onChange={(e) => setLoteId(Number(e.target.value))}
-                className="w-full bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-200 outline-none"
-              >
-                {lotes.map(l => (
-                  <option key={l.id} value={l.id}>Lote #{l.numeroLote}</option>
-                ))}
-              </select>
-            </div>
+            {/* 5. Centro de Custo Simples (se Rateio desabilitado) ou Lote */}
+            {!habilitarRateio ? (
+              <div className="col-span-2">
+                <label className="block text-[11px] font-medium text-neutral-400 mb-1">Centro de Custo</label>
+                <select
+                  value={centroCustoId}
+                  onChange={(e) => setCentroCustoId(Number(e.target.value))}
+                  className="w-full bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-200 outline-none truncate"
+                >
+                  <option value={0}>Nenhum Centro</option>
+                  {centrosCusto.map(cc => (
+                    <option key={cc.id} value={cc.id}>{cc.codigo} - {cc.nome}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="col-span-2">
+                <label className="block text-[11px] font-medium text-neutral-400 mb-1">Lote</label>
+                <select
+                  value={loteId}
+                  onChange={(e) => setLoteId(Number(e.target.value))}
+                  className="w-full bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-200 outline-none truncate"
+                >
+                  {lotes.map(l => (
+                    <option key={l.id} value={l.id}>Lote #{l.numeroLote || l.numero}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* 6. Histórico Padrão */}
             <div className="col-span-4">
-              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Histórico Padrão</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-medium text-neutral-400">Histórico Padrão (F2)</label>
+                <button
+                  type="button"
+                  onClick={() => abrirF2('HISTORICO')}
+                  className="text-[10px] text-neutral-400 hover:text-neutral-200"
+                >
+                  Pesquisar
+                </button>
+              </div>
               <div className="flex space-x-1.5">
                 <input
                   ref={inputHistRef}
@@ -555,10 +864,117 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Sub-painel de Rateio Gerencial Multi-Centros de Custo */}
+          {habilitarRateio && (
+            <div className="p-3 bg-[#161616] border border-purple-500/20 rounded-lg space-y-2 mt-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Split className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs font-semibold text-purple-300">Grade de Rateio Gerencial de Centros de Custo:</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={handleDistribuirIgualmenteRateio}
+                    className="px-2 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-[11px] rounded border border-white/10"
+                  >
+                    Distribuir Igualmente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddLinhaRateio}
+                    className="px-2 py-0.5 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 text-[11px] rounded border border-purple-500/30 flex items-center space-x-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Adicionar Centro</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                {rateios.map((r, idx) => (
+                  <div key={r.id} className="grid grid-cols-12 gap-2 items-center text-xs">
+                    <div className="col-span-6">
+                      <select
+                        value={r.centroCustoId}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setRateios(prev => prev.map(item => item.id === r.id ? { ...item, centroCustoId: val } : item));
+                        }}
+                        className="w-full bg-[#121212] border border-white/10 rounded px-2.5 py-1 text-neutral-200 outline-none"
+                      >
+                        {centrosCusto.map(cc => (
+                          <option key={cc.id} value={cc.id}>
+                            {cc.codigo} - {cc.nome}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="col-span-2">
+                      <div className="flex items-center bg-[#121212] border border-white/10 rounded px-2 py-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="%"
+                          value={r.percentual || ''}
+                          onChange={(e) => handlePercentualRateioChange(r.id, parseFloat(e.target.value) || 0)}
+                          className="w-full bg-transparent text-right font-mono text-purple-300 outline-none"
+                        />
+                        <span className="text-neutral-500 ml-1">%</span>
+                      </div>
+                    </div>
+
+                    <div className="col-span-3">
+                      <div className="flex items-center bg-[#121212] border border-white/10 rounded px-2 py-1">
+                        <span className="text-neutral-500 mr-1">R$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="0,00"
+                          value={r.valor || ''}
+                          onChange={(e) => handleValorRateioChange(r.id, parseFloat(e.target.value) || 0)}
+                          className="w-full bg-transparent text-right font-mono text-emerald-400 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="col-span-1 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLinhaRateio(r.id)}
+                        className="p-1 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded"
+                        title="Remover Centro"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Totalizador do Rateio */}
+              <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
+                <span className="text-neutral-400">Totalizadores do Rateio:</span>
+                <div className={`px-2.5 py-1 rounded font-mono text-xs font-semibold flex items-center space-x-2 border ${
+                  rateioBalanceado 
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse'
+                }`}>
+                  <span>Soma: {totalPercRateio.toFixed(2)}%</span>
+                  <span>•</span>
+                  <span>{formatCurrency(totalValorRateio)}</span>
+                  <span>•</span>
+                  <span>{rateioBalanceado ? 'Balanceado 100% ✅' : `Diferença: ${(100 - totalPercRateio).toFixed(2)}% ⚠️`}</span>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       ) : (
         /* Partida Múltipla / Composta */
-        <div className="p-4 bg-[#1e1e1e] border-b border-white/10 space-y-3">
+        <div className="p-4 bg-[#1c1c1c] border-b border-white/10 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-xs font-semibold text-neutral-300">Grade de Lançamento Composto (Mesmo Nº de Partida):</span>
@@ -567,18 +983,17 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
             <div className={`px-2.5 py-1 rounded text-xs font-mono font-medium flex items-center space-x-2 ${
               diferencaMultipla === 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-400 border border-rose-500/30 animate-pulse'
             }`}>
-              <span>Déb: R$ {totalMultiploDebito.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <span>Déb: {formatCurrency(totalMultiploDebito)}</span>
               <span>•</span>
-              <span>Créd: R$ {totalMultiploCredito.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <span>Créd: {formatCurrency(totalMultiploCredito)}</span>
               <span>•</span>
-              <strong>DxC: R$ {diferencaMultipla.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+              <strong>DxC: {formatCurrency(diferencaMultipla)}</strong>
             </div>
           </div>
 
           <div className="space-y-1.5">
             {multiplasItens.map((item, idx) => (
               <div key={item.id} className="flex items-center space-x-2 text-xs">
-                <span className="font-mono text-neutral-500 w-4">{idx + 1}.</span>
                 <select
                   value={item.tipo}
                   onChange={(e) => {
@@ -586,8 +1001,10 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                     next[idx].tipo = e.target.value as 'DEBITO' | 'CREDITO';
                     setMultiplasItens(next);
                   }}
-                  className={`w-24 px-2 py-1 rounded font-semibold border ${
-                    item.tipo === 'DEBITO' ? 'bg-blue-900/30 text-blue-400 border-blue-500/30' : 'bg-indigo-900/30 text-indigo-400 border-indigo-500/30'
+                  className={`w-24 px-2 py-1 rounded font-semibold text-xs border ${
+                    item.tipo === 'DEBITO'
+                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                      : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
                   }`}
                 >
                   <option value="DEBITO">DÉBITO</option>
@@ -676,20 +1093,43 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
       {/* Grade de Lançamentos Registrados */}
       <div className="flex-1 flex flex-col p-4 overflow-hidden">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <span className="text-xs font-semibold text-neutral-300 uppercase tracking-wider">
               Diário de Lançamentos ({lancamentosFiltrados.length})
             </span>
+
+            {/* Barra de Ações em Lote */}
+            {selecionados.length > 0 && (
+              <div className="flex items-center space-x-2 bg-rose-500/10 border border-rose-500/30 px-3 py-1 rounded-lg animate-fadeIn">
+                <span className="text-xs text-rose-300 font-semibold">{selecionados.length} selecionado(s)</span>
+                <button
+                  onClick={handleExcluirLote}
+                  className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-[11px] font-semibold flex items-center space-x-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span>Excluir Selecionados</span>
+                </button>
+                <button
+                  onClick={() => setSelecionados([])}
+                  className="px-1.5 py-0.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 text-[11px] rounded"
+                >
+                  Limpar
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center space-x-2">
             <button
               onClick={() => {
-                const headers = ['Partida', 'Data', 'Conta Débito', 'Conta Crédito', 'Valor', 'Histórico / Complemento'];
+                const headers = ['Partida', 'Data', 'Conta Débito', 'Conta Crédito', 'Valor', 'Histórico / Complemento', 'Centro de Custo / Rateio'];
                 const rows = lancamentosFiltrados.map(l => {
                   const deb = contas.find(c => c.id === l.contaDebitoId)?.nome || '';
                   const cred = contas.find(c => c.id === l.contaCreditoId)?.nome || '';
-                  return [l.numeroPartida, l.dataLancamento, deb, cred, l.valor, l.complementoHistorico];
+                  const ccInfo = l.rateios && l.rateios.length > 0 
+                    ? `Rateio (${l.rateios.length} Centros)` 
+                    : l.centroCustoId ? (centrosCusto.find(cc => cc.id === l.centroCustoId)?.nome || '') : 'Sem CC';
+                  return [l.numeroPartida, l.dataLancamento, deb, cred, l.valor, l.complementoHistorico, ccInfo];
                 });
                 exportToCSV(`Lancamentos_Contabeis_${new Date().toISOString().split('T')[0]}`, rows, headers);
               }}
@@ -717,12 +1157,20 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-neutral-900/90 sticky top-0 border-b border-white/10 text-neutral-400 font-medium z-10">
               <tr>
+                <th className="py-2 px-2.5 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selecionados.length === lancamentosFiltrados.length && lancamentosFiltrados.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded bg-neutral-900 border-white/20 text-blue-600 focus:ring-0"
+                  />
+                </th>
                 <th className="py-2 px-3 w-16 text-center">Partida</th>
                 <th className="py-2 px-3 w-24">Data</th>
                 <th className="py-2 px-3 w-48">Conta Débito</th>
                 <th className="py-2 px-3 w-48">Conta Crédito</th>
                 <th className="py-2 px-3 w-32 text-right">Valor (R$)</th>
-                <th className="py-2 px-3">Histórico / Complemento</th>
+                <th className="py-2 px-3">Histórico / Centro de Custo</th>
                 <th className="py-2 px-3 w-28 text-center">Ações</th>
               </tr>
             </thead>
@@ -731,9 +1179,19 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                 const debito = contas.find(c => c.id === l.contaDebitoId);
                 const credito = contas.find(c => c.id === l.contaCreditoId);
                 const hist = historicos.find(h => h.id === l.historicoId);
+                const ccObj = centrosCusto.find(cc => cc.id === l.centroCustoId);
+                const isSelected = selecionados.includes(l.id);
 
                 return (
-                  <tr key={l.id} className="hover:bg-white/[0.02] transition-colors group">
+                  <tr key={l.id} className={`hover:bg-white/[0.02] transition-colors group ${isSelected ? 'bg-blue-600/10' : ''}`}>
+                    <td className="py-2 px-2.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectOne(l.id)}
+                        className="rounded bg-neutral-900 border-white/20 text-blue-600 focus:ring-0"
+                      />
+                    </td>
                     <td className="py-2 px-3 text-center font-mono text-neutral-500">#{l.numeroPartida}</td>
                     <td className="py-2 px-3 font-mono text-neutral-300">
                       {new Date(l.dataLancamento + 'T00:00:00').toLocaleDateString('pt-BR')}
@@ -747,11 +1205,29 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                       <div className="text-[10px] text-neutral-500 font-mono">Red: {credito?.codigoReduzido} • {credito?.classificacao}</div>
                     </td>
                     <td className="py-2 px-3 text-right font-mono font-semibold text-emerald-400">
-                      {l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {formatCurrency(l.valor)}
                     </td>
                     <td className="py-2 px-3 text-neutral-300">
-                      {hist && <span className="font-semibold text-neutral-400 mr-1.5">[{hist.codigo}]</span>}
-                      <span>{l.complementoHistorico || (hist?.descricao)}</span>
+                      <div className="flex items-center space-x-1.5 flex-wrap">
+                        {hist && <span className="font-semibold text-neutral-400">[{hist.codigo}]</span>}
+                        <span>{l.complementoHistorico || (hist?.descricao)}</span>
+                        
+                        {/* Tags de Centro de Custo ou Rateio */}
+                        {l.rateios && l.rateios.length > 0 ? (
+                          <button
+                            onClick={() => setDetalheRateioLanc(l)}
+                            className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-purple-500/15 border border-purple-500/30 text-purple-300 rounded text-[10px] hover:bg-purple-500/25 transition"
+                            title="Clique para ver o detalhamento do rateio"
+                          >
+                            <Split className="w-2.5 h-2.5" />
+                            <span>Rateio ({l.rateios.length} Centros)</span>
+                          </button>
+                        ) : ccObj ? (
+                          <span className="inline-flex items-center space-x-1 px-1.5 py-0.5 bg-neutral-800 text-neutral-400 rounded text-[10px]">
+                            <span>CC: {ccObj.codigo}</span>
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="py-2 px-3 text-center">
                       <div className="flex items-center justify-center space-x-1 opacity-70 group-hover:opacity-100 transition-opacity">
@@ -793,10 +1269,158 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
         </div>
       </div>
 
+      {/* Modal F2 (Busca Rápida de Contas e Históricos) */}
+      {showF2Modal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-xl bg-[#1c1c1c] border border-white/10 rounded-xl shadow-2xl p-4 text-xs space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <div className="flex items-center space-x-2">
+                <Search className="w-4 h-4 text-blue-400" />
+                <span className="font-semibold text-neutral-100">
+                  Busca Rápida de {f2Tipo === 'DEBITO' ? 'Conta Débito' : f2Tipo === 'CREDITO' ? 'Conta Crédito' : 'Histórico Padrão'} (F2)
+                </span>
+              </div>
+              <button onClick={() => setShowF2Modal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-neutral-400 absolute left-3 top-2.5" />
+              <input
+                ref={f2InputRef}
+                type="text"
+                placeholder="Digite o código reduzido, classificação ou nome..."
+                value={f2Query}
+                onChange={(e) => {
+                  setF2Query(e.target.value);
+                  setF2SelectedIndex(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    setShowF2Modal(false);
+                  } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setF2SelectedIndex(prev => Math.min(prev + 1, f2ItensFiltrados.length - 1));
+                  } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setF2SelectedIndex(prev => Math.max(prev - 1, 0));
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (f2ItensFiltrados[f2SelectedIndex]) {
+                      handleSelectF2Item(f2ItensFiltrados[f2SelectedIndex]);
+                    }
+                  }
+                }}
+                className="w-full pl-9 pr-3 py-2 bg-[#121212] border border-blue-500 rounded-lg text-neutral-100 font-mono text-xs outline-none"
+              />
+            </div>
+
+            <div className="max-h-72 overflow-y-auto custom-scrollbar space-y-1">
+              {f2ItensFiltrados.length === 0 ? (
+                <div className="text-center py-6 text-neutral-500">Nenhum registro encontrado.</div>
+              ) : (
+                f2ItensFiltrados.map((item, idx) => {
+                  const isConta = f2Tipo !== 'HISTORICO';
+                  const c = item as ContaContabil;
+                  const h = item as HistoricoPadrao;
+                  const isCurrentSelected = idx === f2SelectedIndex;
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={() => handleSelectF2Item(item)}
+                      onMouseEnter={() => setF2SelectedIndex(idx)}
+                      className={`p-2.5 rounded-lg border transition-colors cursor-pointer flex items-center justify-between ${
+                        isCurrentSelected 
+                          ? 'bg-blue-600/20 border-blue-500/40 text-neutral-100' 
+                          : 'bg-neutral-900/50 border-white/5 hover:border-white/10 text-neutral-300'
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="font-semibold text-xs flex items-center space-x-2">
+                          <span className="font-mono text-blue-400">
+                            {isConta ? c.codigoReduzido : h.codigo}
+                          </span>
+                          <span>-</span>
+                          <span>{isConta ? c.nome : h.descricao}</span>
+                        </div>
+                        {isConta && (
+                          <div className="text-[10px] text-neutral-500 font-mono mt-0.5">
+                            Classificação: {c.classificacao} • Natureza: {c.natureza === 'D' ? 'Devedora' : 'Credora'}
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-neutral-500 font-mono">
+                        {isCurrentSelected && '↵ Selecionar'}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-neutral-500">
+              <span>Use ↑ ↓ para navegar, ↵ Enter para confirmar, Esc para fechar</span>
+              <span>Total: {f2ItensFiltrados.length}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detalhes do Rateio */}
+      {detalheRateioLanc && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#1c1c1c] border border-white/10 rounded-xl shadow-2xl p-5 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center space-x-2">
+                <Split className="w-4 h-4 text-purple-400" />
+                <span className="font-semibold text-neutral-100">
+                  Rateio Gerencial da Partida #{detalheRateioLanc.numeroPartida}
+                </span>
+              </div>
+              <button onClick={() => setDetalheRateioLanc(null)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between text-neutral-400">
+                <span>Valor Total da Partida:</span>
+                <span className="font-mono font-bold text-neutral-100">{formatCurrency(detalheRateioLanc.valor)}</span>
+              </div>
+
+              <div className="divide-y divide-white/5 border border-white/10 rounded-lg overflow-hidden bg-neutral-900/50">
+                {detalheRateioLanc.rateios?.map((r, i) => {
+                  const cc = centrosCusto.find(c => c.id === r.centroCustoId);
+                  return (
+                    <div key={i} className="p-2.5 flex items-center justify-between">
+                      <div>
+                        <div className="font-semibold text-neutral-200">{cc?.nome || 'Centro de Custo'}</div>
+                        <div className="text-[10px] text-neutral-500 font-mono">Cód: {cc?.codigo}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono font-bold text-purple-300">{formatPercent(r.percentual)}</div>
+                        <div className="font-mono text-emerald-400">{formatCurrency(r.valor)}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-white/10 text-right">
+              <button
+                onClick={() => setDetalheRateioLanc(null)}
+                className="px-4 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded text-xs transition"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Edição Direta de Lançamento */}
       {editandoLancamento && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#1c1c1c] border border-white/10 rounded-xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#1c1c1c] border border-white/10 rounded-xl w-full max-w-lg p-5 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-sm font-semibold text-neutral-100">
               Editar Lançamento #{editandoLancamento.numeroPartida}
             </h3>
@@ -858,6 +1482,90 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                   className="w-full bg-[#121212] border border-white/10 rounded px-2.5 py-1.5 text-neutral-100 outline-none"
                 />
               </div>
+
+              {/* Centro de Custo / Rateio na Edição */}
+              <div className="pt-2 border-t border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-neutral-400 font-medium">Alocação de Centro de Custo / Rateio:</label>
+                  <label className="flex items-center space-x-1.5 cursor-pointer text-purple-300">
+                    <input
+                      type="checkbox"
+                      checked={editHabilitarRateio}
+                      onChange={(e) => setEditHabilitarRateio(e.target.checked)}
+                      className="rounded bg-neutral-900 border-white/20 text-purple-600 focus:ring-0"
+                    />
+                    <span>Multi-Centros (Rateio)</span>
+                  </label>
+                </div>
+
+                {!editHabilitarRateio ? (
+                  <select
+                    value={editCentroCustoId}
+                    onChange={(e) => setEditCentroCustoId(Number(e.target.value))}
+                    className="w-full bg-[#121212] border border-white/10 rounded px-2.5 py-1.5 text-neutral-200 outline-none"
+                  >
+                    <option value={0}>Sem Centro de Custo</option>
+                    {centrosCusto.map(cc => (
+                      <option key={cc.id} value={cc.id}>{cc.codigo} - {cc.nome}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="space-y-2 p-3 bg-neutral-900/60 rounded border border-purple-500/20">
+                    <div className="space-y-1.5">
+                      {editRateios.map((r, i) => (
+                        <div key={i} className="flex items-center space-x-2">
+                          <select
+                            value={r.centroCustoId}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              const next = [...editRateios];
+                              next[i].centroCustoId = val;
+                              setEditRateios(next);
+                            }}
+                            className="flex-1 bg-[#121212] border border-white/10 rounded px-2 py-1 text-neutral-200 outline-none"
+                          >
+                            {centrosCusto.map(cc => (
+                              <option key={cc.id} value={cc.id}>{cc.codigo} - {cc.nome}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            placeholder="%"
+                            value={r.percentual || ''}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0;
+                              const next = [...editRateios];
+                              next[i].percentual = val;
+                              const vNum = parseFloat(editValor.replace(/\./g, '').replace(',', '.')) || 0;
+                              next[i].valor = parseFloat(((vNum * val) / 100).toFixed(2));
+                              setEditRateios(next);
+                            }}
+                            className="w-20 bg-[#121212] border border-white/10 rounded px-2 py-1 text-right font-mono text-purple-300 outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEditRateios(editRateios.filter((_, idx) => idx !== i))}
+                            className="p-1 hover:bg-rose-500/20 text-neutral-500 hover:text-rose-400 rounded"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const defaultCC = centrosCusto[0]?.id || 1;
+                        setEditRateios([...editRateios, { id: Date.now(), centroCustoId: defaultCC, percentual: 0, valor: 0 }]);
+                      }}
+                      className="px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded text-[11px] flex items-center space-x-1"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Adicionar Linha</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-end space-x-2 pt-3 border-t border-white/10">
@@ -869,7 +1577,7 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
               </button>
               <button
                 onClick={handleSalvarEdicao}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium transition"
+                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium transition shadow-lg shadow-blue-600/20"
               >
                 Salvar Alterações
               </button>

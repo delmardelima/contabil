@@ -46,12 +46,15 @@ import { HistoricosModule } from './components/cadastros/HistoricosModule';
 import { LotesModule } from './components/movimentos/LotesModule';
 import { AuditoriaContabilModule } from './components/utilitarios/AuditoriaContabilModule';
 import { TransporteSaldosModule } from './components/utilitarios/TransporteSaldosModule';
+import { AtivoImobilizadoModule } from './components/patrimonio/AtivoImobilizadoModule';
 
 // Módulos Escrita Fiscal
 import { DashboardFiscalModule } from './components/escrita/DashboardFiscalModule';
 import { AcumuladoresModule } from './components/escrita/AcumuladoresModule';
 import { NotasFiscaisModule } from './components/escrita/NotasFiscaisModule';
 import { ApuracaoFiscalModule } from './components/escrita/ApuracaoFiscalModule';
+import { ParticipantesModule } from './components/escrita/ParticipantesModule';
+import { ProdutosServicosModule } from './components/escrita/ProdutosServicosModule';
 
 // Módulos Folha de Pagamento
 import { DashboardFolhaModule } from './components/folha/DashboardFolhaModule';
@@ -89,7 +92,9 @@ import {
   DollarSign,
   Receipt,
   Calculator,
-  CreditCard
+  CreditCard,
+  Package,
+  Archive
 } from 'lucide-react';
 
 export interface WorkspaceTab {
@@ -195,10 +200,13 @@ export const App: React.FC = () => {
       case 'lotes': return { title: 'Gestão de Lotes', icon: Layers };
       case 'auditoria': return { title: 'Auditoria de Saldos', icon: ShieldAlert };
       case 'transporteSaldos': return { title: 'Transporte de Saldos', icon: ArrowRightLeft };
+      case 'ativoImobilizado': return { title: 'Ativo Imobilizado & Depreciação', icon: Archive };
 
       // Escrita Fiscal
       case 'dashboardFiscal': return { title: 'Dashboard Fiscal', icon: Receipt };
       case 'notasFiscais': return { title: 'Notas Fiscais & XML', icon: FileText };
+      case 'participantes': return { title: 'Participantes SPED', icon: Users };
+      case 'produtos': return { title: 'Itens & Produtos', icon: Package };
       case 'acumuladores': return { title: 'Acumuladores Fiscais', icon: Layers };
       case 'apuracaoFiscal': return { title: 'Apuração DAS & Guias', icon: Calculator };
 
@@ -334,6 +342,7 @@ export const App: React.FC = () => {
       contaCreditoId: l.contaCreditoId,
       valor: l.valor,
       centroCustoId: l.centroCustoId,
+      rateios: l.rateios ? JSON.parse(JSON.stringify(l.rateios)) : undefined,
       historicoId: l.historicoId,
       complementoHistorico: `${l.complementoHistorico} (Cópia)`
     });
@@ -534,14 +543,14 @@ export const App: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-neutral-200">
               {dre.items.map(i => (
-                <tr key={i.id} className={i.tipoLinha !== 'CONTA' ? 'font-bold bg-neutral-50' : ''}>
+                <tr key={i.id ?? i.ordem} className={i.tipoLinha !== 'CONTA' ? 'font-bold bg-neutral-50' : ''}>
                   <td className="py-1.5 px-2 font-mono text-neutral-500">{i.ordem}</td>
                   <td className="py-1.5 px-2 uppercase">{i.descricao}</td>
                   <td className="py-1.5 px-4 font-mono text-right">
                     {i.operacao === 'SUBTRAI' ? `(${i.valor.toFixed(2)})` : i.valor.toFixed(2)}
                   </td>
                   <td className="py-1.5 px-4 font-mono text-right font-semibold">
-                    {i.analiseVerticalPerc.toFixed(2)}%
+                    {(i.analiseVerticalPerc ?? 0).toFixed(2)}%
                   </td>
                 </tr>
               ))}
@@ -871,6 +880,18 @@ export const App: React.FC = () => {
               />
             </div>
 
+            {/* Ativo Imobilizado & Depreciação */}
+            <div className={`h-full w-full ${activeTabId === 'ativoImobilizado' ? 'block' : 'hidden'}`}>
+              <AtivoImobilizadoModule
+                empresa={empresaAtiva}
+                contas={contas}
+                onIntegracaoSucesso={() => {
+                  setLancamentos(dbService.getLancamentos(empresaAtiva.id));
+                }}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
+              />
+            </div>
+
             {/* ESCRITA FISCAL */}
             <div className={`h-full w-full ${activeTabId === 'dashboardFiscal' ? 'block' : 'hidden'}`}>
               <DashboardFiscalModule
@@ -889,6 +910,14 @@ export const App: React.FC = () => {
 
             <div className={`h-full w-full ${activeTabId === 'notasFiscais' ? 'block' : 'hidden'}`}>
               <NotasFiscaisModule empresa={empresaAtiva} />
+            </div>
+
+            <div className={`h-full w-full ${activeTabId === 'participantes' ? 'block' : 'hidden'}`}>
+              <ParticipantesModule empresaAtiva={empresaAtiva} />
+            </div>
+
+            <div className={`h-full w-full ${activeTabId === 'produtos' ? 'block' : 'hidden'}`}>
+              <ProdutosServicosModule empresaAtiva={empresaAtiva} />
             </div>
 
             <div className={`h-full w-full ${activeTabId === 'apuracaoFiscal' ? 'block' : 'hidden'}`}>

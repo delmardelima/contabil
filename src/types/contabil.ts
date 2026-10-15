@@ -1,8 +1,30 @@
-// Tipos Fundamentais do Sistema Contábil (Baseado na Engenharia Reversa de C:\Contabil\contabil.exe)
+// Tipos Fundamentais do Sistema Contábil (Baseado na Engenharia Reversa de C:\Contabil\contabil.exe e Domínio Sistemas)
 
 export type RegimeTributario = 'SIMPLES_NACIONAL' | 'LUCRO_PRESUMIDO' | 'LUCRO_REAL' | 'IMUNE_ISENTA';
 export type NaturezaConta = 'D' | 'C';
 export type TipoConta = 'S' | 'A'; // Sintética | Analítica
+
+export interface SocioAdministrador {
+  id: number;
+  nome: string;
+  cpf: string;
+  qualificacaoRFB?: string; // 49 - Sócio-Administrador, 22 - Sócio, 05 - Administrador
+  percentualCapital: number;
+  dataEntrada: string;
+  dataSaida?: string;
+  retiraProLabore: boolean;
+  valorProLabore?: number;
+  percentualLucros?: number;
+}
+
+export interface VigenciaTributaria {
+  id: number;
+  inicioCompetencia: string; // YYYY-MM
+  fimCompetencia?: string; // YYYY-MM
+  regimeTributario: RegimeTributario;
+  regimeApuracao: 'COMPETENCIA' | 'CAIXA';
+  enquadramentoSimples?: 'MICROEMPRESA' | 'EPP' | 'NAO_OPTANTE';
+}
 
 export interface Empresa {
   id: number;
@@ -12,7 +34,11 @@ export interface Empresa {
   cnpj: string;
   inscricaoEstadual?: string;
   inscricaoMunicipal?: string;
+  inscricaoSuframa?: string;
   nire?: string;
+  dataConstituicao?: string;
+  naturezaJuridica?: string;
+  porteEmpresa?: 'ME' | 'EPP' | 'DEMAIS';
   logradouro?: string;
   numero?: string;
   complemento?: string;
@@ -20,6 +46,16 @@ export interface Empresa {
   cidade?: string;
   uf?: string;
   cep?: string;
+  codigoIbge?: string;
+  cnaePrincipal?: string;
+  cnaesSecundarios?: string[];
+  anexoPadraoSimples?: string;
+  fatorR?: boolean;
+  aliquotaISS?: number;
+  codigoTerceiros?: string;
+  fpas?: string;
+  rat?: number;
+  fap?: number;
   responsavelLegal?: string;
   cpfResponsavel?: string;
   contadorNome?: string;
@@ -32,6 +68,8 @@ export interface Empresa {
   competenciaAtiva: string; // YYYY-MM
   mascaraPlano: string;
   exigeCentroCusto?: boolean;
+  socios?: SocioAdministrador[];
+  vigencias?: VigenciaTributaria[];
 }
 
 export interface ContaContabil {
@@ -47,6 +85,12 @@ export interface ContaContabil {
   saldoAtual?: number;
   contaPaiId?: number;
   aceitaLancamento?: boolean;
+  codigoReferencialRFB?: string;
+  naturezaSped?: '01' | '02' | '03' | '04' | '05'; // 01-Ativo, 02-Passivo, 03-PL, 04-Resultado, 05-Compensação
+  dataInclusao?: string;
+  dataInativacao?: string;
+  exigeCentroCusto?: boolean;
+  ativa?: boolean;
 }
 
 export interface HistoricoPadrao {
@@ -89,6 +133,13 @@ export interface LoteContabil {
   totalCredito: number;
 }
 
+export interface RateioCentroCusto {
+  id: string | number;
+  centroCustoId: number;
+  percentual: number;
+  valor: number;
+}
+
 export interface LancamentoContabil {
   id: number;
   empresaId: number;
@@ -100,6 +151,7 @@ export interface LancamentoContabil {
   contaCreditoId?: number;
   valor: number;
   centroCustoId?: number;
+  rateios?: RateioCentroCusto[];
   historicoId?: number;
   complementoHistorico: string;
   isZeramento?: boolean;
@@ -115,75 +167,31 @@ export interface PartidaMultiplaItem {
   valor: number;
   centroCustoId?: number;
   historicoId?: number;
-  complemento: string;
+  complemento?: string;
 }
 
-export interface BalanceteItem {
-  id: number;
-  classificacao: string;
-  codigoReduzido: number;
-  nome: string;
-  grau: number;
-  tipo: TipoConta;
-  natureza: NaturezaConta;
-  saldoAnterior: number;
-  debitos: number;
-  creditos: number;
-  saldoAtual: number;
-  saldoAtualNatureza: NaturezaConta;
-}
-
-export interface BalancoItem {
-  classificacao: string;
-  nome: string;
-  grau: number;
-  tipo: TipoConta;
-  saldo: number;
-  isPassivoDescoberto?: boolean;
-}
-
-export interface DREEstruturaLinha {
-  id: number;
-  empresaId: number;
-  ordem: number;
-  descricao: string;
-  tipoLinha: 'CONTA' | 'SUBTOTAL' | 'TOTAL_GERAL';
-  operacao: 'SOMA' | 'SUBTRAI';
-  prefixoContas?: string;
-  isBasePercentual?: boolean;
-}
-
-export interface DREItemCalculado {
-  id: number;
-  ordem: number;
-  descricao: string;
-  tipoLinha: 'CONTA' | 'SUBTOTAL' | 'TOTAL_GERAL';
-  operacao: 'SOMA' | 'SUBTRAI';
-  valor: number;
-  analiseVerticalPerc: number;
-  analiseHorizontalPerc?: number;
-}
+export type PerfilUsuario = 'ADMIN' | 'CONTADOR' | 'ASSISTENTE' | 'AUDITOR' | 'ANALISTA';
 
 export interface DocumentoStudio {
   id: number;
   empresaId: number;
+  tipo: 'ATA_ASSEMBLEIA' | 'CONTRATO_SOCIAL' | 'DISTRATO' | 'CARTA_RESPONSABILIDADE' | 'NOTAS_EXPLICATIVAS' | 'RELATORIO_DIRETORIA' | 'NOTA_EXPLICATIVA';
   titulo: string;
-  tipo: 'NOTA_EXPLICATIVA' | 'TERMO_ABERTURA' | 'TERMO_ENCERRAMENTO' | 'RELATORIO_DIRETORIA';
-  exercicioAno: number;
   conteudoHtml: string;
-  updatedAt: string;
+  dataAtualizacao?: string;
+  updatedAt?: string;
+  exercicioAno?: number;
 }
-
-export type PerfilUsuario = 'ADMIN' | 'ANALISTA' | 'ASSISTENTE' | 'CONSULTA';
 
 export interface Usuario {
   id: number;
-  nome: string;
   login: string;
-  senha?: string;
-  perfil: PerfilUsuario;
+  nome: string;
   email: string;
+  cargo?: string;
+  perfil: PerfilUsuario;
   ativo: boolean;
+  permissoes?: string[];
 }
 
 export interface AuditoriaLog {
@@ -191,35 +199,98 @@ export interface AuditoriaLog {
   dataHora: string;
   usuarioNome: string;
   modulo: string;
-  acao: string;
-  descricao: string;
+  operacao?: 'INCLUSAO' | 'EDICAO' | 'EXCLUSAO' | 'ENCERRAMENTO' | 'IMPORTACAO' | 'EXPORTACAO' | 'PROCESSAMENTO' | string;
+  detalhes?: string;
+  acao?: string;
+  descricao?: string;
 }
 
 export interface ParametrosEmpresa {
+  id?: number;
   empresaId: number;
-  regimeContabil: 'COMPETENCIA' | 'CAIXA';
-  bloquearLancamentosAte?: string;
-  obrigaCentroCusto: boolean;
   permiteDiferencaDxC: boolean;
-  avancaPaginaTrocaGrupo: boolean;
-  contaDestinoZeramentoId: number;
-  contaLucrosAcumuladosId: number;
-  contaPrejuizosAcumuladosId: number;
-  numeroLivroDiario: number;
-  numeroFolhaInicial: number;
+  bloquearLancamentoDataAnterior?: boolean;
+  dataFechamento?: string;
+  bloquearLancamentosAte?: string;
+  obrigaCentroCusto?: boolean;
+  zeramentoAutomaticoAtivo?: boolean;
+  contaApuracaoResultadoId?: number;
+  contaLucrosAcumuladosId?: number;
+  contaPrejuizosAcumuladosId?: number;
+  contaDestinoZeramentoId?: number;
+  regimeContabil?: 'COMPETENCIA' | 'CAIXA';
+  avancaPaginaTrocaGrupo?: boolean;
+  numeroLivroDiario?: number;
+  numeroFolhaInicial?: number;
 }
 
 export interface ConfiguracaoRede {
-  modo: 'SERVIDOR' | 'ESTACAO';
-  serverHost: string;
-  serverPort: number;
+  modoOperacao?: 'STANDALONE' | 'CLIENTE_LAN' | 'SERVIDOR_MASTER';
+  modo?: 'STANDALONE' | 'CLIENTE_LAN' | 'SERVIDOR_MASTER' | 'SERVIDOR' | 'ESTACAO';
+  servidorHost?: string;
+  serverHost?: string;
+  servidorPorta?: number;
+  serverPort?: number;
+  statusConexao?: 'ONLINE' | 'OFFLINE' | 'SINCRONIZANDO';
   isOnline?: boolean;
+  ultimaSincronizacao?: string;
+  totalEstacoesConectadas?: number;
 }
 
-// ----------------------------------------------------
-// SUÍTE MULTI-MÓDULO OFICIAL
-// ----------------------------------------------------
 export type ModuloSistema = 'contabilidade' | 'escrita' | 'folha' | 'honorarios';
+
+// ----------------------------------------------------
+// CADASTROS FISCAIS OBRIGATÓRIOS (SPED 0150 & 0200)
+// ----------------------------------------------------
+export interface ParticipanteFiscal {
+  id: number;
+  empresaId: number;
+  codigo: string;
+  nomeRazaoSocial: string;
+  nomeFantasia?: string;
+  tipoPessoa: 'J' | 'F';
+  cnpjCpf: string;
+  inscricaoEstadual?: string;
+  contribuinteICMS: '1' | '2' | '9'; // 1 - Contribuinte, 2 - Isento, 9 - Não Contribuinte
+  uf: string;
+  municipio: string;
+  codigoIbge: string;
+  tipoRelacao: 'CLIENTE' | 'FORNECEDOR' | 'AMBOS' | 'TRANSPORTADORA';
+  contaContabilId?: number; // Conta Cliente/Fornecedor individualizada
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cep?: string;
+  email?: string;
+  telefone?: string;
+  ativo: boolean;
+}
+
+export interface ProdutoServico {
+  id: number;
+  empresaId: number;
+  codigo: string;
+  descricao: string;
+  codigoBarras?: string;
+  tipoItemSped: '00' | '01' | '02' | '03' | '04' | '05' | '06' | '07' | '08' | '09' | '99';
+  ncm: string; // 8 dígitos
+  cest?: string;
+  unidadeMedida: string; // UN, KG, CX, SV, etc.
+  cstICMSPadrao?: string;
+  csosnPadrao?: string;
+  cstPISCOFINSPadrao?: string;
+  aliquotaICMS?: number;
+  aliquotaIPI?: number;
+  aliquotaPIS?: number;
+  aliquotaCOFINS?: number;
+  precoUnitarioVenda?: number;
+  precoUnitarioCusto?: number;
+  contaContabilInventarioId?: number;
+  contaContabilReceitaId?: number;
+  contaContabilCustoId?: number;
+  ativo: boolean;
+}
 
 // ----------------------------------------------------
 // ESCRITA FISCAL (EF)
@@ -229,33 +300,72 @@ export interface AcumuladorFiscal {
   empresaId: number;
   codigo: number;
   descricao: string;
+  tipoOperacao?: string;
   cfopPadrao: string;
-  tipoOperacao?: 'ENTRADA' | 'SAIDA' | 'SERVICO';
   incideICMS: boolean;
-  aliquotaICMS?: number;
   incideIPI?: boolean;
   incidePIS: boolean;
-  aliquotaPIS?: number;
   incideCOFINS: boolean;
-  aliquotaCOFINS?: number;
   incideISS: boolean;
-  aliquotaISS?: number;
   incideSimples: boolean;
-  // Integração Contábil Automática
-  contaDebitoValor?: number;
-  contaCreditoValor?: number;
-  contaCreditoICMS?: number;
-  contaCreditoPIS?: number;
-  contaCreditoCOFINS?: number;
+  aliquotaICMS?: number;
+  aliquotaPIS?: number;
+  aliquotaCOFINS?: number;
+  aliquotaISS?: number;
+  retencaoIRRF?: boolean;
+  retencaoCSRF?: boolean;
+  retencaoINSS?: boolean;
   contaContabilDebitoId?: number;
   contaContabilCreditoId?: number;
+  contaDebitoValor?: number;
+  contaCreditoValor?: number;
+  contaDebitoICMS?: number;
+  contaCreditoICMS?: number;
   contaICMSDebitoId?: number;
   contaICMSCreditoId?: number;
+  contaDebitoPIS?: number;
+  contaCreditoPIS?: number;
   contaPISDebitoId?: number;
   contaPISCreditoId?: number;
+  contaDebitoCOFINS?: number;
+  contaCreditoCOFINS?: number;
   contaCOFINSDebitoId?: number;
   contaCOFINSCreditoId?: number;
   historicoId?: number;
+}
+
+export interface ItemNotaFiscal {
+  id: number;
+  numeroItem: number;
+  produtoId?: number;
+  codigoProduto: string;
+  descricao: string;
+  ncm: string;
+  cfop: string;
+  unidade: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+  baseCalculoICMS?: number;
+  aliquotaICMS?: number;
+  valorICMS?: number;
+  cstICMS?: string;
+  cstPIS?: string;
+  baseCalculoPIS?: number;
+  aliquotaPIS?: number;
+  valorPIS?: number;
+  cstCOFINS?: string;
+  baseCalculoCOFINS?: number;
+  aliquotaCOFINS?: number;
+  valorCOFINS?: number;
+}
+
+export interface ParcelaNotaFiscal {
+  id: number;
+  numeroParcela: number;
+  dataVencimento: string;
+  valor: number;
+  contaContabilId?: number;
 }
 
 export interface NotaFiscal {
@@ -269,6 +379,7 @@ export interface NotaFiscal {
   tipo: 'ENTRADA' | 'SAIDA' | 'SERVICO';
   acumuladorId: number;
   cfop: string;
+  participanteId?: number;
   destinatarioOuRemetente?: string;
   cnpjCpf?: string;
   clienteFornecedorNome?: string;
@@ -285,6 +396,8 @@ export interface NotaFiscal {
   retencaoIRRF?: number;
   retencaoCSRF?: number;
   retencaoINSS?: number;
+  itens?: ItemNotaFiscal[];
+  parcelas?: ParcelaNotaFiscal[];
   integradaContabil?: boolean;
 }
 
@@ -317,18 +430,54 @@ export interface ApuracaoFiscal {
 // ----------------------------------------------------
 // FOLHA DE PAGAMENTO (FO / DP)
 // ----------------------------------------------------
+export interface DependenteFolha {
+  id: number;
+  nome: string;
+  cpf?: string;
+  dataNascimento: string;
+  parentesco: 'FILHO' | 'CONJUGE' | 'PAI_MAE' | 'OUTROS';
+  finsIRRF: boolean;
+  finsSalarioFamilia: boolean;
+}
+
 export interface Colaborador {
   id: number;
   empresaId: number;
   matricula: string | number;
+  matriculaeSocial?: string;
   nome: string;
   cpf: string;
+  dataNascimento?: string;
+  sexo?: 'M' | 'F';
+  estadoCivil?: 'SOLTEIRO' | 'CASADO' | 'DIVORCIADO' | 'VIUVO' | 'UNIAO_ESTAVEL';
+  grauInstrucao?: string;
+  racaCor?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
+  cep?: string;
+  ctpsNumero?: string;
+  ctpsSerie?: string;
+  ctpsUF?: string;
+  rgNumero?: string;
+  rgOrgaoEmissor?: string;
+  pisPasep?: string;
+  tituloEleitor?: string;
+  cnhNumero?: string;
+  categoriaeSocial?: string; // 101 - Empregado, 721 - Diretor, etc.
+  cbo?: string;
   cargo: string;
   departamento?: string;
   tipoVinculo: 'CLT' | 'PRO_LABORE' | 'ESTAGIO' | 'AUTONOMO';
   salarioBase: number;
+  tipoPagamento?: 'MENSALISTA' | 'HORISTA' | 'COMISSIONISTA';
+  jornadaSemanal?: number;
   dependentesIRRF: number;
   dependentesSalarioFamilia?: number;
+  listaDependentes?: DependenteFolha[];
   dataAdmissao: string;
   centroCustoId?: number;
   bancoNome?: string;
@@ -399,6 +548,24 @@ export interface FolhaMensal {
   integradaContabil?: boolean;
 }
 
+export interface VariaveisColaborador {
+  id?: number;
+  empresaId: number;
+  colaboradorId: number;
+  competencia: string; // YYYY-MM
+  horasExtras50?: number;
+  horasExtras100?: number;
+  adicionalNoturnoHoras?: number;
+  grauInsalubridade?: 'MINIMO' | 'MEDIO' | 'MAXIMO' | 'NENHUM'; // 10%, 20%, 40% s/ SM
+  periculosidade?: boolean; // 30% s/ Salário Base
+  faltasDias?: number;
+  faltasHoras?: number;
+  adiantamentoSalarial?: number;
+  descontoValeTransporte?: boolean; // até 6%
+  outrosProventos?: number;
+  outrosDescontos?: number;
+}
+
 // ----------------------------------------------------
 // HONORÁRIOS CONTÁBEIS (HO)
 // ----------------------------------------------------
@@ -412,6 +579,13 @@ export interface ContratoHonorario {
   indexadorReajuste: 'IGPM' | 'IPCA' | 'SALARIO_MINIMO' | 'FIXO';
   mesReajuste: number;
   cobra13Honorario: boolean;
+  franquiaEmpregados?: number;
+  valorExcedenteEmpregado?: number;
+  franquiaNotas?: number;
+  valorExcedenteNota?: number;
+  retencaoIRRF?: boolean;
+  retencaoCSRF?: boolean;
+  aliquotaISS?: number;
   dataInicio: string;
   ativo?: boolean;
   status?: 'ATIVO' | 'CANCELADO' | 'SUSPENSO';
@@ -424,8 +598,17 @@ export interface FaturaHonorario {
   numeroFatura?: string;
   valorHonorarioBase?: number;
   valorBase?: number;
+  qtdEmpregadosApurados?: number;
+  qtdNotasApuradas?: number;
+  valorExcedenteFolha?: number;
+  valorExcedenteFiscal?: number;
   valorServicosExtras?: number;
   servicosExtras?: { descricao: string; valor: number }[];
+  valorBrutoTotal?: number;
+  valorIRRFRetido?: number;
+  valorCSRFRetido?: number;
+  valorISSRetido?: number;
+  valorLiquidoFatura?: number;
   valorTotal: number;
   dataEmissao?: string;
   dataVencimento: string;
@@ -433,6 +616,29 @@ export interface FaturaHonorario {
   status: 'PENDENTE' | 'PAGO' | 'CANCELADO' | 'ATRASADO';
   servicosExtrasDescricao?: string;
   integradaContabil?: boolean;
+}
+
+// ----------------------------------------------------
+// CONTROLE DE ATIVO IMOBILIZADO (CT / IMOBILIZADO)
+// ----------------------------------------------------
+export interface AtivoImobilizado {
+  id: number;
+  empresaId: number;
+  codigo: string;
+  descricao: string;
+  grupo: 'VEICULOS' | 'MAQUINAS' | 'INFORMATICA' | 'MOVEIS' | 'EDIFICACOES' | 'OUTROS';
+  dataAquisicao: string;
+  dataInicioDepreciacao: string;
+  valorOriginal: number;
+  valorResidual: number;
+  taxaDepreciacaoAnual: number; // % ao ano conforme RFB
+  vidaUtilMeses: number;
+  contaAtivoId?: number;
+  contaDepreciacaoAcumuladaId?: number;
+  contaDespesaDepreciacaoId?: number;
+  depreciacaoAcumulada?: number;
+  valorContabilAtual?: number;
+  ativo: boolean;
 }
 
 // ----------------------------------------------------
@@ -482,4 +688,50 @@ export interface DFCItem {
   grupo: 'OPERACIONAL' | 'INVESTIMENTO' | 'FINANCIAMENTO' | 'VARIACAO_LIQUIDA';
   descricao: string;
   valor: number;
+}
+
+export interface BalanceteItem {
+  id: number;
+  classificacao: string;
+  codigoReduzido: number;
+  nome: string;
+  grau: number;
+  tipo: TipoConta;
+  natureza: NaturezaConta;
+  saldoAnterior: number;
+  debitos: number;
+  creditos: number;
+  saldoAtual: number;
+  saldoAtualNatureza: NaturezaConta;
+}
+
+export interface BalancoItem {
+  classificacao: string;
+  nome: string;
+  grau: number;
+  tipo: TipoConta;
+  saldo: number;
+}
+
+export interface DREItemCalculado {
+  id?: number;
+  ordem: number;
+  descricao: string;
+  valor: number;
+  tipo?: 'CONTA' | 'SUBTOTAL' | 'TOTAL_GERAL';
+  tipoLinha: 'CONTA' | 'SUBTOTAL' | 'TOTAL_GERAL' | string;
+  operacao: 'SOMA' | 'SUBTRAI' | string;
+  percentualVertical?: number;
+  analiseVerticalPerc: number;
+}
+
+export interface DREEstruturaLinha {
+  id: number;
+  empresaId: number;
+  ordem: number;
+  descricao: string;
+  tipoLinha: 'CONTA' | 'SUBTOTAL' | 'TOTAL_GERAL';
+  operacao: 'SOMA' | 'SUBTRAI';
+  prefixoContas?: string;
+  isBasePercentual: boolean;
 }

@@ -32,7 +32,8 @@ import {
   Calculator,
   CreditCard,
   Archive,
-  BarChart2
+  BarChart2,
+  Package
 } from 'lucide-react';
 
 export interface NavItem {
@@ -118,6 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         items: [
           { id: 'lancamentos', title: 'Digitação de Lançamentos', icon: BookOpen, shortcut: 'F2' },
           { id: 'lotes', title: 'Gestão de Lotes', icon: Layers },
+          { id: 'ativoImobilizado', title: 'Ativo Imobilizado & Depreciação', icon: Archive, badge: 'CPC 27' },
           { id: 'zeramento', title: 'Encerramento de Período (ARE)', icon: FileCheck2 }
         ]
       },
@@ -163,8 +165,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
       {
         id: 'fiscal_cad',
-        title: 'CONFIGURAÇÕES FISCAIS',
+        title: 'CADASTROS OBRIGATÓRIOS (SPED)',
         items: [
+          { id: 'participantes', title: 'Participantes (Clientes/Forn)', icon: Users, badge: '0150' },
+          { id: 'produtos', title: 'Produtos, Serviços & Bens', icon: Package, badge: '0200' },
           { id: 'acumuladores', title: 'Acumuladores Fiscais', icon: Layers, badge: 'CFOP' },
           { id: 'parametros', title: 'Parâmetros de Tributação', icon: Sliders },
           { id: 'empresas', title: 'Dados Cadastrais da Empresa', icon: Building2 }

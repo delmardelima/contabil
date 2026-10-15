@@ -26,7 +26,8 @@ import {
   Receipt,
   DollarSign,
   Calculator,
-  CreditCard
+  CreditCard,
+  Package
 } from 'lucide-react';
 
 interface RibbonBarProps {
@@ -69,6 +70,8 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
     topTabs = [
       { id: 'dashboardFiscal', label: 'Dashboard Fiscal', icon: Receipt },
       { id: 'notasFiscais', label: 'Importador XML & NF-e', icon: FileText },
+      { id: 'participantes', label: 'Participantes SPED', icon: Users },
+      { id: 'produtos', label: 'Itens & Produtos', icon: Package },
       { id: 'acumuladores', label: 'Acumuladores (CFOP)', icon: Layers },
       { id: 'apuracaoFiscal', label: 'Apuração DAS / Guias', icon: Calculator },
       { id: 'livros', label: 'Livros Fiscais', icon: BookOpen },
