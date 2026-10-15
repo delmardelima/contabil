@@ -1843,6 +1843,92 @@ export class DatabaseService {
     };
   }
 
+  // Integração de Apuração Fiscal (Tributos Devidos DAS / ICMS / PIS / COFINS / IRPJ / CSLL) -> Contabilidade
+  public integrarApuracaoContabil(empresaId: number, competencia: string): {
+    success: boolean;
+    partidasGeradas: number;
+    loteId: number;
+    totalImposto: number;
+  } {
+    const ap = this.getApuracaoFiscal(empresaId, competencia);
+    if (!ap || !ap.impostoDevido || ap.impostoDevido <= 0) {
+      return { success: false, partidasGeradas: 0, loteId: 0, totalImposto: 0 };
+    }
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Provisão de Tributos e Impostos Fiscais - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    let partidas = 0;
+    let totalGeral = 0;
+
+    if (ap.regime === 'SIMPLES_NACIONAL' || ap.valorDAS) {
+      const vDAS = ap.valorDAS || ap.impostoDevido;
+      this.addLancamento({
+        empresaId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId,
+        dataLancamento: `${competencia}-28`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 45, // (-) Tributos Incidentes sobre Vendas
+        contaCreditoId: 29, // Simples Nacional / DAS a Recolher
+        valor: vDAS,
+        historicoId: 3,
+        complementoHistorico: `Provisão Guia DAS Simples Nacional Comp. ${competencia}`
+      });
+      partidas++;
+      totalGeral += vDAS;
+    } else {
+      if (ap.detalhamentoImpostos) {
+        for (const [impostoNome, valor] of Object.entries(ap.detalhamentoImpostos)) {
+          if (valor > 0) {
+            this.addLancamento({
+              empresaId,
+              numeroPartida: this.lancamentos.length + 1,
+              loteId,
+              dataLancamento: `${competencia}-28`,
+              tipoPartida: 'SIMPLES',
+              contaDebitoId: 45,
+              contaCreditoId: 29,
+              valor: Math.round(valor * 100) / 100,
+              historicoId: 3,
+              complementoHistorico: `Provisão de ${impostoNome} Comp. ${competencia}`
+            });
+            partidas++;
+            totalGeral += valor;
+          }
+        }
+      }
+    }
+
+    lote.totalDebito = totalGeral;
+    lote.totalCredito = totalGeral;
+    this.lotes.push(lote);
+
+    ap.integradaContabil = true;
+    this.saveApuracaoFiscal(ap);
+
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_FISCAL', 'PROCESSAMENTO', `Integração contábil da apuração de tributos de ${competencia} gerou o Lote nº ${lote.numero} com ${partidas} partidas.`);
+
+    return {
+      success: true,
+      partidasGeradas: partidas,
+      loteId,
+      totalImposto: totalGeral
+    };
+  }
+
   // --------------------------------------------------------------------------
   // MÓDULO FOLHA DE PAGAMENTO (FO)
   // --------------------------------------------------------------------------

@@ -302,6 +302,7 @@ export interface AcumuladorFiscal {
   descricao: string;
   tipoOperacao?: string;
   cfopPadrao: string;
+  cfopsPermitidos?: string[];
   incideICMS: boolean;
   incideIPI?: boolean;
   incidePIS: boolean;
@@ -309,6 +310,7 @@ export interface AcumuladorFiscal {
   incideISS: boolean;
   incideSimples: boolean;
   aliquotaICMS?: number;
+  aliquotaIPI?: number;
   aliquotaPIS?: number;
   aliquotaCOFINS?: number;
   aliquotaISS?: number;
@@ -323,6 +325,8 @@ export interface AcumuladorFiscal {
   contaCreditoICMS?: number;
   contaICMSDebitoId?: number;
   contaICMSCreditoId?: number;
+  contaDebitoIPI?: number;
+  contaCreditoIPI?: number;
   contaDebitoPIS?: number;
   contaCreditoPIS?: number;
   contaPISDebitoId?: number;
@@ -331,6 +335,8 @@ export interface AcumuladorFiscal {
   contaCreditoCOFINS?: number;
   contaCOFINSDebitoId?: number;
   contaCOFINSCreditoId?: number;
+  contaDebitoISS?: number;
+  contaCreditoISS?: number;
   historicoId?: number;
 }
 
@@ -371,6 +377,7 @@ export interface ParcelaNotaFiscal {
 export interface NotaFiscal {
   id: number;
   empresaId: number;
+  modelo?: string;
   numero: string | number;
   serie: string;
   chaveAcesso?: string;
@@ -380,6 +387,7 @@ export interface NotaFiscal {
   acumuladorId: number;
   cfop: string;
   participanteId?: number;
+  participanteNome?: string;
   destinatarioOuRemetente?: string;
   cnpjCpf?: string;
   clienteFornecedorNome?: string;
