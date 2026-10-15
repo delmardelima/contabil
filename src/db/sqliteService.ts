@@ -67,7 +67,16 @@ import {
   ItemInventarioPatrimonial,
   ImovelRuralLCDPR,
   LancamentoLCDPR,
-  ResumoMensalLCDPR
+  ResumoMensalLCDPR,
+  MotivoRescisao,
+  TipoAvisoPrevio,
+  RescisaoContratual,
+  LinhaDmpl,
+  QuadroDmpl,
+  ItemDva,
+  DemonstracaoDva,
+  ItemInventarioEstoque,
+  InventarioEstoqueModelo7
 } from '../types/contabil';
 
 const STORAGE_KEYS = {
@@ -2558,6 +2567,108 @@ const SEED_LANCAMENTOS_LCDPR: LancamentoLCDPR[] = [
   }
 ];
 
+const SEED_RESCISOES_TRCT: RescisaoContratual[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    colaboradorId: 3,
+    colaboradorNome: 'JULIANA PEREIRA LIMA',
+    cargo: 'Assistente Administrativo Pleno',
+    dataAdmissao: '2023-04-10',
+    dataDemissao: '2026-03-31',
+    dataAvisoPrevio: '2026-03-01',
+    motivo: 'SEM_JUSTA_CAUSA',
+    tipoAviso: 'TRABALHADO',
+    diasAvisoLei12506: 36,
+    salarioBase: 3800.00,
+    saldoSalarioDias: 30,
+    saldoSalarioValor: 3800.00,
+    decimoTerceiroAvos: 3,
+    decimoTerceiroValor: 950.00,
+    feriasProporcionaisAvos: 12,
+    feriasProporcionaisValor: 3800.00,
+    tercoConstitucionalFeriasProp: 1266.67,
+    feriasVencidasValor: 0,
+    tercoConstitucionalFeriasVenc: 0,
+    avisoPrevioIndenizadoValor: 760.00,
+    totalProventosBruto: 10576.67,
+    inssRescisao: 372.40,
+    irrfRescisao: 114.85,
+    outrasDeducoes: 0,
+    totalDescontos: 487.25,
+    valorLiquidoRescisorio: 10089.42,
+    saldoFgtsParaFinsRescisorios: 12450.00,
+    aliquotaMultaFgts: 40,
+    valorMultaFgts: 4980.00,
+    statusIntegracaoContabil: true,
+    loteContabilId: 140,
+    observacoes: 'Homologação concluída com quitação bancária e liberação das guias de seguro-desemprego e chave FGTS.'
+  }
+];
+
+const SEED_ITENS_INVENTARIO_ESTOQUE: ItemInventarioEstoque[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    ano: 2026,
+    dataInventario: '2026-12-31',
+    codigoItem: 'PROD-001',
+    descricaoItem: 'Servidor Dell PowerEdge T150 Xeon E-2314',
+    tipoItemSped: '00',
+    unidadeMedida: 'UN',
+    quantidade: 14,
+    custoMedioUnitario: 8950.00,
+    valorTotal: 125300.00,
+    indicadorPropriedade: '0',
+    contaContabilCodigo: '1.01.03.001.0001'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    ano: 2026,
+    dataInventario: '2026-12-31',
+    codigoItem: 'PROD-002',
+    descricaoItem: 'Switch Gerenciável 24 Portas Gigabit L2 PoE+',
+    tipoItemSped: '00',
+    unidadeMedida: 'UN',
+    quantidade: 35,
+    custoMedioUnitario: 1450.00,
+    valorTotal: 50750.00,
+    indicadorPropriedade: '0',
+    contaContabilCodigo: '1.01.03.001.0001'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    ano: 2026,
+    dataInventario: '2026-12-31',
+    codigoItem: 'PROD-003',
+    descricaoItem: 'Bobina Cabo de Rede UTP Cat6 305m Homologado',
+    tipoItemSped: '01',
+    unidadeMedida: 'CX',
+    quantidade: 80,
+    custoMedioUnitario: 420.00,
+    valorTotal: 33600.00,
+    indicadorPropriedade: '0',
+    contaContabilCodigo: '1.01.03.002.0001'
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    ano: 2026,
+    dataInventario: '2026-12-31',
+    codigoItem: 'PROD-004',
+    descricaoItem: 'Nobreak Senoidal Online Dupla Conversão 3kVA',
+    tipoItemSped: '00',
+    unidadeMedida: 'UN',
+    quantidade: 8,
+    custoMedioUnitario: 4100.00,
+    valorTotal: 32800.00,
+    indicadorPropriedade: '0',
+    contaContabilCodigo: '1.01.03.001.0001'
+  }
+];
+
 export class DatabaseService {
   private empresas: Empresa[] = [];
   private contas: ContaContabil[] = [];
@@ -2610,6 +2721,8 @@ export class DatabaseService {
   private itensInventario: ItemInventarioPatrimonial[] = [];
   private imoveisRurais: ImovelRuralLCDPR[] = [];
   private lancamentosLcdpr: LancamentoLCDPR[] = [];
+  private rescisoesTrct: RescisaoContratual[] = [];
+  private itensInventarioEstoque: ItemInventarioEstoque[] = [];
 
   constructor() {
     this.initDatabase();
@@ -2663,6 +2776,8 @@ export class DatabaseService {
         this.itensInventario = snap.itensInventario || SEED_INVENTARIO_PATRIMONIAL;
         this.imoveisRurais = snap.imoveisRurais || SEED_IMOVEIS_RURAIS;
         this.lancamentosLcdpr = snap.lancamentosLcdpr || SEED_LANCAMENTOS_LCDPR;
+        this.rescisoesTrct = snap.rescisoesTrct || SEED_RESCISOES_TRCT;
+        this.itensInventarioEstoque = snap.itensInventarioEstoque || SEED_ITENS_INVENTARIO_ESTOQUE;
       } catch (e) {
         this.carregarSeeds();
       }
@@ -2724,6 +2839,8 @@ export class DatabaseService {
     this.itensInventario = [...SEED_INVENTARIO_PATRIMONIAL];
     this.imoveisRurais = [...SEED_IMOVEIS_RURAIS];
     this.lancamentosLcdpr = [...SEED_LANCAMENTOS_LCDPR];
+    this.rescisoesTrct = [...SEED_RESCISOES_TRCT];
+    this.itensInventarioEstoque = [...SEED_ITENS_INVENTARIO_ESTOQUE];
 
     this.persistSnapshot();
   }
@@ -2771,6 +2888,8 @@ export class DatabaseService {
       itensInventario: this.itensInventario,
       imoveisRurais: this.imoveisRurais,
       lancamentosLcdpr: this.lancamentosLcdpr,
+      rescisoesTrct: this.rescisoesTrct,
+      itensInventarioEstoque: this.itensInventarioEstoque,
       timestamp: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEYS.SNAPSHOT, JSON.stringify(snap));
@@ -8441,6 +8560,507 @@ export class DatabaseService {
     contadorLinha++;
     lines.push(`9999|${contadorLinha}`);
 
+    return lines.join('\r\n');
+  }
+
+  // ----------------------------------------------------
+  // RESCISÃO TRABALHISTA & TRCT (Portaria MTE nº 1.057/2012)
+  // ----------------------------------------------------
+  public getRescisoes(empresaId?: number): RescisaoContratual[] {
+    if (empresaId) {
+      return this.rescisoesTrct.filter(r => r.empresaId === empresaId);
+    }
+    return this.rescisoesTrct;
+  }
+
+  public calcularRescisao(params: {
+    empresaId: number;
+    colaboradorId: number;
+    dataDemissao: string;
+    dataAviso: string;
+    motivo: MotivoRescisao;
+    tipoAviso: TipoAvisoPrevio;
+    saldoFgts: number;
+    feriasVencidas: boolean;
+    outrasDeducoes?: number;
+    observacoes?: string;
+  }): RescisaoContratual {
+    const colab = this.colaboradores.find(c => c.id === params.colaboradorId) || this.colaboradores[0];
+    const salarioBase = colab ? (colab.salarioBase || 3500) : 3500;
+    const dataAdm = colab ? new Date(colab.dataAdmissao) : new Date('2024-01-01');
+    const dataDem = new Date(params.dataDemissao);
+
+    // Lei 12.506/2011: 30 dias + 3 dias por ano trabalhado (máx 90 dias)
+    let anosCompletos = dataDem.getFullYear() - dataAdm.getFullYear();
+    const m = dataDem.getMonth() - dataAdm.getMonth();
+    if (m < 0 || (m === 0 && dataDem.getDate() < dataAdm.getDate())) {
+      anosCompletos--;
+    }
+    anosCompletos = Math.max(0, anosCompletos);
+    const diasAvisoLei12506 = Math.min(90, 30 + (anosCompletos * 3));
+
+    // Saldo de Salários do mês do desligamento
+    const diaDemissao = dataDem.getDate();
+    const saldoSalarioDias = Math.min(30, diaDemissao);
+    const saldoSalarioValor = Number(((salarioBase / 30) * saldoSalarioDias).toFixed(2));
+
+    // 13º Salário Proporcional
+    const mesDemissao = dataDem.getMonth() + 1;
+    let decimoTerceiroAvos = mesDemissao - (diaDemissao >= 15 ? 0 : 1);
+    if (params.motivo === 'JUSTA_CAUSA') {
+      decimoTerceiroAvos = 0;
+    }
+    decimoTerceiroAvos = Math.max(0, Math.min(12, decimoTerceiroAvos));
+    const decimoTerceiroValor = Number(((salarioBase / 12) * decimoTerceiroAvos).toFixed(2));
+
+    // Férias Proporcionais + 1/3
+    let feriasProporcionaisAvos = Math.max(1, Math.min(12, mesDemissao));
+    if (params.motivo === 'JUSTA_CAUSA') {
+      feriasProporcionaisAvos = 0;
+    }
+    const feriasProporcionaisValor = Number(((salarioBase / 12) * feriasProporcionaisAvos).toFixed(2));
+    const tercoConstitucionalFeriasProp = Number((feriasProporcionaisValor / 3).toFixed(2));
+
+    // Férias Vencidas + 1/3
+    const feriasVencidasValor = params.feriasVencidas ? salarioBase : 0;
+    const tercoConstitucionalFeriasVenc = params.feriasVencidas ? Number((salarioBase / 3).toFixed(2)) : 0;
+
+    // Aviso Prévio Indenizado
+    let avisoPrevioIndenizadoValor = 0;
+    if (params.motivo === 'SEM_JUSTA_CAUSA' && params.tipoAviso === 'INDENIZADO') {
+      avisoPrevioIndenizadoValor = Number(((salarioBase / 30) * diasAvisoLei12506).toFixed(2));
+    } else if (params.motivo === 'SEM_JUSTA_CAUSA' && params.tipoAviso === 'TRABALHADO' && diasAvisoLei12506 > 30) {
+      avisoPrevioIndenizadoValor = Number(((salarioBase / 30) * (diasAvisoLei12506 - 30)).toFixed(2));
+    } else if (params.motivo === 'ACORDO_MUTUO' && params.tipoAviso === 'INDENIZADO') {
+      avisoPrevioIndenizadoValor = Number(((salarioBase / 30) * diasAvisoLei12506 * 0.5).toFixed(2));
+    }
+
+    const totalProventosBruto = Number((
+      saldoSalarioValor + 
+      decimoTerceiroValor + 
+      feriasProporcionaisValor + 
+      tercoConstitucionalFeriasProp + 
+      feriasVencidasValor + 
+      tercoConstitucionalFeriasVenc + 
+      avisoPrevioIndenizadoValor
+    ).toFixed(2));
+
+    // Descontos: INSS
+    let inssSaldo = 0;
+    if (saldoSalarioValor <= 1412.00) inssSaldo = saldoSalarioValor * 0.075;
+    else if (saldoSalarioValor <= 2666.68) inssSaldo = 1412 * 0.075 + (saldoSalarioValor - 1412) * 0.09;
+    else if (saldoSalarioValor <= 4000.03) inssSaldo = 1412 * 0.075 + (2666.68 - 1412) * 0.09 + (saldoSalarioValor - 2666.68) * 0.12;
+    else inssSaldo = 1412 * 0.075 + (2666.68 - 1412) * 0.09 + (4000.03 - 2666.68) * 0.12 + (Math.min(saldoSalarioValor, 7786.02) - 4000.03) * 0.14;
+
+    let inssDecimo = 0;
+    if (decimoTerceiroValor > 0) {
+      if (decimoTerceiroValor <= 1412.00) inssDecimo = decimoTerceiroValor * 0.075;
+      else if (decimoTerceiroValor <= 2666.68) inssDecimo = 1412 * 0.075 + (decimoTerceiroValor - 1412) * 0.09;
+      else inssDecimo = 1412 * 0.075 + (2666.68 - 1412) * 0.09 + (decimoTerceiroValor - 2666.68) * 0.12;
+    }
+    const inssRescisao = Number((inssSaldo + inssDecimo).toFixed(2));
+
+    // Desconto: IRRF
+    const baseIrrf = saldoSalarioValor + decimoTerceiroValor - inssRescisao;
+    let irrfRescisao = 0;
+    if (baseIrrf > 2259.20 && baseIrrf <= 2826.65) irrfRescisao = (baseIrrf * 0.075) - 169.44;
+    else if (baseIrrf > 2826.65 && baseIrrf <= 3751.05) irrfRescisao = (baseIrrf * 0.15) - 381.44;
+    else if (baseIrrf > 3751.05 && baseIrrf <= 4664.68) irrfRescisao = (baseIrrf * 0.225) - 662.77;
+    else if (baseIrrf > 4664.68) irrfRescisao = (baseIrrf * 0.275) - 896.00;
+    irrfRescisao = Number(Math.max(0, irrfRescisao).toFixed(2));
+
+    const outrasDeducoes = Number(params.outrasDeducoes || 0);
+    const totalDescontos = Number((inssRescisao + irrfRescisao + outrasDeducoes).toFixed(2));
+    const valorLiquidoRescisorio = Number((totalProventosBruto - totalDescontos).toFixed(2));
+
+    // FGTS e Multa
+    let aliquotaMultaFgts = 0;
+    if (params.motivo === 'SEM_JUSTA_CAUSA') aliquotaMultaFgts = 40;
+    else if (params.motivo === 'ACORDO_MUTUO') aliquotaMultaFgts = 20;
+    const valorMultaFgts = Number((params.saldoFgts * (aliquotaMultaFgts / 100)).toFixed(2));
+
+    const novoId = this.rescisoesTrct.length > 0 ? Math.max(...this.rescisoesTrct.map(r => r.id)) + 1 : 1;
+
+    return {
+      id: novoId,
+      empresaId: params.empresaId,
+      colaboradorId: colab ? colab.id : 1,
+      colaboradorNome: colab ? colab.nome : 'COLABORADOR',
+      cargo: colab ? colab.cargo : 'Cargo',
+      dataAdmissao: colab ? colab.dataAdmissao : '2024-01-01',
+      dataDemissao: params.dataDemissao,
+      dataAvisoPrevio: params.dataAviso,
+      motivo: params.motivo,
+      tipoAviso: params.tipoAviso,
+      diasAvisoLei12506,
+      salarioBase,
+      saldoSalarioDias,
+      saldoSalarioValor,
+      decimoTerceiroAvos,
+      decimoTerceiroValor,
+      feriasProporcionaisAvos,
+      feriasProporcionaisValor,
+      tercoConstitucionalFeriasProp,
+      feriasVencidasValor,
+      tercoConstitucionalFeriasVenc,
+      avisoPrevioIndenizadoValor,
+      totalProventosBruto,
+      inssRescisao,
+      irrfRescisao,
+      outrasDeducoes,
+      totalDescontos,
+      valorLiquidoRescisorio,
+      saldoFgtsParaFinsRescisorios: params.saldoFgts,
+      aliquotaMultaFgts,
+      valorMultaFgts,
+      statusIntegracaoContabil: false,
+      observacoes: params.observacoes || ''
+    };
+  }
+
+  public salvarRescisao(rescisao: RescisaoContratual): RescisaoContratual {
+    const idx = this.rescisoesTrct.findIndex(r => r.id === rescisao.id);
+    if (idx !== -1) {
+      this.rescisoesTrct[idx] = { ...rescisao };
+    } else {
+      this.rescisoesTrct.push(rescisao);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('RESCISAO_TRCT', 'GRAVACAO', `Rescisão de ${rescisao.colaboradorNome} salva com sucesso.`);
+    return rescisao;
+  }
+
+  public integrarRescisaoTrctContabil(rescisaoId: number): { sucesso: boolean; loteId: number; mensagem: string } {
+    const resc = this.rescisoesTrct.find(r => r.id === rescisaoId);
+    if (!resc) {
+      return { sucesso: false, loteId: 0, mensagem: 'Rescisão não encontrada.' };
+    }
+    if (resc.statusIntegracaoContabil) {
+      return { sucesso: true, loteId: resc.loteContabilId || 0, mensagem: 'Rescisão já integrada contabilmente.' };
+    }
+
+    const novoLoteId = this.lotes.length > 0 ? Math.max(...this.lotes.map(l => l.id)) + 1 : 1;
+    const novoLoteNumero = this.lotes.length > 0 ? Math.max(...this.lotes.map(l => l.numero)) + 1 : 1;
+
+    const contaDespesa = this.contas.find(c => c.classificacao.startsWith('3.01.01') || c.classificacao.startsWith('4.01.01')) || this.contas[10];
+    const contaInss = this.contas.find(c => c.nome.toLowerCase().includes('inss a recolher')) || this.contas[12];
+    const contaIrrf = this.contas.find(c => c.nome.toLowerCase().includes('irrf a recolher')) || this.contas[13];
+    const contaSalariosPagar = this.contas.find(c => c.nome.toLowerCase().includes('salários a pagar')) || this.contas[14];
+
+    const lancamentosRescisao: LancamentoContabil[] = [];
+    const novoLancId = this.lancamentos.length > 0 ? Math.max(...this.lancamentos.map(l => l.id)) + 1 : 1;
+
+    lancamentosRescisao.push({
+      id: novoLancId,
+      empresaId: resc.empresaId,
+      numeroPartida: 1,
+      loteId: novoLoteId,
+      dataLancamento: resc.dataDemissao,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: contaDespesa.id,
+      contaCreditoId: contaSalariosPagar.id,
+      valor: resc.valorLiquidoRescisorio,
+      historicoId: 1,
+      complementoHistorico: `Vlr. ref. quitação rescisória de ${resc.colaboradorNome} (TRCT)`,
+      createdAt: new Date().toISOString()
+    });
+
+    if (resc.inssRescisao > 0) {
+      lancamentosRescisao.push({
+        id: novoLancId + 1,
+        empresaId: resc.empresaId,
+        numeroPartida: 2,
+        loteId: novoLoteId,
+        dataLancamento: resc.dataDemissao,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaDespesa.id,
+        contaCreditoId: contaInss.id,
+        valor: resc.inssRescisao,
+        historicoId: 1,
+        complementoHistorico: `Retenção INSS sobre verbas rescisórias de ${resc.colaboradorNome}`,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    if (resc.irrfRescisao > 0) {
+      lancamentosRescisao.push({
+        id: novoLancId + 2,
+        empresaId: resc.empresaId,
+        numeroPartida: 3,
+        loteId: novoLoteId,
+        dataLancamento: resc.dataDemissao,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaDespesa.id,
+        contaCreditoId: contaIrrf.id,
+        valor: resc.irrfRescisao,
+        historicoId: 1,
+        complementoHistorico: `Retenção IRRF sobre verbas rescisórias de ${resc.colaboradorNome}`,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    this.lancamentos.push(...lancamentosRescisao);
+
+    this.lotes.push({
+      id: novoLoteId,
+      empresaId: resc.empresaId,
+      numero: novoLoteNumero,
+      numeroLote: novoLoteNumero,
+      descricao: `Rescisão Trabalhista TRCT - ${resc.colaboradorNome}`,
+      dataLote: resc.dataDemissao,
+      status: 'FECHADO',
+      totalDebito: resc.totalProventosBruto,
+      totalCredito: resc.totalProventosBruto
+    });
+
+    resc.statusIntegracaoContabil = true;
+    resc.loteContabilId = novoLoteId;
+
+    this.persistSnapshot();
+    this.registrarAuditoria('RESCISAO_TRCT', 'INTEGRACAO_CONTABIL', `Lote nº ${novoLoteNumero} gerado com sucesso para a rescisão de ${resc.colaboradorNome}.`);
+    return { sucesso: true, loteId: novoLoteId, mensagem: `Lote Contábil nº ${novoLoteNumero} gerado com ${lancamentosRescisao.length} partidas dobradas.` };
+  }
+
+  // ----------------------------------------------------
+  // DEMONSTRAÇÃO DAS MUTAÇÕES DO PATRIMÔNIO LÍQUIDO (DMPL - CPC 26) & DVA (CPC 09)
+  // ----------------------------------------------------
+  public getQuadroDmpl(empresaId: number, ano: number): QuadroDmpl {
+    const empresa = this.empresas.find(e => e.id === empresaId) || this.empresas[0];
+    const capitalSocialBase = empresa.capitalSocial || 500000.00;
+    
+    const dreLinhas = this.gerarDREConsolidada(empresaId);
+    const lucroLinha = dreLinhas.find(l => l.descricao.includes('LUCRO LÍQUIDO'));
+    const lucroLiquido = (lucroLinha && lucroLinha.valorConsolidado > 0) ? lucroLinha.valorConsolidado : 184500.00;
+    const reservaLegal = Number((lucroLiquido * 0.05).toFixed(2));
+    const reservaEstatutaria = Number((lucroLiquido * 0.10).toFixed(2));
+    const dividendos = Number((lucroLiquido * 0.25).toFixed(2));
+    const lucrosRetidos = Number((lucroLiquido - reservaLegal - reservaEstatutaria - dividendos).toFixed(2));
+
+    const linhas: LinhaDmpl[] = [
+      {
+        id: '1',
+        descricao: `Saldos em 01/01/${ano}`,
+        capitalSocial: capitalSocialBase,
+        reservasCapital: 25000.00,
+        reservasLucros: 85000.00,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: 0,
+        totalPl: capitalSocialBase + 25000.00 + 85000.00
+      },
+      {
+        id: '2',
+        descricao: 'Ajustes de Exercícios Anteriores (NBC TG 23)',
+        capitalSocial: 0,
+        reservasCapital: 0,
+        reservasLucros: 0,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: 4200.00,
+        totalPl: 4200.00
+      },
+      {
+        id: '3',
+        descricao: 'Aumento de Capital Social por Subscrição',
+        capitalSocial: 100000.00,
+        reservasCapital: 0,
+        reservasLucros: 0,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: 0,
+        totalPl: 100000.00
+      },
+      {
+        id: '4',
+        descricao: `Lucro Líquido do Exercício de ${ano}`,
+        capitalSocial: 0,
+        reservasCapital: 0,
+        reservasLucros: 0,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: lucroLiquido,
+        totalPl: lucroLiquido
+      },
+      {
+        id: '5',
+        descricao: 'Constituição de Reserva Legal (5% Lei 6.404/76)',
+        capitalSocial: 0,
+        reservasCapital: 0,
+        reservasLucros: reservaLegal,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: -reservaLegal,
+        totalPl: 0
+      },
+      {
+        id: '6',
+        descricao: 'Constituição de Reserva Estatutária e Expansão',
+        capitalSocial: 0,
+        reservasCapital: 0,
+        reservasLucros: reservaEstatutaria,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: -reservaEstatutaria,
+        totalPl: 0
+      },
+      {
+        id: '7',
+        descricao: 'Distribuição de Dividendos Obrigatórios e Propostos',
+        capitalSocial: 0,
+        reservasCapital: 0,
+        reservasLucros: 0,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: -dividendos,
+        totalPl: -dividendos
+      },
+      {
+        id: '8',
+        descricao: `Saldos Finais em 31/12/${ano}`,
+        capitalSocial: capitalSocialBase + 100000.00,
+        reservasCapital: 25000.00,
+        reservasLucros: 85000.00 + reservaLegal + reservaEstatutaria,
+        acoesTesouraria: 0,
+        lucrosPrejuizosAcumulados: 4200.00 + lucrosRetidos,
+        totalPl: (capitalSocialBase + 100000.00) + 25000.00 + (85000.00 + reservaLegal + reservaEstatutaria) + (4200.00 + lucrosRetidos)
+      }
+    ];
+
+    const totalFinalPl = linhas[linhas.length - 1].totalPl;
+    return { ano, empresaId, linhas, totalFinalPl };
+  }
+
+  public getDemonstracaoDva(empresaId: number, ano: number): DemonstracaoDva {
+    const dreLinhas = this.gerarDREConsolidada(empresaId);
+    const recLinha = dreLinhas.find(l => l.descricao.includes('RECEITA OPERACIONAL BRUTA'));
+    const receitaBruta = (recLinha && recLinha.valorConsolidado > 0) ? recLinha.valorConsolidado : 890000.00;
+    const custosLinha = dreLinhas.find(l => l.descricao.includes('CUSTOS'));
+    const custosInsumos = (custosLinha && custosLinha.valorConsolidado > 0) ? custosLinha.valorConsolidado : 320000.00;
+    const servicosTerceiros = 65000.00;
+    const depreciacao = 18500.00;
+    const valorAdicionadoBruto = receitaBruta - custosInsumos - servicosTerceiros;
+    const valorAdicionadoLiquido = valorAdicionadoBruto - depreciacao;
+    const valorAdicionadoTotal = valorAdicionadoLiquido;
+
+    const geracaoValor: ItemDva[] = [
+      { codigo: '1', descricao: 'RECEITAS', nivel: 1, valor: receitaBruta },
+      { codigo: '1.1', descricao: 'Venda de mercadorias, produtos e serviços', nivel: 2, valor: receitaBruta },
+      { codigo: '2', descricao: 'INSUMOS ADQUIRIDOS DE TERCEIROS', nivel: 1, valor: custosInsumos + servicosTerceiros },
+      { codigo: '2.1', descricao: 'Custos das mercadorias e produtos vendidos', nivel: 2, valor: custosInsumos },
+      { codigo: '2.2', descricao: 'Materiais, energia e serviços de terceiros', nivel: 2, valor: servicosTerceiros },
+      { codigo: '3', descricao: 'VALOR ADICIONADO BRUTO (1 - 2)', nivel: 1, valor: valorAdicionadoBruto },
+      { codigo: '4', descricao: 'RETENÇÕES (Depreciação, amortização e exaustão)', nivel: 1, valor: depreciacao },
+      { codigo: '5', descricao: 'VALOR ADICIONADO LÍQUIDO PRODUZIDO PELA ENTIDADE (3 - 4)', nivel: 1, valor: valorAdicionadoLiquido },
+      { codigo: '6', descricao: 'VALOR ADICIONADO TOTAL A DISTRIBUIR', nivel: 1, valor: valorAdicionadoTotal }
+    ];
+
+    const despesasPessoal = 195000.00;
+    const impostosFederais = 62000.00;
+    const impostosEstaduais = 48000.00;
+    const jurosAlugueis = 24000.00;
+    const lucrosAcionistas = valorAdicionadoTotal - (despesasPessoal + impostosFederais + impostosEstaduais + jurosAlugueis);
+
+    const distribuicaoValor: ItemDva[] = [
+      { codigo: '7.1', descricao: 'PESSOAL & ENCARGOS (Salários, Benefícios e FGTS)', nivel: 1, valor: despesasPessoal },
+      { codigo: '7.2', descricao: 'IMPOSTOS, TAXAS E CONTRIBUIÇÕES', nivel: 1, valor: impostosFederais + impostosEstaduais },
+      { codigo: '7.2.1', descricao: 'Federais (IRPJ, CSLL, PIS, COFINS, INSS Patronal)', nivel: 2, valor: impostosFederais },
+      { codigo: '7.2.2', descricao: 'Estaduais e Municipais (ICMS, ISSQN)', nivel: 2, valor: impostosEstaduais },
+      { codigo: '7.3', descricao: 'REMUNERAÇÃO DE CAPITAIS DE TERCEIROS (Juros e Aluguéis)', nivel: 1, valor: jurosAlugueis },
+      { codigo: '7.4', descricao: 'REMUNERAÇÃO DE CAPITAIS PRÓPRIOS (Lucros Retidos e Dividendos)', nivel: 1, valor: lucrosAcionistas }
+    ];
+
+    return { ano, empresaId, geracaoValor, distribuicaoValor, valorAdicionadoTotal };
+  }
+
+  // ----------------------------------------------------
+  // LIVRO REGISTRO DE INVENTÁRIO MODELO 7 & SPED BLOCO H
+  // ----------------------------------------------------
+  public getInventarioEstoque(empresaId: number, ano: number): InventarioEstoqueModelo7 {
+    const itens = this.itensInventarioEstoque.filter(i => i.empresaId === empresaId && i.ano === ano);
+    const totalEstoque = itens.reduce((acc, i) => acc + i.valorTotal, 0);
+    return {
+      ano,
+      empresaId,
+      dataInventario: `${ano}-12-31`,
+      motivoInventario: '01 - No encerramento do período social',
+      totalEstoque,
+      itens,
+      geradoEm: new Date().toISOString()
+    };
+  }
+
+  public saveItemInventarioEstoque(item: Partial<ItemInventarioEstoque>): ItemInventarioEstoque {
+    let itemSalvo: ItemInventarioEstoque;
+    const qtd = Number(item.quantidade || 0);
+    const custo = Number(item.custoMedioUnitario || 0);
+    const total = Number((qtd * custo).toFixed(2));
+
+    if (item.id) {
+      const idx = this.itensInventarioEstoque.findIndex(i => i.id === item.id);
+      if (idx !== -1) {
+        this.itensInventarioEstoque[idx] = {
+          ...this.itensInventarioEstoque[idx],
+          ...item,
+          quantidade: qtd,
+          custoMedioUnitario: custo,
+          valorTotal: total
+        };
+        itemSalvo = this.itensInventarioEstoque[idx];
+      } else {
+        itemSalvo = { ...(item as ItemInventarioEstoque), valorTotal: total };
+        this.itensInventarioEstoque.push(itemSalvo);
+      }
+    } else {
+      const novoId = this.itensInventarioEstoque.length > 0 ? Math.max(...this.itensInventarioEstoque.map(i => i.id)) + 1 : 1;
+      itemSalvo = {
+        id: novoId,
+        empresaId: item.empresaId || 1,
+        ano: item.ano || 2026,
+        dataInventario: item.dataInventario || `${item.ano || 2026}-12-31`,
+        codigoItem: item.codigoItem || `PROD-${novoId}`,
+        descricaoItem: item.descricaoItem || 'Item de Estoque',
+        tipoItemSped: item.tipoItemSped || '00',
+        unidadeMedida: item.unidadeMedida || 'UN',
+        quantidade: qtd,
+        custoMedioUnitario: custo,
+        valorTotal: total,
+        indicadorPropriedade: item.indicadorPropriedade || '0',
+        contaContabilCodigo: item.contaContabilCodigo || '1.01.03.001.0001'
+      };
+      this.itensInventarioEstoque.push(itemSalvo);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('INVENTARIO_ESTOQUE', 'SALVAMENTO', `Item de estoque ${itemSalvo.codigoItem} (${itemSalvo.descricaoItem}) cadastrado/atualizado.`);
+    return itemSalvo;
+  }
+
+  public deleteItemInventarioEstoque(id: number): boolean {
+    const idx = this.itensInventarioEstoque.findIndex(i => i.id === id);
+    if (idx !== -1) {
+      const rem = this.itensInventarioEstoque.splice(idx, 1)[0];
+      this.persistSnapshot();
+      this.registrarAuditoria('INVENTARIO_ESTOQUE', 'EXCLUSAO', `Item ${rem.codigoItem} excluído do inventário.`);
+      return true;
+    }
+    return false;
+  }
+
+  public gerarSpedFiscalBlocoH(empresaId: number, ano: number): string {
+    const inventario = this.getInventarioEstoque(empresaId, ano);
+    const lines: string[] = [];
+    let contadorLinhas = 0;
+
+    lines.push(`|H001|0|`);
+    contadorLinhas++;
+
+    const dtInvFormatada = inventario.dataInventario.split('-').reverse().join('');
+    const totalEstoqueStr = inventario.totalEstoque.toFixed(2).replace('.', ',');
+    lines.push(`|H005|${dtInvFormatada}|${totalEstoqueStr}|01|`);
+    contadorLinhas++;
+
+    inventario.itens.forEach(it => {
+      const qtdStr = it.quantidade.toFixed(3).replace('.', ',');
+      const custoStr = it.custoMedioUnitario.toFixed(6).replace('.', ',');
+      const totalStr = it.valorTotal.toFixed(2).replace('.', ',');
+      lines.push(`|H010|${it.codigoItem}|${it.unidadeMedida}|${qtdStr}|${custoStr}|${totalStr}|${it.indicadorPropriedade}|||||${it.contaContabilCodigo || ''}||`);
+      contadorLinhas++;
+    });
+
+    contadorLinhas++;
+    lines.push(`|H990|${contadorLinhas}|`);
     return lines.join('\r\n');
   }
 }

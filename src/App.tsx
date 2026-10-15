@@ -49,6 +49,7 @@ import { TransporteSaldosModule } from './components/utilitarios/TransporteSaldo
 import { AtivoImobilizadoModule } from './components/patrimonio/AtivoImobilizadoModule';
 import { CalendarioFiscalModule } from './components/utilitarios/CalendarioFiscalModule';
 import { ConsolidacaoModule } from './components/demonstrativos/ConsolidacaoModule';
+import { DmplDvaModule } from './components/demonstrativos/DmplDvaModule';
 import { ApuracaoTrimestralModule } from './components/contabilidade/ApuracaoTrimestralModule';
 import { LalurLacsModule } from './components/contabilidade/LalurLacsModule';
 import { RazaoAuxiliarModule } from './components/contabilidade/RazaoAuxiliarModule';
@@ -68,6 +69,7 @@ import { NfseModule } from './components/escrita/NfseModule';
 import { CiapModule } from './components/patrimonio/CiapModule';
 import { InventarioPatrimonioModule } from './components/patrimonio/InventarioPatrimonioModule';
 import { LcdprModule } from './components/escrita/LcdprModule';
+import { InventarioEstoqueModule } from './components/escrita/InventarioEstoqueModule';
 
 // Módulos Folha de Pagamento
 import { DashboardFolhaModule } from './components/folha/DashboardFolhaModule';
@@ -77,6 +79,7 @@ import { CalculoFolhaModule } from './components/folha/CalculoFolhaModule';
 import { ProvisoesFolhaModule } from './components/folha/ProvisoesFolhaModule';
 import { ESocialXmlModule } from './components/folha/ESocialXmlModule';
 import { DctfWebModule } from './components/folha/DctfWebModule';
+import { RescisaoModule } from './components/folha/RescisaoModule';
 
 // Módulos Honorários
 import { DashboardHonorariosModule } from './components/honorarios/DashboardHonorariosModule';
@@ -113,7 +116,9 @@ import {
   Archive,
   Calendar,
   Share2,
-  FileCheck2
+  FileCheck2,
+  Boxes,
+  UserMinus
 } from 'lucide-react';
 
 export interface WorkspaceTab {
@@ -226,6 +231,7 @@ export const App: React.FC = () => {
       case 'apuracaoTrimestral': return { title: 'Apuração IRPJ & CSLL (Trimestral)', icon: Calculator };
       case 'lalur': return { title: 'LALUR / LACS (Lucro Real)', icon: BookOpen };
       case 'consolidacao': return { title: 'Consolidação Matriz & Filiais (CPC 36)', icon: Share2 };
+      case 'dmplDva': return { title: 'DMPL & DVA (CPC 26/09)', icon: Share2 };
       case 'razaoAuxiliar': return { title: 'Razão Auxiliar (Clientes/Forn)', icon: FileSpreadsheet };
 
       // Escrita Fiscal
@@ -234,6 +240,7 @@ export const App: React.FC = () => {
       case 'nfse': return { title: 'NFS-e Nacional / DPS', icon: Receipt };
       case 'ciap': return { title: 'CIAP Bloco G (Ativo Permanente)', icon: Layers };
       case 'lcdpr': return { title: 'Livro Caixa Rural (LCDPR)', icon: BookOpen };
+      case 'inventarioEstoque': return { title: 'Livro Registro de Inventário Modelo 7 (SPED Bloco H)', icon: Boxes };
       case 'cartoes': return { title: 'Vendas Cartões & Operadoras (1600)', icon: CreditCard };
       case 'retencoes': return { title: 'Retenções na Fonte & DARF', icon: Receipt };
       case 'reinf': return { title: 'EFD-Reinf em XML (v2.01)', icon: FileCode };
@@ -250,6 +257,7 @@ export const App: React.FC = () => {
       case 'esocial': return { title: 'Central eSocial XML (S-1200/1210)', icon: FileCode };
       case 'dctfWeb': return { title: 'DCTFWeb & DARF Previdenciário', icon: FileCheck2 };
       case 'provisoesFolha': return { title: 'Provisões Mensais (Férias/13º)', icon: Layers };
+      case 'rescisao': return { title: 'Rescisão Contratual & TRCT Oficial', icon: UserMinus };
       case 'colaboradores': return { title: 'Colaboradores & Sócios', icon: Users };
       case 'rubricas': return { title: 'Rubricas & Tabelas', icon: Sliders };
 
@@ -959,6 +967,11 @@ export const App: React.FC = () => {
               />
             </div>
 
+            {/* Demonstração das Mutações do Patrimônio Líquido (DMPL CPC 26) & Demonstração do Valor Adicionado (DVA CPC 09) */}
+            <div className={`h-full w-full ${activeTabId === 'dmplDva' ? 'block' : 'hidden'}`}>
+              <DmplDvaModule />
+            </div>
+
             {/* Apuração Trimestral IRPJ & CSLL (Lucro Presumido) */}
             <div className={`h-full w-full ${activeTabId === 'apuracaoTrimestral' ? 'block' : 'hidden'}`}>
               <ApuracaoTrimestralModule
@@ -1049,6 +1062,11 @@ export const App: React.FC = () => {
               <LcdprModule />
             </div>
 
+            {/* Livro Registro de Inventário Modelo 7 & EFD-ICMS/IPI Bloco H */}
+            <div className={`h-full w-full ${activeTabId === 'inventarioEstoque' ? 'block' : 'hidden'}`}>
+              <InventarioEstoqueModule />
+            </div>
+
             {/* Central EFD-Reinf em XML (v2.01.02) */}
             <div className={`h-full w-full ${activeTabId === 'reinf' ? 'block' : 'hidden'}`}>
               <ReinfXmlModule />
@@ -1120,6 +1138,11 @@ export const App: React.FC = () => {
                   setLancamentos(dbService.getLancamentos(empresaAtiva.id));
                 }}
               />
+            </div>
+
+            {/* Rescisão Contratual & TRCT Oficial (Portaria MTE 1.057/2012 & Lei 12.506/2011) */}
+            <div className={`h-full w-full ${activeTabId === 'rescisao' ? 'block' : 'hidden'}`}>
+              <RescisaoModule />
             </div>
 
             {/* HONORÁRIOS CONTÁBEIS */}

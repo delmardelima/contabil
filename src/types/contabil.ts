@@ -1652,6 +1652,144 @@ export interface ResumoMensalLCDPR {
   saldoMes: number;
 }
 
+// ----------------------------------------------------
+// RESCISÃO CONTRATUAL & TRCT OFICIAL (Portaria MTE nº 1.057/2012 / CLT / Lei 12.506/2011)
+// ----------------------------------------------------
+export type MotivoRescisao = 
+  | 'SEM_JUSTA_CAUSA' 
+  | 'PEDIDO_DEMISSAO' 
+  | 'JUSTA_CAUSA' 
+  | 'ACORDO_MUTUO' 
+  | 'TERMINO_EXPERIENCIA' 
+  | 'RESCISAO_ANTECIPADA';
+
+export type TipoAvisoPrevio = 'TRABALHADO' | 'INDENIZADO' | 'DISPENSADO';
+
+export interface VerbaRescisoriaItem {
+  codigo: string;
+  descricao: string;
+  rubricaTipo: 'PROVENTO' | 'DESCONTO';
+  valor: number;
+  baseInss: boolean;
+  baseFgts: boolean;
+  baseIrrf: boolean;
+}
+
+export interface RescisaoContratual {
+  id: number;
+  empresaId: number;
+  colaboradorId: number;
+  colaboradorNome: string;
+  cargo: string;
+  dataAdmissao: string;
+  dataDemissao: string;
+  dataAvisoPrevio: string;
+  motivo: MotivoRescisao;
+  tipoAviso: TipoAvisoPrevio;
+  diasAvisoLei12506: number; // 30 + 3 por ano trabalhado (máx 90)
+  salarioBase: number;
+  
+  // Proventos Rescisórios
+  saldoSalarioDias: number;
+  saldoSalarioValor: number;
+  decimoTerceiroAvos: number;
+  decimoTerceiroValor: number;
+  feriasProporcionaisAvos: number;
+  feriasProporcionaisValor: number;
+  tercoConstitucionalFeriasProp: number;
+  feriasVencidasValor: number;
+  tercoConstitucionalFeriasVenc: number;
+  avisoPrevioIndenizadoValor: number;
+  totalProventosBruto: number;
+
+  // Descontos Oficiais
+  inssRescisao: number;
+  irrfRescisao: number;
+  outrasDeducoes: number;
+  totalDescontos: number;
+
+  // Total Líquido
+  valorLiquidoRescisorio: number;
+
+  // FGTS e Multa Rescisória
+  saldoFgtsParaFinsRescisorios: number;
+  aliquotaMultaFgts: number; // 40% ou 20%
+  valorMultaFgts: number;
+
+  // Integração Contábil
+  statusIntegracaoContabil: boolean;
+  loteContabilId?: number;
+  observacoes?: string;
+}
+
+// ----------------------------------------------------
+// DEMONSTRAÇÃO DAS MUTAÇÕES DO PATRIMÔNIO LÍQUIDO (DMPL - CPC 26) & VALOR ADICIONADO (DVA - CPC 09)
+// ----------------------------------------------------
+export interface LinhaDmpl {
+  id: string;
+  descricao: string;
+  capitalSocial: number;
+  reservasCapital: number;
+  reservasLucros: number;
+  acoesTesouraria: number; // Negativo
+  lucrosPrejuizosAcumulados: number;
+  totalPl: number;
+}
+
+export interface QuadroDmpl {
+  ano: number;
+  empresaId: number;
+  linhas: LinhaDmpl[];
+  totalFinalPl: number;
+}
+
+export interface ItemDva {
+  codigo: string;
+  descricao: string;
+  nivel: number;
+  valor: number;
+}
+
+export interface DemonstracaoDva {
+  ano: number;
+  empresaId: number;
+  geracaoValor: ItemDva[];
+  distribuicaoValor: ItemDva[];
+  valorAdicionadoTotal: number;
+}
+
+// ----------------------------------------------------
+// LIVRO REGISTRO DE INVENTÁRIO MODELO 7 & SPED BLOCO H (RIR/2018 / RICMS)
+// ----------------------------------------------------
+export interface ItemInventarioEstoque {
+  id: number;
+  empresaId: number;
+  ano: number;
+  dataInventario: string; // YYYY-12-31
+  codigoItem: string;
+  descricaoItem: string;
+  tipoItemSped: string; // 00, 01, 02, etc.
+  unidadeMedida: string;
+  quantidade: number;
+  custoMedioUnitario: number;
+  valorTotal: number;
+  indicadorPropriedade: '0' | '1' | '2'; // 0-Item próprio em posse do informante, 1-Item próprio em poder de terceiros, 2-Item de terceiros em poder do informante
+  contaContabilId?: number;
+  contaContabilCodigo?: string;
+  participantesCnpjCpf?: string;
+}
+
+export interface InventarioEstoqueModelo7 {
+  ano: number;
+  empresaId: number;
+  dataInventario: string;
+  motivoInventario: string; // 01-No encerramento do período
+  totalEstoque: number;
+  itens: ItemInventarioEstoque[];
+  geradoEm: string;
+}
+
+
 
 
 
