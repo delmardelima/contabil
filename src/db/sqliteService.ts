@@ -1,0 +1,1949 @@
+import { 
+  Empresa, 
+  ContaContabil, 
+  HistoricoPadrao, 
+  LancamentoContabil, 
+  DocumentoStudio,
+  CentroCusto,
+  LancamentoPadrao,
+  LoteContabil,
+  Usuario,
+  AuditoriaLog,
+  ParametrosEmpresa,
+  ConfiguracaoRede,
+  ModuloSistema,
+  AcumuladorFiscal,
+  NotaFiscal,
+  ApuracaoFiscal,
+  Colaborador,
+  RubricaFolha,
+  FolhaMensal,
+  ContratoHonorario,
+  FaturaHonorario,
+  RegraConciliacao,
+  ExtratoTransacao,
+  DLPAItem,
+  DFCItem
+} from '../types/contabil';
+
+const STORAGE_KEYS = {
+  SNAPSHOT: 'contabil_master_snapshot_v3',
+  REDE_CONFIG: 'contabil_rede_config_v2',
+  CURRENT_USER: 'contabil_current_user_v2'
+};
+
+// Seed de dados contábeis profissionais (Padrão CFC / CPC / Domínio)
+const SEED_EMPRESA: Empresa = {
+  id: 1,
+  codigo: 1,
+  razaoSocial: 'AMIL LABS TECNOLOGIA & AUDITORIA CONTÁBIL LTDA',
+  nomeFantasia: 'Amil Labs Contabilidade Digital',
+  cnpj: '12.345.678/0001-90',
+  inscricaoEstadual: '110.234.567.890',
+  inscricaoMunicipal: '4.567.890-1',
+  nire: '35212345678',
+  logradouro: 'Avenida Paulista',
+  numero: '1500',
+  complemento: 'Andar 14 - Cj 1401',
+  bairro: 'Bela Vista',
+  cidade: 'São Paulo',
+  uf: 'SP',
+  cep: '01310-200',
+  telefone: '(11) 3245-8900',
+  email: 'contato@amillabs.com.br',
+  regimeTributario: 'LUCRO_PRESUMIDO',
+  responsavelLegal: 'Carlos Eduardo Mendes',
+  cpfResponsavel: '123.456.789-00',
+  contadorNome: 'Dra. Helena Silveira Santos',
+  contadorCRC: 'CRC-SP 1SP234567/O-8',
+  contadorCPF: '987.654.321-11',
+  mascaraPlano: '1.01.01.001.0001',
+  exercicioAtivo: 2026,
+  competenciaAtiva: '2026-10'
+};
+
+const SEED_PARAMETROS: ParametrosEmpresa = {
+  empresaId: 1,
+  regimeContabil: 'COMPETENCIA',
+  bloquearLancamentosAte: '2025-12-31',
+  obrigaCentroCusto: false,
+  permiteDiferencaDxC: true,
+  avancaPaginaTrocaGrupo: true,
+  contaDestinoZeramentoId: 41, // ARE
+  contaLucrosAcumuladosId: 40,
+  contaPrejuizosAcumuladosId: 40,
+  numeroLivroDiario: 1,
+  numeroFolhaInicial: 1
+};
+
+const SEED_CENTROS_CUSTO: CentroCusto[] = [
+  { id: 1, empresaId: 1, codigo: '01', nome: 'ADMINISTRAÇÃO GERAL', tipo: 'S' },
+  { id: 2, empresaId: 1, codigo: '01.01', nome: 'Diretoria e Jurídico', tipo: 'A' },
+  { id: 3, empresaId: 1, codigo: '01.02', nome: 'Financeiro e Contabilidade', tipo: 'A' },
+  { id: 4, empresaId: 1, codigo: '02', nome: 'OPERAÇÕES E ENGENHARIA', tipo: 'S' },
+  { id: 5, empresaId: 1, codigo: '02.01', nome: 'Desenvolvimento e Software', tipo: 'A' },
+  { id: 6, empresaId: 1, codigo: '02.02', nome: 'Auditoria e Consultoria Externa', tipo: 'A' }
+];
+
+const SEED_LOTES: LoteContabil[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    numero: 1,
+    descricao: 'Lote Mensal de Abertura e Movimento - 10/2026',
+    dataLote: '2026-10-01',
+    status: 'FECHADO',
+    totalDebito: 112700.00,
+    totalCredito: 112700.00
+  }
+];
+
+const SEED_LANCAMENTOS_PADRAO: LancamentoPadrao[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigo: 101,
+    descricao: 'Recebimento de Cliente via Banco Itaú',
+    contaDebitoId: 6, // Banco Itaú
+    contaCreditoId: 11, // Duplicatas a Receber
+    historicoId: 1,
+    complemento: 'Ref. liquidação de títulos clientes'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    codigo: 102,
+    descricao: 'Pagamento de Fornecedor via Itaú',
+    contaDebitoId: 30, // Fornecedores
+    contaCreditoId: 6, // Banco Itaú
+    historicoId: 2,
+    complemento: 'Ref. quitação de duplicata fornecedor'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    codigo: 103,
+    descricao: 'Apropriação da Folha Salarial',
+    contaDebitoId: 56, // Despesas com Salários
+    contaCreditoId: 26, // Salários a Pagar
+    historicoId: 3,
+    complemento: 'Competência mensal folha'
+  }
+];
+
+const SEED_USUARIOS: Usuario[] = [
+  {
+    id: 1,
+    nome: 'Dra. Helena Silveira Santos (Contadora Chefe)',
+    login: 'admin',
+    perfil: 'ADMIN',
+    email: 'helena.santos@amillabs.com.br',
+    ativo: true
+  },
+  {
+    id: 2,
+    nome: 'Marcos Vinicius Rezende (Analista Sênior)',
+    login: 'marcos',
+    perfil: 'ANALISTA',
+    email: 'marcos.rezende@amillabs.com.br',
+    ativo: true
+  },
+  {
+    id: 3,
+    nome: 'Juliana Beatriz Costa (Assistente Contábil)',
+    login: 'juliana',
+    perfil: 'ASSISTENTE',
+    email: 'juliana.costa@amillabs.com.br',
+    ativo: true
+  }
+];
+
+const SEED_AUDITORIA: AuditoriaLog[] = [
+  {
+    id: 1,
+    dataHora: '2026-10-01 08:30:12',
+    usuarioNome: 'Dra. Helena Silveira Santos',
+    modulo: 'ADMINISTRAÇÃO',
+    acao: 'INICIALIZAÇÃO',
+    descricao: 'Abertura do exercício social 2026 e importação do plano referencial.'
+  },
+  {
+    id: 2,
+    dataHora: '2026-10-02 10:02:45',
+    usuarioNome: 'Marcos Vinicius Rezende',
+    modulo: 'LANÇAMENTOS',
+    acao: 'INCLUSÃO',
+    descricao: 'Partida nº 1 gravada no valor de R$ 45.000,00.'
+  }
+];
+
+// Plano de Contas Referencial Domínio / CFC
+const SEED_CONTAS: ContaContabil[] = [
+  // 1. ATIVO
+  { id: 1, empresaId: 1, classificacao: '1', codigoReduzido: 1, nome: 'ATIVO TOTAL', tipo: 'S', natureza: 'D', grau: 1, saldoAnterior: 1050300.50 },
+  { id: 2, empresaId: 1, classificacao: '1.01', codigoReduzido: 10, nome: 'ATIVO CIRCULANTE', tipo: 'S', natureza: 'D', grau: 2, saldoAnterior: 650300.50 },
+  { id: 3, empresaId: 1, classificacao: '1.01.01', codigoReduzido: 100, nome: 'Disponibilidades Financeiras', tipo: 'S', natureza: 'D', grau: 3, saldoAnterior: 310300.50 },
+  { id: 4, empresaId: 1, classificacao: '1.01.01.001', codigoReduzido: 1001, nome: 'Caixa Geral', tipo: 'S', natureza: 'D', grau: 4, saldoAnterior: 15300.50 },
+  { id: 5, empresaId: 1, classificacao: '1.01.01.001.0001', codigoReduzido: 101, nome: 'Caixa Pequeno Escritório', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 15300.50 },
+  { id: 6, empresaId: 1, classificacao: '1.01.01.002.0001', codigoReduzido: 102, nome: 'Banco Itaú S/A - Ag. 0912 C/C 45120-8', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 295000.00 },
+  { id: 10, empresaId: 1, classificacao: '1.01.02', codigoReduzido: 110, nome: 'Créditos e Contas a Receber', tipo: 'S', natureza: 'D', grau: 3, saldoAnterior: 240000.00 },
+  { id: 11, empresaId: 1, classificacao: '1.01.02.001.0001', codigoReduzido: 111, nome: 'Clientes - Duplicatas a Receber', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 240000.00 },
+  { id: 14, empresaId: 1, classificacao: '1.01.03', codigoReduzido: 120, nome: 'Estoques e Mercadorias', tipo: 'S', natureza: 'D', grau: 3, saldoAnterior: 100000.00 },
+  { id: 15, empresaId: 1, classificacao: '1.01.03.001.0001', codigoReduzido: 121, nome: 'Estoque de Mercadorias para Revenda', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 100000.00 },
+  { id: 16, empresaId: 1, classificacao: '1.01.04.001.0001', codigoReduzido: 131, nome: 'ICMS a Recuperar', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 18000.00 },
+  { id: 17, empresaId: 1, classificacao: '1.01.04.002.0001', codigoReduzido: 132, nome: 'PIS/COFINS a Recuperar', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 7500.00 },
+  { id: 18, empresaId: 1, classificacao: '1.02', codigoReduzido: 20, nome: 'ATIVO NÃO CIRCULANTE', tipo: 'S', natureza: 'D', grau: 2, saldoAnterior: 400000.00 },
+  { id: 19, empresaId: 1, classificacao: '1.02.01.001.0001', codigoReduzido: 201, nome: 'Imóveis Administrativos Sede', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 300000.00 },
+  { id: 20, empresaId: 1, classificacao: '1.02.01.002.0001', codigoReduzido: 202, nome: 'Equipamentos de Informática e Servidores', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 100000.00 },
+
+  // 2. PASSIVO E PATRIMÔNIO LÍQUIDO
+  { id: 21, empresaId: 1, classificacao: '2', codigoReduzido: 2, nome: 'PASSIVO E PATRIMÔNIO LÍQUIDO', tipo: 'S', natureza: 'C', grau: 1, saldoAnterior: 1050300.50 },
+  { id: 22, empresaId: 1, classificacao: '2.01', codigoReduzido: 21, nome: 'PASSIVO CIRCULANTE', tipo: 'S', natureza: 'C', grau: 2, saldoAnterior: 241300.00 },
+  { id: 26, empresaId: 1, classificacao: '2.01.01.001.0001', codigoReduzido: 301, nome: 'Salários e Ordenados a Pagar', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 35000.00 },
+  { id: 27, empresaId: 1, classificacao: '2.01.01.002.0001', codigoReduzido: 302, nome: 'INSS e Previdência Social a Recolher', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 9800.00 },
+  { id: 28, empresaId: 1, classificacao: '2.01.01.003.0001', codigoReduzido: 303, nome: 'FGTS a Recolher', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 3200.00 },
+  { id: 29, empresaId: 1, classificacao: '2.01.02.001.0001', codigoReduzido: 311, nome: 'Simples Nacional / DAS a Recolher', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 12500.00 },
+  { id: 30, empresaId: 1, classificacao: '2.01.03.001.0001', codigoReduzido: 321, nome: 'Fornecedores Nacionais a Pagar', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 180800.00 },
+  { id: 35, empresaId: 1, classificacao: '2.03', codigoReduzido: 23, nome: 'PATRIMÔNIO LÍQUIDO', tipo: 'S', natureza: 'C', grau: 2, saldoAnterior: 809000.50 },
+  { id: 36, empresaId: 1, classificacao: '2.03.01.001.0001', codigoReduzido: 501, nome: 'Capital Social Integralizado', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 600000.00 },
+  { id: 37, empresaId: 1, classificacao: '2.03.02.001.0001', codigoReduzido: 502, nome: 'Reserva Legal', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 50000.00 },
+  { id: 40, empresaId: 1, classificacao: '2.03.03.001.0001', codigoReduzido: 505, nome: 'Lucros ou Prejuízos Acumulados', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 159000.50 },
+  { id: 41, empresaId: 1, classificacao: '2.03.04.001.0001', codigoReduzido: 599, nome: 'Conta Transitória de ARE', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0.00 },
+
+  // 3. RECEITAS
+  { id: 42, empresaId: 1, classificacao: '3', codigoReduzido: 3, nome: 'RECEITAS OPERACIONAIS', tipo: 'S', natureza: 'C', grau: 1, saldoAnterior: 0 },
+  { id: 43, empresaId: 1, classificacao: '3.01.01.001.0001', codigoReduzido: 601, nome: 'Receita Bruta com Venda de Mercadorias', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
+  { id: 44, empresaId: 1, classificacao: '3.01.01.002.0001', codigoReduzido: 602, nome: 'Receita com Prestação de Serviços Digitais', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
+  { id: 45, empresaId: 1, classificacao: '3.01.02.001.0001', codigoReduzido: 611, nome: '(-) Tributos Incidentes sobre Vendas', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+
+  // 4. DESPESAS E CUSTOS
+  { id: 50, empresaId: 1, classificacao: '4', codigoReduzido: 4, nome: 'CUSTOS E DESPESAS OPERACIONAIS', tipo: 'S', natureza: 'D', grau: 1, saldoAnterior: 0 },
+  { id: 55, empresaId: 1, classificacao: '4.01.01.001.0001', codigoReduzido: 701, nome: 'Custo das Mercadorias Vendidas (CMV)', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+  { id: 56, empresaId: 1, classificacao: '4.01.02.001.0001', codigoReduzido: 711, nome: 'Despesas com Salários e Ordenados', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+  { id: 57, empresaId: 1, classificacao: '4.01.02.002.0001', codigoReduzido: 712, nome: 'Despesas com Serviços de TI e Nuvem', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+  { id: 58, empresaId: 1, classificacao: '4.01.03.001.0001', codigoReduzido: 721, nome: 'Despesas com Tarifas Bancárias', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+  { id: 59, empresaId: 1, classificacao: '4.01.04.001.0001', codigoReduzido: 731, nome: 'Despesas de Aluguel e Instalações', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 }
+];
+
+const SEED_LANCAMENTOS: LancamentoContabil[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    numeroPartida: 1,
+    loteId: 1,
+    dataLancamento: '2026-10-02',
+    tipoPartida: 'SIMPLES',
+    contaDebitoId: 6, // Banco Itaú
+    contaCreditoId: 44, // Receita de Serviços
+    valor: 45000.00,
+    historicoId: 1,
+    complementoHistorico: 'Ref. Contrato anual de suporte e licença software',
+    createdAt: '2026-10-02T10:00:00Z'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    numeroPartida: 2,
+    loteId: 1,
+    dataLancamento: '2026-10-05',
+    tipoPartida: 'SIMPLES',
+    contaDebitoId: 56, // Despesas com Salários
+    contaCreditoId: 26, // Salários a Pagar
+    valor: 28500.00,
+    historicoId: 3,
+    complementoHistorico: 'Competência 10/2026 equipe técnica e desenvolvimento',
+    createdAt: '2026-10-05T14:30:00Z'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    numeroPartida: 3,
+    loteId: 1,
+    dataLancamento: '2026-10-07',
+    tipoPartida: 'SIMPLES',
+    contaDebitoId: 26, // Salários a Pagar
+    contaCreditoId: 6, // Banco Itaú
+    valor: 28500.00,
+    historicoId: 2,
+    complementoHistorico: 'Liquidação da folha via TED em lote Itaú',
+    createdAt: '2026-10-07T11:15:00Z'
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    numeroPartida: 4,
+    loteId: 1,
+    dataLancamento: '2026-10-10',
+    tipoPartida: 'SIMPLES',
+    contaDebitoId: 57, // Despesas TI/Nuvem
+    contaCreditoId: 6, // Banco Itaú
+    valor: 4200.00,
+    historicoId: 2,
+    complementoHistorico: 'AWS Cloud Services fatura #94821',
+    createdAt: '2026-10-10T16:00:00Z'
+  },
+  {
+    id: 5,
+    empresaId: 1,
+    numeroPartida: 5,
+    loteId: 1,
+    dataLancamento: '2026-10-12',
+    tipoPartida: 'SIMPLES',
+    contaDebitoId: 59, // Aluguel
+    contaCreditoId: 6, // Banco Itaú
+    valor: 6500.00,
+    historicoId: 2,
+    complementoHistorico: 'Locação conjunto 1401 Edifício Trade Center',
+    createdAt: '2026-10-12T09:20:00Z'
+  }
+];
+
+const SEED_DOCUMENTOS: DocumentoStudio[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    titulo: 'Notas Explicativas - Exercício 2026',
+    tipo: 'NOTA_EXPLICATIVA',
+    exercicioAno: 2026,
+    conteudoHtml: '<h2>1. Contexto Operacional</h2><p>A <strong>AMIL LABS TECNOLOGIA & AUDITORIA CONTÁBIL LTDA</strong> atua no desenvolvimento de software de alta performance e auditoria contábil digital.</p><h2>2. Apresentação das Demonstrações</h2><p>Demonstrações elaboradas em consonância com as Normas Brasileiras de Contabilidade (NBC TG / CPC).</p>',
+    updatedAt: new Date().toISOString()
+  }
+];
+
+const SEED_HISTORICOS: HistoricoPadrao[] = [
+  { id: 1, empresaId: 1, codigo: 1, descricao: 'Recebimento de cliente referente a serviços prestados' },
+  { id: 2, empresaId: 1, codigo: 2, descricao: 'Pagamento efetuado a fornecedores via transferência bancária' },
+  { id: 3, empresaId: 1, codigo: 3, descricao: 'Valor referente à provisão da folha de pagamento mensal' },
+  { id: 4, empresaId: 1, codigo: 4, descricao: 'Despesa com tarifa bancária e manutenção de conta' }
+];
+
+// Seeds Multi-Módulo (Escrita, Folha, Honorários, Conciliação)
+const SEED_ACUMULADORES: AcumuladorFiscal[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigo: 1,
+    descricao: 'Compra de Mercadorias para Comercialização',
+    cfopPadrao: '1.102',
+    tipoOperacao: 'ENTRADA',
+    incideICMS: true,
+    aliquotaICMS: 18.0,
+    incidePIS: true,
+    aliquotaPIS: 1.65,
+    incideCOFINS: true,
+    aliquotaCOFINS: 7.6,
+    incideISS: false,
+    incideSimples: false,
+    contaContabilDebitoId: 15, // Estoque
+    contaContabilCreditoId: 30, // Fornecedores
+    contaICMSDebitoId: 16, // ICMS a Recuperar
+    contaICMSCreditoId: 30,
+    historicoId: 2
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    codigo: 2,
+    descricao: 'Venda de Mercadorias no Estado',
+    cfopPadrao: '5.102',
+    tipoOperacao: 'SAIDA',
+    incideICMS: true,
+    aliquotaICMS: 18.0,
+    incidePIS: true,
+    aliquotaPIS: 0.65,
+    incideCOFINS: true,
+    aliquotaCOFINS: 3.0,
+    incideISS: false,
+    incideSimples: true,
+    contaContabilDebitoId: 11, // Clientes
+    contaContabilCreditoId: 43, // Receita Vendas
+    historicoId: 1
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    codigo: 3,
+    descricao: 'Prestação de Serviços de Desenvolvimento e Consultoria',
+    cfopPadrao: '5.933',
+    tipoOperacao: 'SERVICO',
+    incideICMS: false,
+    incidePIS: true,
+    aliquotaPIS: 0.65,
+    incideCOFINS: true,
+    aliquotaCOFINS: 3.0,
+    incideISS: true,
+    aliquotaISS: 5.0,
+    incideSimples: true,
+    contaContabilDebitoId: 11, // Clientes
+    contaContabilCreditoId: 44, // Receita Serviços
+    historicoId: 1
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    codigo: 4,
+    descricao: 'Aquisição de Serviços Tomados (Nuvem / TI)',
+    cfopPadrao: '1.933',
+    tipoOperacao: 'ENTRADA',
+    incideICMS: false,
+    incidePIS: false,
+    incideCOFINS: false,
+    incideISS: true,
+    aliquotaISS: 5.0,
+    incideSimples: false,
+    contaContabilDebitoId: 57, // Despesas TI
+    contaContabilCreditoId: 30, // Fornecedores
+    historicoId: 2
+  }
+];
+
+const SEED_NOTAS_FISCAIS: NotaFiscal[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    numero: 1051,
+    serie: '1',
+    chaveAcesso: '35261012345678000190550010000010511234567890',
+    dataEmissao: '2026-10-02',
+    dataEntradaSaida: '2026-10-02',
+    tipo: 'SAIDA',
+    acumuladorId: 3,
+    cfop: '5.933',
+    clienteFornecedorNome: 'BANCO DIGITAL ALPHA S/A',
+    clienteFornecedorCnpj: '09.876.543/0001-21',
+    valorTotal: 45000.00,
+    baseCalculoICMS: 0,
+    valorICMS: 0,
+    baseCalculoPIS: 45000.00,
+    valorPIS: 292.50,
+    baseCalculoCOFINS: 45000.00,
+    valorCOFINS: 1350.00,
+    baseCalculoISS: 45000.00,
+    valorISS: 2250.00,
+    retencaoIRRF: 675.00,
+    integradaContabil: true
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    numero: 8820,
+    serie: 'E',
+    chaveAcesso: '35261001234567000188550010000088201987654321',
+    dataEmissao: '2026-10-08',
+    dataEntradaSaida: '2026-10-08',
+    tipo: 'ENTRADA',
+    acumuladorId: 4,
+    cfop: '1.933',
+    clienteFornecedorNome: 'AMAZON WEB SERVICES BRASIL LTDA',
+    clienteFornecedorCnpj: '15.419.093/0001-44',
+    valorTotal: 12800.00,
+    baseCalculoICMS: 0,
+    valorICMS: 0,
+    baseCalculoPIS: 0,
+    valorPIS: 0,
+    baseCalculoCOFINS: 0,
+    valorCOFINS: 0,
+    baseCalculoISS: 12800.00,
+    valorISS: 640.00,
+    integradaContabil: false
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    numero: 1052,
+    serie: '1',
+    chaveAcesso: '35261012345678000190550010000010521234567891',
+    dataEmissao: '2026-10-15',
+    dataEntradaSaida: '2026-10-15',
+    tipo: 'SAIDA',
+    acumuladorId: 3,
+    cfop: '5.933',
+    clienteFornecedorNome: 'GRUPO VAREJO BRASIL S/A',
+    clienteFornecedorCnpj: '33.111.222/0001-88',
+    valorTotal: 38500.00,
+    baseCalculoICMS: 0,
+    valorICMS: 0,
+    baseCalculoPIS: 38500.00,
+    valorPIS: 250.25,
+    baseCalculoCOFINS: 38500.00,
+    valorCOFINS: 1155.00,
+    baseCalculoISS: 38500.00,
+    valorISS: 1925.00,
+    retencaoIRRF: 577.50,
+    integradaContabil: false
+  }
+];
+
+const SEED_APURACOES_FISCAIS: ApuracaoFiscal[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    competencia: '2026-10',
+    regimeTributario: 'LUCRO_PRESUMIDO',
+    faturamentoTotal: 83500.00,
+    rbt12: 980000.00,
+    valorPISApurado: 542.75,
+    valorCOFINSApurado: 2505.00,
+    valorISSApurado: 4175.00,
+    valorIRPJApurado: 4008.00,
+    valorCSLLApurado: 2404.80,
+    status: 'CALCULADA',
+    integradaContabil: false
+  }
+];
+
+const SEED_COLABORADORES: Colaborador[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    matricula: 101,
+    nome: 'Lucas Gabriel Silveira',
+    cpf: '234.567.890-12',
+    cargo: 'Engenheiro de Software Sênior',
+    tipoVinculo: 'CLT',
+    salarioBase: 12500.00,
+    dependentesIRRF: 1,
+    dependentesSalarioFamilia: 0,
+    dataAdmissao: '2023-03-01',
+    centroCustoId: 5,
+    bancoNome: 'Banco Itaú',
+    agencia: '0912',
+    contaBancaria: '44821-0',
+    ativo: true
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    matricula: 102,
+    nome: 'Mariana Oliveira Prado',
+    cpf: '345.678.901-23',
+    cargo: 'Analista Contábil Pleno',
+    tipoVinculo: 'CLT',
+    salarioBase: 6200.00,
+    dependentesIRRF: 0,
+    dependentesSalarioFamilia: 0,
+    dataAdmissao: '2024-01-15',
+    centroCustoId: 3,
+    bancoNome: 'Banco Santander',
+    agencia: '3310',
+    contaBancaria: '12900-5',
+    ativo: true
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    matricula: 103,
+    nome: 'Renato Dias Batista',
+    cpf: '456.789.012-34',
+    cargo: 'Assistente Administrativo',
+    tipoVinculo: 'CLT',
+    salarioBase: 3100.00,
+    dependentesIRRF: 1,
+    dependentesSalarioFamilia: 1,
+    dataAdmissao: '2025-05-02',
+    centroCustoId: 2,
+    bancoNome: 'Banco Bradesco',
+    agencia: '1202',
+    contaBancaria: '98432-1',
+    ativo: true
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    matricula: 201,
+    nome: 'Carlos Eduardo Mendes',
+    cpf: '123.456.789-00',
+    cargo: 'Sócio Diretor Executivo',
+    tipoVinculo: 'PRO_LABORE',
+    salarioBase: 15000.00,
+    dependentesIRRF: 2,
+    dependentesSalarioFamilia: 0,
+    dataAdmissao: '2022-01-10',
+    centroCustoId: 2,
+    bancoNome: 'Banco Itaú',
+    agencia: '0912',
+    contaBancaria: '10982-3',
+    ativo: true
+  }
+];
+
+const SEED_RUBRICAS: RubricaFolha[] = [
+  { id: 1, empresaId: 1, codigo: 101, nome: 'Salário Base Mensal', tipo: 'PROVENTO', incideINSS: true, incideFGTS: true, incideIRRF: true, contaDebitoId: 56, contaCreditoId: 26 },
+  { id: 2, empresaId: 1, codigo: 102, nome: 'Pró-Labore Diretores', tipo: 'PROVENTO', incideINSS: true, incideFGTS: false, incideIRRF: true, contaDebitoId: 56, contaCreditoId: 26 },
+  { id: 3, empresaId: 1, codigo: 103, nome: 'Horas Extras 50%', tipo: 'PROVENTO', incideINSS: true, incideFGTS: true, incideIRRF: true, contaDebitoId: 56, contaCreditoId: 26 },
+  { id: 4, empresaId: 1, codigo: 201, nome: 'Desconto INSS Segurados', tipo: 'DESCONTO', incideINSS: false, incideFGTS: false, incideIRRF: false, contaDebitoId: 26, contaCreditoId: 27 },
+  { id: 5, empresaId: 1, codigo: 202, nome: 'Desconto IRRF Retido na Fonte', tipo: 'DESCONTO', incideINSS: false, incideFGTS: false, incideIRRF: false, contaDebitoId: 26, contaCreditoId: 27 },
+  { id: 6, empresaId: 1, codigo: 203, nome: 'Desconto Vale Transporte', tipo: 'DESCONTO', incideINSS: false, incideFGTS: false, incideIRRF: false, contaDebitoId: 26, contaCreditoId: 57 }
+];
+
+const SEED_FOLHAS: FolhaMensal[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    competencia: '2026-10',
+    dataCalculo: '2026-10-31',
+    totalBruto: 36800.00,
+    totalLiquido: 28240.25,
+    totalINSSSegurados: 3912.45,
+    totalINSSPatronal: 4360.00,
+    totalFGTS: 1744.00,
+    totalIRRF: 4647.30,
+    status: 'ABERTA',
+    itens: [
+      {
+        id: 1,
+        colaboradorId: 1,
+        colaboradorNome: 'Lucas Gabriel Silveira',
+        colaboradorCargo: 'Engenheiro de Software Sênior',
+        tipoVinculo: 'CLT',
+        salarioBase: 12500.00,
+        totalProventos: 12500.00,
+        inssDesconto: 908.85,
+        irrfDesconto: 2125.40,
+        outrosDescontos: 0,
+        totalDescontos: 3034.25,
+        salarioLiquido: 9465.75,
+        fgtsEmpresa: 1000.00,
+        inssPatronal: 2500.00
+      },
+      {
+        id: 2,
+        colaboradorId: 2,
+        colaboradorNome: 'Mariana Oliveira Prado',
+        colaboradorCargo: 'Analista Contábil Pleno',
+        tipoVinculo: 'CLT',
+        salarioBase: 6200.00,
+        totalProventos: 6200.00,
+        inssDesconto: 694.75,
+        irrfDesconto: 628.90,
+        outrosDescontos: 0,
+        totalDescontos: 1323.65,
+        salarioLiquido: 4876.35,
+        fgtsEmpresa: 496.00,
+        inssPatronal: 1240.00
+      },
+      {
+        id: 3,
+        colaboradorId: 3,
+        colaboradorNome: 'Renato Dias Batista',
+        colaboradorCargo: 'Assistente Administrativo',
+        tipoVinculo: 'CLT',
+        salarioBase: 3100.00,
+        totalProventos: 3100.00,
+        inssDesconto: 278.85,
+        irrfDesconto: 63.00,
+        outrosDescontos: 186.00,
+        totalDescontos: 527.85,
+        salarioLiquido: 2572.15,
+        fgtsEmpresa: 248.00,
+        inssPatronal: 620.00
+      },
+      {
+        id: 4,
+        colaboradorId: 4,
+        colaboradorNome: 'Carlos Eduardo Mendes',
+        colaboradorCargo: 'Sócio Diretor Executivo',
+        tipoVinculo: 'PRO_LABORE',
+        salarioBase: 15000.00,
+        totalProventos: 15000.00,
+        inssDesconto: 908.85,
+        irrfDesconto: 2830.00,
+        outrosDescontos: 0,
+        totalDescontos: 3738.85,
+        salarioLiquido: 11261.15,
+        fgtsEmpresa: 0,
+        inssPatronal: 0
+      }
+    ],
+    integradaContabil: false
+  }
+];
+
+const SEED_CONTRATOS: ContratoHonorario[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    numeroContrato: 'CT-2026/001',
+    valorMensalBase: 3850.00,
+    diaVencimento: 15,
+    indexadorReajuste: 'IPCA',
+    mesReajuste: 1,
+    cobra13Honorario: true,
+    dataInicio: '2023-01-01',
+    ativo: true
+  }
+];
+
+const SEED_FATURAS: FaturaHonorario[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    competencia: '2026-10',
+    numeroFatura: 'FAT-2026-1001',
+    valorHonorarioBase: 3850.00,
+    valorServicosExtras: 650.00,
+    valorTotal: 4500.00,
+    dataVencimento: '2026-10-15',
+    dataPagamento: '2026-10-14',
+    status: 'PAGO',
+    servicosExtrasDescricao: 'Elaboração de 3ª Alteração Contratual na JUCESP',
+    integradaContabil: false
+  }
+];
+
+const SEED_REGRAS_CONCILIACAO: RegraConciliacao[] = [
+  { id: 1, empresaId: 1, palavraChave: 'PIX RECEBIDO', contaDebitoId: 6, contaCreditoId: 11, historicoId: 1, complementoPadrao: 'Recebimento de cliente via PIX' },
+  { id: 2, empresaId: 1, palavraChave: 'TARIFA', contaDebitoId: 58, contaCreditoId: 6, historicoId: 4, complementoPadrao: 'Tarifa bancária mensal de manutenção' },
+  { id: 3, empresaId: 1, palavraChave: 'PAGTO FORNECEDOR', contaDebitoId: 30, contaCreditoId: 6, historicoId: 2, complementoPadrao: 'Quitação de títulos fornecedores' },
+  { id: 4, empresaId: 1, palavraChave: 'AWS', contaDebitoId: 57, contaCreditoId: 6, historicoId: 2, complementoPadrao: 'Serviços de infraestrutura cloud AWS' },
+  { id: 5, empresaId: 1, palavraChave: 'FOLHA', contaDebitoId: 26, contaCreditoId: 6, historicoId: 2, complementoPadrao: 'Pagamento líquido de salários e ordenados' },
+  { id: 6, empresaId: 1, palavraChave: 'PRO-LABORE', contaDebitoId: 26, contaCreditoId: 6, historicoId: 2, complementoPadrao: 'Retirada de pró-labore sócios' }
+];
+
+export class DatabaseService {
+  private empresas: Empresa[] = [];
+  private contas: ContaContabil[] = [];
+  private historicos: HistoricoPadrao[] = [];
+  private lancamentos: LancamentoContabil[] = [];
+  private documentos: DocumentoStudio[] = [];
+  private centrosCusto: CentroCusto[] = [];
+  private lancamentosPadrao: LancamentoPadrao[] = [];
+  private lotes: LoteContabil[] = [];
+  private usuarios: Usuario[] = [];
+  private auditoria: AuditoriaLog[] = [];
+  private parametros: ParametrosEmpresa = SEED_PARAMETROS;
+  private redeConfig: ConfiguracaoRede = {
+    modo: 'SERVIDOR',
+    serverHost: 'localhost',
+    serverPort: 4590,
+    isOnline: true
+  };
+  private currentUser: Usuario = SEED_USUARIOS[0];
+  private activeEmpresaId: number = 1;
+
+  // Multi-Módulos
+  private acumuladores: AcumuladorFiscal[] = [];
+  private notasFiscais: NotaFiscal[] = [];
+  private apuracoesFiscais: ApuracaoFiscal[] = [];
+  private colaboradores: Colaborador[] = [];
+  private rubricasFolha: RubricaFolha[] = [];
+  private folhasMensais: FolhaMensal[] = [];
+  private contratosHonorarios: ContratoHonorario[] = [];
+  private faturasHonorarios: FaturaHonorario[] = [];
+  private regrasConciliacao: RegraConciliacao[] = [];
+
+  constructor() {
+    this.initDatabase();
+    this.connectServerIfAvailable();
+  }
+
+  private initDatabase() {
+    const raw = localStorage.getItem(STORAGE_KEYS.SNAPSHOT);
+    if (raw) {
+      try {
+        const snap = JSON.parse(raw);
+        this.empresas = snap.empresas || [SEED_EMPRESA];
+        this.contas = snap.contas || SEED_CONTAS;
+        this.historicos = snap.historicos || SEED_HISTORICOS;
+        this.lancamentos = snap.lancamentos || SEED_LANCAMENTOS;
+        this.documentos = snap.documentos || SEED_DOCUMENTOS;
+        this.centrosCusto = snap.centrosCusto || SEED_CENTROS_CUSTO;
+        this.lancamentosPadrao = snap.lancamentosPadrao || SEED_LANCAMENTOS_PADRAO;
+        this.lotes = snap.lotes || SEED_LOTES;
+        this.usuarios = snap.usuarios || SEED_USUARIOS;
+        this.auditoria = snap.auditoria || SEED_AUDITORIA;
+        this.parametros = snap.parametros || SEED_PARAMETROS;
+        this.activeEmpresaId = snap.activeEmpresaId || 1;
+
+        this.acumuladores = snap.acumuladores || SEED_ACUMULADORES;
+        this.notasFiscais = snap.notasFiscais || SEED_NOTAS_FISCAIS;
+        this.apuracoesFiscais = snap.apuracoesFiscais || SEED_APURACOES_FISCAIS;
+        this.colaboradores = snap.colaboradores || SEED_COLABORADORES;
+        this.rubricasFolha = snap.rubricasFolha || SEED_RUBRICAS;
+        this.folhasMensais = snap.folhasMensais || SEED_FOLHAS;
+        this.contratosHonorarios = snap.contratosHonorarios || SEED_CONTRATOS;
+        this.faturasHonorarios = snap.faturasHonorarios || SEED_FATURAS;
+        this.regrasConciliacao = snap.regrasConciliacao || SEED_REGRAS_CONCILIACAO;
+      } catch (e) {
+        this.carregarSeeds();
+      }
+    } else {
+      this.carregarSeeds();
+    }
+
+    const rawRede = localStorage.getItem(STORAGE_KEYS.REDE_CONFIG);
+    if (rawRede) {
+      try { this.redeConfig = JSON.parse(rawRede); } catch(e) {}
+    }
+
+    const rawUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+    if (rawUser) {
+      try { this.currentUser = JSON.parse(rawUser); } catch(e) {}
+    }
+  }
+
+  private carregarSeeds() {
+    this.empresas = [SEED_EMPRESA];
+    this.contas = [...SEED_CONTAS];
+    this.historicos = [...SEED_HISTORICOS];
+    this.lancamentos = [...SEED_LANCAMENTOS];
+    this.documentos = [...SEED_DOCUMENTOS];
+    this.centrosCusto = [...SEED_CENTROS_CUSTO];
+    this.lancamentosPadrao = [...SEED_LANCAMENTOS_PADRAO];
+    this.lotes = [...SEED_LOTES];
+    this.usuarios = [...SEED_USUARIOS];
+    this.auditoria = [...SEED_AUDITORIA];
+    this.parametros = { ...SEED_PARAMETROS };
+    this.activeEmpresaId = 1;
+
+    this.acumuladores = [...SEED_ACUMULADORES];
+    this.notasFiscais = [...SEED_NOTAS_FISCAIS];
+    this.apuracoesFiscais = [...SEED_APURACOES_FISCAIS];
+    this.colaboradores = [...SEED_COLABORADORES];
+    this.rubricasFolha = [...SEED_RUBRICAS];
+    this.folhasMensais = [...SEED_FOLHAS];
+    this.contratosHonorarios = [...SEED_CONTRATOS];
+    this.faturasHonorarios = [...SEED_FATURAS];
+    this.regrasConciliacao = [...SEED_REGRAS_CONCILIACAO];
+
+    this.persistSnapshot();
+  }
+
+  public persistSnapshot() {
+    const snap = {
+      empresas: this.empresas,
+      contas: this.contas,
+      historicos: this.historicos,
+      lancamentos: this.lancamentos,
+      documentos: this.documentos,
+      centrosCusto: this.centrosCusto,
+      lancamentosPadrao: this.lancamentosPadrao,
+      lotes: this.lotes,
+      usuarios: this.usuarios,
+      auditoria: this.auditoria,
+      parametros: this.parametros,
+      activeEmpresaId: this.activeEmpresaId,
+      acumuladores: this.acumuladores,
+      notasFiscais: this.notasFiscais,
+      apuracoesFiscais: this.apuracoesFiscais,
+      colaboradores: this.colaboradores,
+      rubricasFolha: this.rubricasFolha,
+      folhasMensais: this.folhasMensais,
+      contratosHonorarios: this.contratosHonorarios,
+      faturasHonorarios: this.faturasHonorarios,
+      regrasConciliacao: this.regrasConciliacao,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem(STORAGE_KEYS.SNAPSHOT, JSON.stringify(snap));
+    this.syncToServer(snap);
+  }
+
+  private async syncToServer(data: any) {
+    try {
+      const url = `http://${this.redeConfig.serverHost}:${this.redeConfig.serverPort}/api/save`;
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      this.redeConfig.isOnline = true;
+    } catch (e) {
+      this.redeConfig.isOnline = false;
+    }
+  }
+
+  public async connectServerIfAvailable() {
+    try {
+      const url = `http://${this.redeConfig.serverHost}:${this.redeConfig.serverPort}/api/data`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        const d = json.data;
+        if (d.empresas) this.empresas = d.empresas;
+        if (d.contas) this.contas = d.contas;
+        if (d.historicos) this.historicos = d.historicos;
+        if (d.lancamentos) this.lancamentos = d.lancamentos;
+        if (d.documentos) this.documentos = d.documentos;
+        if (d.centrosCusto) this.centrosCusto = d.centrosCusto;
+        if (d.lancamentosPadrao) this.lancamentosPadrao = d.lancamentosPadrao;
+        if (d.lotes) this.lotes = d.lotes;
+        if (d.usuarios) this.usuarios = d.usuarios;
+        if (d.parametros) this.parametros = d.parametros;
+        if (d.acumuladores) this.acumuladores = d.acumuladores;
+        if (d.notasFiscais) this.notasFiscais = d.notasFiscais;
+        if (d.apuracoesFiscais) this.apuracoesFiscais = d.apuracoesFiscais;
+        if (d.colaboradores) this.colaboradores = d.colaboradores;
+        if (d.rubricasFolha) this.rubricasFolha = d.rubricasFolha;
+        if (d.folhasMensais) this.folhasMensais = d.folhasMensais;
+        if (d.contratosHonorarios) this.contratosHonorarios = d.contratosHonorarios;
+        if (d.faturasHonorarios) this.faturasHonorarios = d.faturasHonorarios;
+        if (d.regrasConciliacao) this.regrasConciliacao = d.regrasConciliacao;
+        this.redeConfig.isOnline = true;
+      }
+    } catch (e) {
+      this.redeConfig.isOnline = false;
+    }
+  }
+
+  public registrarAuditoria(modulo: string, acao: string, descricao: string) {
+    const log: AuditoriaLog = {
+      id: Date.now(),
+      dataHora: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      usuarioNome: this.currentUser?.nome || 'Sistema',
+      modulo,
+      acao,
+      descricao
+    };
+    this.auditoria.unshift(log);
+    this.persistSnapshot();
+  }
+
+  public get isOnline(): boolean {
+    return Boolean(this.redeConfig.isOnline);
+  }
+
+  public exportBackupJson(): string {
+    return JSON.stringify({
+      empresas: this.empresas,
+      contas: this.contas,
+      historicos: this.historicos,
+      lancamentos: this.lancamentos,
+      documentos: this.documentos,
+      centrosCusto: this.centrosCusto,
+      lancamentosPadrao: this.lancamentosPadrao,
+      lotes: this.lotes,
+      usuarios: this.usuarios,
+      parametros: this.parametros,
+      auditoria: this.auditoria,
+      acumuladores: this.acumuladores,
+      notasFiscais: this.notasFiscais,
+      apuracoesFiscais: this.apuracoesFiscais,
+      colaboradores: this.colaboradores,
+      rubricasFolha: this.rubricasFolha,
+      folhasMensais: this.folhasMensais,
+      contratosHonorarios: this.contratosHonorarios,
+      faturasHonorarios: this.faturasHonorarios,
+      regrasConciliacao: this.regrasConciliacao
+    }, null, 2);
+  }
+
+  public restaurarBackupJSON(jsonStr: string): boolean {
+    try {
+      const snap = JSON.parse(jsonStr);
+      if (snap.empresas && snap.contas) {
+        this.empresas = snap.empresas;
+        this.contas = snap.contas;
+        this.historicos = snap.historicos || [];
+        this.lancamentos = snap.lancamentos || [];
+        this.documentos = snap.documentos || [];
+        this.centrosCusto = snap.centrosCusto || [];
+        this.lancamentosPadrao = snap.lancamentosPadrao || [];
+        this.lotes = snap.lotes || [];
+        this.usuarios = snap.usuarios || [];
+        this.parametros = snap.parametros || SEED_PARAMETROS;
+        this.acumuladores = snap.acumuladores || SEED_ACUMULADORES;
+        this.notasFiscais = snap.notasFiscais || SEED_NOTAS_FISCAIS;
+        this.apuracoesFiscais = snap.apuracoesFiscais || SEED_APURACOES_FISCAIS;
+        this.colaboradores = snap.colaboradores || SEED_COLABORADORES;
+        this.rubricasFolha = snap.rubricasFolha || SEED_RUBRICAS;
+        this.folhasMensais = snap.folhasMensais || SEED_FOLHAS;
+        this.contratosHonorarios = snap.contratosHonorarios || SEED_CONTRATOS;
+        this.faturasHonorarios = snap.faturasHonorarios || SEED_FATURAS;
+        this.regrasConciliacao = snap.regrasConciliacao || SEED_REGRAS_CONCILIACAO;
+        this.persistSnapshot();
+        this.registrarAuditoria('SISTEMA', 'RESTAURAÇÃO', 'Banco de dados restaurado com sucesso.');
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  public importBackupJson(jsonStr: string): boolean {
+    return this.restaurarBackupJSON(jsonStr);
+  }
+
+  // APIs Empresa
+  public getEmpresas(): Empresa[] { return [...this.empresas]; }
+  public getActiveEmpresa(): Empresa {
+    return this.empresas.find(e => e.id === this.activeEmpresaId) || this.empresas[0] || SEED_EMPRESA;
+  }
+  public setActiveEmpresa(id: number) {
+    this.activeEmpresaId = id;
+    this.registrarAuditoria('EMPRESA', 'SELEÇÃO', `Empresa ativa alterada para ID ${id}.`);
+    this.persistSnapshot();
+  }
+  public saveEmpresa(emp: Empresa) {
+    const idx = this.empresas.findIndex(e => e.id === emp.id);
+    if (idx >= 0) {
+      this.empresas[idx] = emp;
+      this.registrarAuditoria('EMPRESA', 'ALTERAÇÃO', `Empresa ${emp.razaoSocial} atualizada.`);
+    } else {
+      emp.id = Date.now();
+      this.empresas.push(emp);
+      this.registrarAuditoria('EMPRESA', 'CADASTRO', `Nova empresa ${emp.razaoSocial} cadastrada.`);
+    }
+    this.persistSnapshot();
+  }
+  public deleteEmpresa(id: number): { success: boolean; message?: string } {
+    if (this.empresas.length <= 1) {
+      return { success: false, message: 'Não é possível excluir a única empresa cadastrada.' };
+    }
+    const emp = this.empresas.find(e => e.id === id);
+    this.empresas = this.empresas.filter(e => e.id !== id);
+    if (this.activeEmpresaId === id) {
+      this.activeEmpresaId = this.empresas[0].id;
+    }
+    this.registrarAuditoria('EMPRESA', 'EXCLUSÃO', `Empresa ${emp?.razaoSocial} excluída.`);
+    this.persistSnapshot();
+    return { success: true };
+  }
+
+  // APIs Contas
+  public getContas(empresaId?: number): ContaContabil[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.contas.filter(c => c.empresaId === empId);
+  }
+  public getContaById(id: number): ContaContabil | undefined {
+    return this.contas.find(c => c.id === id);
+  }
+  public saveConta(conta: ContaContabil) {
+    const idx = this.contas.findIndex(c => c.id === conta.id);
+    if (idx >= 0) {
+      this.contas[idx] = conta;
+      this.registrarAuditoria('PLANO_CONTAS', 'ALTERAÇÃO', `Conta ${conta.codigoReduzido} - ${conta.nome} alterada.`);
+    } else {
+      conta.id = Date.now();
+      this.contas.push(conta);
+      this.registrarAuditoria('PLANO_CONTAS', 'CADASTRO', `Conta ${conta.codigoReduzido} - ${conta.nome} criada.`);
+    }
+    this.persistSnapshot();
+  }
+  public deleteConta(id: number): { success: boolean; message?: string } {
+    const hasLancamentos = this.lancamentos.some(l => l.contaDebitoId === id || l.contaCreditoId === id);
+    if (hasLancamentos) {
+      return { success: false, message: 'Não é possível excluir esta conta contábil pois existem lançamentos vinculados a ela.' };
+    }
+    const conta = this.getContaById(id);
+    this.contas = this.contas.filter(c => c.id !== id);
+    this.registrarAuditoria('PLANO_CONTAS', 'EXCLUSÃO', `Conta ${conta?.codigoReduzido} - ${conta?.nome} excluída.`);
+    this.persistSnapshot();
+    return { success: true };
+  }
+
+  // APIs Lançamentos
+  public getLancamentos(empresaId?: number): LancamentoContabil[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.lancamentos.filter(l => l.empresaId === empId).sort((a, b) => b.id - a.id);
+  }
+  public addLancamento(lanc: Omit<LancamentoContabil, 'id' | 'createdAt'>): LancamentoContabil {
+    const novo: LancamentoContabil = {
+      ...lanc,
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      usuarioNome: this.currentUser?.nome || 'Sistema',
+      createdAt: new Date().toISOString()
+    };
+    this.lancamentos.unshift(novo);
+    this.registrarAuditoria('LANÇAMENTOS', 'INCLUSÃO', `Partida nº ${novo.numeroPartida} gravada no valor de R$ ${novo.valor.toFixed(2)}.`);
+    this.persistSnapshot();
+    return novo;
+  }
+  public updateLancamento(lanc: LancamentoContabil) {
+    const idx = this.lancamentos.findIndex(l => l.id === lanc.id);
+    if (idx >= 0) {
+      this.lancamentos[idx] = lanc;
+      this.registrarAuditoria('LANÇAMENTOS', 'EDIÇÃO', `Partida nº ${lanc.numeroPartida} alterada para R$ ${lanc.valor.toFixed(2)}.`);
+      this.persistSnapshot();
+    }
+  }
+  public deleteLancamento(id: number) {
+    const l = this.lancamentos.find(item => item.id === id);
+    this.lancamentos = this.lancamentos.filter(item => item.id !== id);
+    this.registrarAuditoria('LANÇAMENTOS', 'EXCLUSÃO', `Partida nº ${l?.numeroPartida} excluída.`);
+    this.persistSnapshot();
+  }
+  public estornarLancamento(lancamentoId: number): LancamentoContabil | null {
+    const original = this.lancamentos.find(l => l.id === lancamentoId);
+    if (!original) return null;
+
+    const estorno: Omit<LancamentoContabil, 'id' | 'createdAt'> = {
+      empresaId: original.empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId: original.loteId,
+      dataLancamento: new Date().toISOString().slice(0, 10),
+      tipoPartida: original.tipoPartida,
+      contaDebitoId: original.contaCreditoId, // Inverte Débito e Crédito
+      contaCreditoId: original.contaDebitoId,
+      valor: original.valor,
+      centroCustoId: original.centroCustoId,
+      historicoId: original.historicoId,
+      complementoHistorico: `Estorno referente à partida nº ${original.numeroPartida} de ${original.dataLancamento}`,
+      usuarioNome: this.currentUser?.nome
+    };
+
+    return this.addLancamento(estorno);
+  }
+
+  // APIs Históricos
+  public getHistoricos(empresaId?: number): HistoricoPadrao[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.historicos.filter(h => h.empresaId === empId);
+  }
+  public saveHistorico(h: HistoricoPadrao) {
+    const idx = this.historicos.findIndex(item => item.id === h.id);
+    if (idx >= 0) this.historicos[idx] = h;
+    else { h.id = Date.now(); this.historicos.push(h); }
+    this.persistSnapshot();
+  }
+  public deleteHistorico(id: number) {
+    this.historicos = this.historicos.filter(h => h.id !== id);
+    this.persistSnapshot();
+  }
+
+  // APIs Centros de Custo
+  public getCentrosCusto(empresaId?: number): CentroCusto[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.centrosCusto.filter(c => c.empresaId === empId);
+  }
+  public saveCentroCusto(c: CentroCusto) {
+    const idx = this.centrosCusto.findIndex(item => item.id === c.id);
+    if (idx >= 0) this.centrosCusto[idx] = c;
+    else { c.id = Date.now(); this.centrosCusto.push(c); }
+    this.persistSnapshot();
+  }
+  public deleteCentroCusto(id: number) {
+    this.centrosCusto = this.centrosCusto.filter(c => c.id !== id);
+    this.persistSnapshot();
+  }
+
+  // APIs Lançamentos Padrão
+  public getLancamentosPadrao(empresaId?: number): LancamentoPadrao[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.lancamentosPadrao.filter(l => l.empresaId === empId);
+  }
+  public saveLancamentoPadrao(lp: LancamentoPadrao) {
+    const idx = this.lancamentosPadrao.findIndex(item => item.id === lp.id);
+    if (idx >= 0) this.lancamentosPadrao[idx] = lp;
+    else { lp.id = Date.now(); this.lancamentosPadrao.push(lp); }
+    this.persistSnapshot();
+  }
+  public deleteLancamentoPadrao(id: number) {
+    this.lancamentosPadrao = this.lancamentosPadrao.filter(l => l.id !== id);
+    this.persistSnapshot();
+  }
+
+  // APIs Lotes
+  public getLotes(empresaId?: number): LoteContabil[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.lotes.filter(l => l.empresaId === empId);
+  }
+  public saveLote(lote: LoteContabil) {
+    const idx = this.lotes.findIndex(item => item.id === lote.id);
+    if (idx >= 0) this.lotes[idx] = lote;
+    else { lote.id = Date.now(); this.lotes.push(lote); }
+    this.persistSnapshot();
+  }
+
+  // APIs Documentos
+  public getDocumentos(empresaId?: number): DocumentoStudio[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.documentos.filter(d => d.empresaId === empId);
+  }
+  public saveDocumento(doc: DocumentoStudio) {
+    const idx = this.documentos.findIndex(d => d.id === doc.id);
+    doc.updatedAt = new Date().toISOString();
+    if (idx >= 0) this.documentos[idx] = doc;
+    else { doc.id = Date.now(); this.documentos.push(doc); }
+    this.persistSnapshot();
+  }
+
+  // APIs Usuários & Autenticação
+  public getUsuarios(): Usuario[] { return [...this.usuarios]; }
+  public getCurrentUser(): Usuario { return this.currentUser; }
+  public setCurrentUser(user: Usuario) {
+    this.currentUser = user;
+    localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
+    this.registrarAuditoria('SEGURANÇA', 'LOGIN', `Usuário ${user.nome} (${user.login}) autenticado.`);
+  }
+  public saveUsuario(user: Usuario) {
+    const idx = this.usuarios.findIndex(u => u.id === user.id);
+    if (idx >= 0) this.usuarios[idx] = user;
+    else { user.id = Date.now(); this.usuarios.push(user); }
+    this.persistSnapshot();
+  }
+
+  // APIs Parâmetros
+  public getParametros(empresaId?: number): ParametrosEmpresa {
+    return { ...this.parametros, empresaId: empresaId || this.activeEmpresaId };
+  }
+  public saveParametros(params: ParametrosEmpresa) {
+    this.parametros = params;
+    this.registrarAuditoria('PARÂMETROS', 'ATUALIZAÇÃO', 'Parâmetros contábeis atualizados.');
+    this.persistSnapshot();
+  }
+
+  // APIs Auditoria & Rede
+  public getAuditoriaLogs(): AuditoriaLog[] { return [...this.auditoria]; }
+  public getRedeConfig(): ConfiguracaoRede { return { ...this.redeConfig }; }
+  public saveRedeConfig(config: ConfiguracaoRede) {
+    this.redeConfig = config;
+    localStorage.setItem(STORAGE_KEYS.REDE_CONFIG, JSON.stringify(config));
+    this.connectServerIfAvailable();
+  }
+
+  // --------------------------------------------------------------------------
+  // MÓDULO ESCRITA FISCAL (EF)
+  // --------------------------------------------------------------------------
+  public getAcumuladores(empresaId?: number): AcumuladorFiscal[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.acumuladores.filter(a => a.empresaId === empId);
+  }
+  public saveAcumulador(a: AcumuladorFiscal) {
+    const idx = this.acumuladores.findIndex(item => item.id === a.id);
+    if (idx >= 0) this.acumuladores[idx] = a;
+    else { a.id = Date.now(); this.acumuladores.push(a); }
+    this.persistSnapshot();
+  }
+  public deleteAcumulador(id: number) {
+    this.acumuladores = this.acumuladores.filter(a => a.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getNotasFiscais(empresaId?: number): NotaFiscal[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.notasFiscais.filter(n => n.empresaId === empId).sort((a, b) => (Number(b.numero) || 0) - (Number(a.numero) || 0));
+  }
+  public saveNotaFiscal(nf: NotaFiscal) {
+    const idx = this.notasFiscais.findIndex(item => item.id === nf.id);
+    if (idx >= 0) this.notasFiscais[idx] = nf;
+    else { nf.id = Date.now(); this.notasFiscais.unshift(nf); }
+    this.persistSnapshot();
+  }
+  public deleteNotaFiscal(id: number) {
+    this.notasFiscais = this.notasFiscais.filter(n => n.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getApuracoesFiscais(empresaId?: number): ApuracaoFiscal[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.apuracoesFiscais.filter(a => a.empresaId === empId);
+  }
+  public getApuracaoFiscal(empresaIdOrComp?: number | string, compOrEmpresaId?: string | number): ApuracaoFiscal | undefined {
+    let empId = this.activeEmpresaId;
+    let comp: string | undefined;
+
+    if (typeof empresaIdOrComp === 'number') {
+      empId = empresaIdOrComp;
+      if (typeof compOrEmpresaId === 'string') comp = compOrEmpresaId;
+    } else if (typeof empresaIdOrComp === 'string') {
+      comp = empresaIdOrComp;
+      if (typeof compOrEmpresaId === 'number') empId = compOrEmpresaId;
+    }
+
+    if (comp) {
+      return this.apuracoesFiscais.find(a => a.empresaId === empId && a.competencia === comp);
+    }
+    return this.apuracoesFiscais.find(a => a.empresaId === empId);
+  }
+  public saveApuracaoFiscal(ap: ApuracaoFiscal) {
+    const idx = this.apuracoesFiscais.findIndex(item => item.id === ap.id);
+    if (idx >= 0) this.apuracoesFiscais[idx] = ap;
+    else { ap.id = Date.now(); this.apuracoesFiscais.unshift(ap); }
+    this.persistSnapshot();
+  }
+
+  // Integração Automática: Escrita Fiscal -> Contabilidade
+  public gerarIntegracaoFiscalContabil(arg1: number | string, arg2?: string | number): {
+    success: boolean;
+    partidasGeradas: number;
+    lancamentosCriados: number;
+    count: number;
+    loteId: number;
+    lote: LoteContabil;
+    valorTotal: number;
+  } {
+    let empId = this.activeEmpresaId;
+    let competencia = new Date().toISOString().slice(0, 7);
+
+    if (typeof arg1 === 'number') {
+      empId = arg1;
+      if (typeof arg2 === 'string') competencia = arg2;
+    } else if (typeof arg1 === 'string') {
+      competencia = arg1;
+      if (typeof arg2 === 'number') empId = arg2;
+    }
+
+    const notasDaComp = this.notasFiscais.filter(n => n.empresaId === empId && n.dataEmissao.startsWith(competencia) && !n.integradaContabil);
+
+    const loteVazio: LoteContabil = {
+      id: Date.now(),
+      empresaId: empId,
+      numero: this.lotes.length + 1,
+      numeroLote: this.lotes.length + 1,
+      descricao: `Lote de Integração Escrita Fiscal - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    if (notasDaComp.length === 0) {
+      return { success: false, partidasGeradas: 0, lancamentosCriados: 0, count: 0, loteId: 0, lote: loteVazio, valorTotal: 0 };
+    }
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const lote: LoteContabil = {
+      id: Date.now(),
+      empresaId: empId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Integração Escrita Fiscal - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    let totalD = 0;
+    let totalC = 0;
+    let partidasCount = 0;
+
+    for (const nf of notasDaComp) {
+      const acumulador = this.acumuladores.find(a => a.id === nf.acumuladorId);
+      const debitoId = acumulador?.contaContabilDebitoId || (nf.tipo === 'ENTRADA' ? 15 : 11);
+      const creditoId = acumulador?.contaContabilCreditoId || (nf.tipo === 'ENTRADA' ? 30 : 44);
+
+      this.addLancamento({
+        empresaId: empId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: nf.dataEmissao,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: debitoId,
+        contaCreditoId: creditoId,
+        valor: nf.valorTotal,
+        historicoId: acumulador?.historicoId || 1,
+        complementoHistorico: `NF-e nº ${nf.numero} - ${nf.clienteFornecedorNome}`,
+        usuarioNome: 'Integração Fiscal'
+      });
+
+      totalD += nf.valorTotal;
+      totalC += nf.valorTotal;
+      partidasCount++;
+
+      nf.integradaContabil = true;
+    }
+
+    lote.totalDebito = totalD;
+    lote.totalCredito = totalC;
+    this.lotes.push(lote);
+
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_FISCAL', 'PROCESSAMENTO', `Integração de ${partidasCount} notas da competência ${competencia} geradas no Lote nº ${lote.numero}.`);
+
+    return {
+      success: true,
+      partidasGeradas: partidasCount,
+      lancamentosCriados: partidasCount,
+      count: partidasCount,
+      loteId: lote.id,
+      lote,
+      valorTotal: totalD
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // MÓDULO FOLHA DE PAGAMENTO (FO)
+  // --------------------------------------------------------------------------
+  public getColaboradores(empresaId?: number): Colaborador[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.colaboradores.filter(c => c.empresaId === empId);
+  }
+  public saveColaborador(c: Colaborador) {
+    const idx = this.colaboradores.findIndex(item => item.id === c.id);
+    if (idx >= 0) this.colaboradores[idx] = c;
+    else { c.id = Date.now(); this.colaboradores.push(c); }
+    this.persistSnapshot();
+  }
+  public deleteColaborador(id: number) {
+    this.colaboradores = this.colaboradores.filter(c => c.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getRubricasFolha(empresaId?: number): RubricaFolha[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.rubricasFolha.filter(r => !r.empresaId || r.empresaId === empId);
+  }
+  public getRubricas(empresaId?: number): RubricaFolha[] {
+    return this.getRubricasFolha(empresaId);
+  }
+  public saveRubricaFolha(r: RubricaFolha) {
+    const idx = this.rubricasFolha.findIndex(item => item.id === r.id);
+    if (idx >= 0) this.rubricasFolha[idx] = r;
+    else { r.id = Date.now(); this.rubricasFolha.push(r); }
+    this.persistSnapshot();
+  }
+  public saveRubrica(r: RubricaFolha) {
+    this.saveRubricaFolha(r);
+  }
+  public deleteRubrica(id: number) {
+    this.rubricasFolha = this.rubricasFolha.filter(r => r.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getFolhasMensais(empresaId?: number): FolhaMensal[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.folhasMensais.filter(f => f.empresaId === empId);
+  }
+  public getFolhasCalculadas(empresaId?: number, competencia?: string): FolhaMensal[] {
+    const empId = empresaId || this.activeEmpresaId;
+    if (competencia) {
+      return this.folhasMensais.filter(f => f.empresaId === empId && f.competencia === competencia);
+    }
+    return this.folhasMensais.filter(f => f.empresaId === empId);
+  }
+  public saveFolhaMensal(folha: FolhaMensal) {
+    const idx = this.folhasMensais.findIndex(item => item.id === folha.id);
+    if (idx >= 0) this.folhasMensais[idx] = folha;
+    else { folha.id = Date.now(); this.folhasMensais.push(folha); }
+    this.persistSnapshot();
+  }
+
+  // Integração Automática: Folha de Pagamento -> Contabilidade
+  public gerarIntegracaoFolhaContabil(arg1: number | string, arg2?: string | number): {
+    success: boolean;
+    partidasGeradas: number;
+    count: number;
+    loteId: number;
+    lote: LoteContabil;
+    totalBruto: number;
+  } {
+    let empId = this.activeEmpresaId;
+    let competencia = new Date().toISOString().slice(0, 7);
+
+    if (typeof arg1 === 'number') {
+      empId = arg1;
+      if (typeof arg2 === 'string') competencia = arg2;
+    } else if (typeof arg1 === 'string') {
+      competencia = arg1;
+      if (typeof arg2 === 'number') empId = arg2;
+    }
+
+    const folha = this.folhasMensais.find(f => f.empresaId === empId && f.competencia === competencia);
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const lote: LoteContabil = {
+      id: Date.now(),
+      empresaId: empId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Integração Folha de Pagamento - Comp. ${competencia}`,
+      dataLote: `${competencia}-30`,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    if (!folha) {
+      return { success: false, partidasGeradas: 0, count: 0, loteId: 0, lote, totalBruto: 0 };
+    }
+
+    let totalD = 0;
+    let totalC = 0;
+    let partidas = 0;
+
+    const totalBruto = folha.totalBruto ?? folha.totalProventos ?? 0;
+    const totalINSS = folha.totalINSSSegurados ?? folha.inssSegurado ?? 0;
+    const totalFGTS = folha.totalFGTS ?? folha.fgts ?? 0;
+
+    // 1. Apropriação de Salários e Pró-Labore Brutos
+    // D: 56 (Despesas com Salários), C: 26 (Salários e Ordenados a Pagar)
+    if (totalBruto > 0) {
+      this.addLancamento({
+        empresaId: empId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: `${competencia}-30`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 56,
+        contaCreditoId: 26,
+        valor: totalBruto,
+        historicoId: 3,
+        complementoHistorico: `Apropriação da Folha Salarial e Pró-Labore ref. ${competencia}`,
+        usuarioNome: 'Integração DP'
+      });
+      totalD += totalBruto;
+      totalC += totalBruto;
+      partidas++;
+    }
+
+    // 2. Retenção de INSS dos Segurados
+    // D: 26 (Salários a Pagar), C: 27 (INSS a Recolher)
+    if (totalINSS > 0) {
+      this.addLancamento({
+        empresaId: empId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: `${competencia}-30`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 26,
+        contaCreditoId: 27,
+        valor: totalINSS,
+        historicoId: 3,
+        complementoHistorico: `Retenção de INSS Segurados sobre Folha ref. ${competencia}`,
+        usuarioNome: 'Integração DP'
+      });
+      totalD += totalINSS;
+      totalC += totalINSS;
+      partidas++;
+    }
+
+    // 3. Encargos de FGTS da Empresa
+    // D: 56 (Despesas com Pessoal - FGTS), C: 28 (FGTS a Recolher)
+    if (totalFGTS > 0) {
+      this.addLancamento({
+        empresaId: empId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: `${competencia}-30`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 56,
+        contaCreditoId: 28,
+        valor: totalFGTS,
+        historicoId: 3,
+        complementoHistorico: `Provisão de FGTS s/ Folha de Pagamento ref. ${competencia}`,
+        usuarioNome: 'Integração DP'
+      });
+      totalD += totalFGTS;
+      totalC += totalFGTS;
+      partidas++;
+    }
+
+    lote.totalDebito = totalD;
+    lote.totalCredito = totalC;
+    this.lotes.push(lote);
+
+    folha.integradaContabil = true;
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_FOLHA', 'PROCESSAMENTO', `Integração da folha ${competencia} concluída com ${partidas} lançamentos no Lote nº ${lote.numero}.`);
+
+    return {
+      success: true,
+      partidasGeradas: partidas,
+      count: partidas,
+      loteId: lote.id,
+      lote,
+      totalBruto
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // MÓDULO HONORÁRIOS CONTÁBEIS (HO)
+  // --------------------------------------------------------------------------
+  public getContratosHonorarios(empresaId?: number): ContratoHonorario[] {
+    if (empresaId) {
+      return this.contratosHonorarios.filter(c => c.empresaId === empresaId);
+    }
+    return this.contratosHonorarios;
+  }
+  public saveContratoHonorario(c: ContratoHonorario) {
+    const idx = this.contratosHonorarios.findIndex(item => item.id === c.id);
+    if (idx >= 0) this.contratosHonorarios[idx] = c;
+    else { c.id = Date.now(); this.contratosHonorarios.push(c); }
+    this.persistSnapshot();
+  }
+  public deleteContratoHonorario(id: number) {
+    this.contratosHonorarios = this.contratosHonorarios.filter(c => c.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getFaturasHonorarios(filtro?: number | string): FaturaHonorario[] {
+    if (typeof filtro === 'string') {
+      return this.faturasHonorarios.filter(f => f.competencia === filtro);
+    }
+    if (typeof filtro === 'number') {
+      return this.faturasHonorarios.filter(f => f.empresaId === filtro);
+    }
+    return this.faturasHonorarios;
+  }
+  public saveFaturaHonorario(f: FaturaHonorario) {
+    const idx = this.faturasHonorarios.findIndex(item => item.id === f.id);
+    if (idx >= 0) this.faturasHonorarios[idx] = f;
+    else { f.id = Date.now(); this.faturasHonorarios.unshift(f); }
+    this.persistSnapshot();
+  }
+  public deleteFaturaHonorario(id: number) {
+    this.faturasHonorarios = this.faturasHonorarios.filter(f => f.id !== id);
+    this.persistSnapshot();
+  }
+
+  // Faturamento em Lote de todas as empresas
+  public gerarFaturamentoMensalHonorarios(competencia: string): { success: boolean; faturasGeradas: number } {
+    let count = 0;
+    for (const contrato of this.contratosHonorarios.filter(c => c.ativo !== false && c.status !== 'CANCELADO')) {
+      const jaExiste = this.faturasHonorarios.some(f => f.empresaId === contrato.empresaId && f.competencia === competencia);
+      if (!jaExiste) {
+        const valBase = contrato.valorMensalBase ?? contrato.valorMensal ?? 0;
+        const fatura: FaturaHonorario = {
+          id: Date.now() + count,
+          empresaId: contrato.empresaId,
+          competencia,
+          numeroFatura: `FAT-${competencia.replace('-', '')}-${String(contrato.empresaId).padStart(3, '0')}`,
+          valorHonorarioBase: valBase,
+          valorBase: valBase,
+          valorServicosExtras: 0,
+          servicosExtras: [],
+          valorTotal: valBase,
+          dataVencimento: `${competencia}-${String(contrato.diaVencimento).padStart(2, '0')}`,
+          status: 'PENDENTE'
+        };
+        this.faturasHonorarios.unshift(fatura);
+        count++;
+      }
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('HONORÁRIOS', 'FATURAMENTO_LOTE', `Geração em lote de ${count} faturas de honorários para ${competencia}.`);
+    return { success: true, faturasGeradas: count };
+  }
+
+  // Integração de Honorários -> Contabilidade
+  public gerarIntegracaoHonorariosContabil(arg1: number | string, arg2?: string | number): {
+    success: boolean;
+    partidasGeradas: number;
+    count: number;
+    loteId: number;
+    lote: LoteContabil;
+    totalRecebido: number;
+  } {
+    let empId = this.activeEmpresaId;
+    let competencia = new Date().toISOString().slice(0, 7);
+
+    if (typeof arg1 === 'number') {
+      empId = arg1;
+      if (typeof arg2 === 'string') competencia = arg2;
+    } else if (typeof arg1 === 'string') {
+      competencia = arg1;
+      if (typeof arg2 === 'number') empId = arg2;
+    }
+
+    const faturasPagas = this.faturasHonorarios.filter(f => f.empresaId === empId && f.competencia === competencia && f.status === 'PAGO' && !f.integradaContabil);
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const lote: LoteContabil = {
+      id: Date.now(),
+      empresaId: empId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Faturamento de Honorários - Comp. ${competencia}`,
+      dataLote: `${competencia}-15`,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    if (faturasPagas.length === 0) {
+      return { success: false, partidasGeradas: 0, count: 0, loteId: 0, lote, totalRecebido: 0 };
+    }
+
+    let total = 0;
+    for (const fat of faturasPagas) {
+      this.addLancamento({
+        empresaId: empId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: fat.dataPagamento || `${competencia}-15`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 6,
+        contaCreditoId: 44,
+        valor: fat.valorTotal,
+        historicoId: 1,
+        complementoHistorico: `Liquidação Fatura Honorários nº ${fat.numeroFatura || fat.id}`,
+        usuarioNome: 'Integração Honorários'
+      });
+      total += fat.valorTotal;
+      fat.integradaContabil = true;
+    }
+
+    lote.totalDebito = total;
+    lote.totalCredito = total;
+    this.lotes.push(lote);
+
+    this.persistSnapshot();
+    return {
+      success: true,
+      partidasGeradas: faturasPagas.length,
+      count: faturasPagas.length,
+      loteId: lote.id,
+      lote,
+      totalRecebido: total
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // CONCILIAÇÃO BANCÁRIA INTELIGENTE & AUTO-MAPPING
+  // --------------------------------------------------------------------------
+  public getRegrasConciliacao(empresaId?: number): RegraConciliacao[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.regrasConciliacao.filter(r => r.empresaId === empId);
+  }
+  public saveRegraConciliacao(r: RegraConciliacao) {
+    const idx = this.regrasConciliacao.findIndex(item => item.id === r.id);
+    if (idx >= 0) this.regrasConciliacao[idx] = r;
+    else { r.id = Date.now(); this.regrasConciliacao.push(r); }
+    this.persistSnapshot();
+  }
+  public deleteRegraConciliacao(id: number) {
+    this.regrasConciliacao = this.regrasConciliacao.filter(r => r.id !== id);
+    this.persistSnapshot();
+  }
+
+  public autoClassificarExtrato(transacoes: ExtratoTransacao[], empresaId?: number, contaBancariaId?: number): ExtratoTransacao[] {
+    const empId = empresaId || this.activeEmpresaId;
+    const regras = this.getRegrasConciliacao(empId);
+
+    return transacoes.map(t => {
+      const texto = (t.historicoOriginal || '').toUpperCase();
+      const regraEncontrada = regras.find(r => texto.includes(r.palavraChave.toUpperCase()));
+
+      if (regraEncontrada) {
+        return {
+          ...t,
+          contaDebitoId: regraEncontrada.contaDebitoId,
+          contaCreditoId: regraEncontrada.contaCreditoId,
+          historicoId: regraEncontrada.historicoId,
+          complemento: regraEncontrada.complementoPadrao || t.historicoOriginal,
+          classificado: true,
+          status: 'CLASSIFICADO'
+        };
+      }
+
+      if (contaBancariaId) {
+        if (t.valor > 0) {
+          // Entrada no banco
+          return {
+            ...t,
+            contaDebitoId: contaBancariaId,
+            status: t.contaCreditoId ? 'CLASSIFICADO' : 'PENDENTE',
+            classificado: !!t.contaCreditoId
+          };
+        } else {
+          // Saída do banco
+          return {
+            ...t,
+            contaCreditoId: contaBancariaId,
+            status: t.contaDebitoId ? 'CLASSIFICADO' : 'PENDENTE',
+            classificado: !!t.contaDebitoId
+          };
+        }
+      }
+
+      return t;
+    });
+  }
+
+  public gerarLoteDoExtrato(
+    transacoes: ExtratoTransacao[],
+    empresaIdOrNome?: number | string,
+    nomeOuEmpresaId?: string | number
+  ): { success: boolean; loteId: number; lote: LoteContabil; count: number; partidasCriadas: number; totalValor: number } {
+    let empId = this.activeEmpresaId;
+    let nomeLote = `Lote Importação Extrato - ${new Date().toISOString().slice(0, 10)}`;
+
+    if (typeof empresaIdOrNome === 'number') {
+      empId = empresaIdOrNome;
+      if (typeof nomeOuEmpresaId === 'string') nomeLote = nomeOuEmpresaId;
+    } else if (typeof empresaIdOrNome === 'string') {
+      nomeLote = empresaIdOrNome;
+      if (typeof nomeOuEmpresaId === 'number') empId = nomeOuEmpresaId;
+    }
+
+    const classificadas = transacoes.filter(t => (t.status === 'CLASSIFICADO' || t.classificado) && t.contaDebitoId && t.contaCreditoId);
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const lote: LoteContabil = {
+      id: Date.now(),
+      empresaId: empId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: nomeLote,
+      dataLote: new Date().toISOString().slice(0, 10),
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    if (classificadas.length === 0) {
+      return { success: false, loteId: 0, lote, count: 0, partidasCriadas: 0, totalValor: 0 };
+    }
+
+    let total = 0;
+    for (const t of classificadas) {
+      this.addLancamento({
+        empresaId: empId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: t.data,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: t.contaDebitoId,
+        contaCreditoId: t.contaCreditoId,
+        valor: Math.abs(t.valor),
+        historicoId: t.historicoId || 1,
+        complementoHistorico: t.complemento || t.historicoOriginal,
+        usuarioNome: 'Conciliação Automática'
+      });
+      total += Math.abs(t.valor);
+    }
+
+    lote.totalDebito = total;
+    lote.totalCredito = total;
+    this.lotes.push(lote);
+
+    this.persistSnapshot();
+    this.registrarAuditoria('CONCILIAÇÃO', 'IMPORTAÇÃO', `Lote nº ${lote.numero} gerado a partir de extrato com ${classificadas.length} partidas.`);
+
+    return {
+      success: true,
+      loteId: lote.id,
+      lote,
+      count: classificadas.length,
+      partidasCriadas: classificadas.length,
+      totalValor: total
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // DEMONSTRATIVOS DLPA E DFC
+  // --------------------------------------------------------------------------
+  private dlpaItens: Record<string, DLPAItem[]> = {};
+  private dfcItens: Record<string, DFCItem[]> = {};
+
+  public getDLPA(empresaId: number, exercicio: number): DLPAItem[] {
+    const key = `${empresaId}_${exercicio}`;
+    if (this.dlpaItens[key]) return this.dlpaItens[key];
+
+    const padrao: DLPAItem[] = [
+      { id: 1, empresaId, exercicio, ordem: 1, descricao: 'Saldo no Início do Período', valor: 85400.00, tipo: 'SALDO_INICIAL' },
+      { id: 2, empresaId, exercicio, ordem: 2, descricao: 'Ajustes de Exercícios Anteriores', valor: 0.00, tipo: 'AJUSTE' },
+      { id: 3, empresaId, exercicio, ordem: 3, descricao: 'Lucro Líquido do Exercício (DRE)', valor: 42150.00, tipo: 'LUCRO_EXERCICIO' },
+      { id: 4, empresaId, exercicio, ordem: 4, descricao: 'Transferência para Reserva Legal (5%)', valor: -2107.50, tipo: 'DESTINACAO' },
+      { id: 5, empresaId, exercicio, ordem: 5, descricao: 'Distribuição de Lucros / Dividendos', valor: -30000.00, tipo: 'DESTINACAO' },
+      { id: 6, empresaId, exercicio, ordem: 6, descricao: 'Saldo no Fim do Período', valor: 95442.50, tipo: 'SALDO_FINAL' }
+    ];
+    this.dlpaItens[key] = padrao;
+    return padrao;
+  }
+
+  public saveDLPA(empresaId: number, exercicio: number, itens: DLPAItem[]) {
+    const key = `${empresaId}_${exercicio}`;
+    this.dlpaItens[key] = itens;
+    this.persistSnapshot();
+  }
+
+  public getDFC(empresaId: number, exercicio: number): DFCItem[] {
+    const key = `${empresaId}_${exercicio}`;
+    if (this.dfcItens[key]) return this.dfcItens[key];
+
+    const padrao: DFCItem[] = [
+      { id: 1, empresaId, exercicio, ordem: 1, grupo: 'OPERACIONAL', descricao: 'Lucro Líquido do Exercício', valor: 42150.00 },
+      { id: 2, empresaId, exercicio, ordem: 2, grupo: 'OPERACIONAL', descricao: '(+) Depreciação e Amortização Acumulada', valor: 5400.00 },
+      { id: 3, empresaId, exercicio, ordem: 3, grupo: 'OPERACIONAL', descricao: '(+/-) Variação em Contas a Receber / Clientes', valor: -12800.00 },
+      { id: 4, empresaId, exercicio, ordem: 4, grupo: 'OPERACIONAL', descricao: '(+/-) Variação em Estoques e Mercadorias', valor: -4500.00 },
+      { id: 5, empresaId, exercicio, ordem: 5, grupo: 'OPERACIONAL', descricao: '(+/-) Variação em Fornecedores e Obrigações Fiscais', valor: 18200.00 },
+      { id: 6, empresaId, exercicio, ordem: 6, grupo: 'INVESTIMENTO', descricao: 'Aquisição de Imobilizado (Equipamentos de TI)', valor: -8500.00 },
+      { id: 7, empresaId, exercicio, ordem: 7, grupo: 'FINANCIAMENTO', descricao: 'Amortização de Empréstimos Bancários', valor: -6000.00 },
+      { id: 8, empresaId, exercicio, ordem: 8, grupo: 'FINANCIAMENTO', descricao: 'Distribuição de Lucros aos Sócios', valor: -25000.00 }
+    ];
+    this.dfcItens[key] = padrao;
+    return padrao;
+  }
+
+  public saveDFC(empresaId: number, exercicio: number, itens: DFCItem[]) {
+    const key = `${empresaId}_${exercicio}`;
+    this.dfcItens[key] = itens;
+    this.persistSnapshot();
+  }
+
+  // --------------------------------------------------------------------------
+  // GERADOR DO SPED ECD (ESCRITURAÇÃO CONTÁBIL DIGITAL) OFICIAL
+  // --------------------------------------------------------------------------
+  public gerarSpedECD(empresaId?: number, ano?: number): string {
+    const emp = this.getEmpresas().find(e => e.id === (empresaId || this.activeEmpresaId)) || this.getActiveEmpresa();
+    const anoRef = ano || emp.exercicioAtivo;
+    const contasEmp = this.getContas(emp.id);
+    const lancsEmp = this.getLancamentos(emp.id).filter(l => l.dataLancamento.startsWith(String(anoRef)));
+
+    const linhas: string[] = [];
+
+    // BLOCO 0: Abertura e Identificação
+    linhas.push(`|0000|LECD|0101${anoRef}|3112${anoRef}|${emp.razaoSocial.toUpperCase()}|${emp.cnpj.replace(/\D/g, '')}|${emp.uf}|${emp.inscricaoEstadual?.replace(/\D/g, '') || ''}|3550308||0|1|||`);
+    linhas.push('|0001|0|');
+    linhas.push(`|0007|00|`);
+    linhas.push('|0990|4|');
+
+    // BLOCO I: Lançamentos Contábeis
+    linhas.push('|I001|0|');
+    linhas.push(`|I010|G|1.00|`);
+
+    // I050: Plano de Contas
+    for (const c of contasEmp) {
+      linhas.push(`|I050|0101${anoRef}|01|${c.tipo}|${c.grau}|${c.codigoReduzido}|${c.classificacao}|${c.nome.toUpperCase()}|`);
+    }
+
+    // I150 e I155: Saldos
+    linhas.push(`|I150|0101${anoRef}|3112${anoRef}|`);
+    for (const c of contasEmp.filter(c => c.tipo === 'A')) {
+      const saldoIni = Math.abs(c.saldoAnterior).toFixed(2);
+      const indIni = c.natureza;
+      linhas.push(`|I155|${c.codigoReduzido}|${c.codigoReduzido}|${saldoIni}|${indIni}|0.00|0.00|${saldoIni}|${indIni}|`);
+    }
+
+    // I200 e I250: Lançamentos e Partidas
+    for (const l of lancsEmp) {
+      const dataFmt = l.dataLancamento.replace(/-/g, '');
+      linhas.push(`|I200|${l.numeroPartida}|${dataFmt}|${l.valor.toFixed(2)}|N|`);
+      if (l.contaDebitoId) {
+        linhas.push(`|I250|${l.contaDebitoId}||${l.valor.toFixed(2)}|D|||${l.complementoHistorico}|`);
+      }
+      if (l.contaCreditoId) {
+        linhas.push(`|I250|${l.contaCreditoId}||${l.valor.toFixed(2)}|C|||${l.complementoHistorico}|`);
+      }
+    }
+    linhas.push(`|I990|${linhas.length}|`);
+
+    // BLOCO J: Demonstrações Contábeis
+    linhas.push('|J001|0|');
+    linhas.push(`|J005|0101${anoRef}|3112${anoRef}|1|BALANÇO PATRIMONIAL E DRE|`);
+    linhas.push('|J990|3|');
+
+    // BLOCO 9: Encerramento
+    linhas.push('|9001|0|');
+    linhas.push(`|9900|0000|1|`);
+    linhas.push(`|9900|I050|${contasEmp.length}|`);
+    linhas.push(`|9900|I200|${lancsEmp.length}|`);
+    linhas.push('|9990|5|');
+    linhas.push(`|9999|${linhas.length + 1}|`);
+
+    this.registrarAuditoria('SPED_ECD', 'EXPORTAÇÃO', `Arquivo SPED ECD do exercício ${anoRef} gerado com sucesso.`);
+
+    return linhas.join('\r\n');
+  }
+
+  // Rotina de Transporte de Saldos Anuais
+  public executarTransporteSaldos(anoOrigem: number, anoDestino: number): { success: boolean; contasTransportadas: number } {
+    let count = 0;
+    for (const c of this.contas) {
+      if (c.tipo === 'A' && (c.classificacao.startsWith('1') || c.classificacao.startsWith('2'))) {
+        c.saldoAnterior = c.saldoAtual !== undefined ? c.saldoAtual : c.saldoAnterior;
+        count++;
+      }
+    }
+    const emp = this.getActiveEmpresa();
+    emp.exercicioAtivo = anoDestino;
+    emp.competenciaAtiva = `${anoDestino}-01`;
+    this.saveEmpresa(emp);
+    this.persistSnapshot();
+    this.registrarAuditoria('ENCERRAMENTO', 'TRANSPORTE_SALDOS', `Transporte de saldos concluído de ${anoOrigem} para ${anoDestino}. (${count} contas atualizadas).`);
+    return { success: true, contasTransportadas: count };
+  }
+}
+
+export const dbService = new DatabaseService();

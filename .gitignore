@@ -1,0 +1,10 @@
+/docs
+/extracted_chm
+/extracted_chm_contabil
+/extracted_chm_escrita
+/extracted_chm_folha
+/extracted_chm_honorarios
+/node_modules
+*.env*
+*.log*
+*.md*
