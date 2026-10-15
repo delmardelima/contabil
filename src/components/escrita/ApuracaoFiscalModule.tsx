@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { dbService } from '../../db/sqliteService';
 import { Empresa, ApuracaoFiscal, NotaFiscal } from '../../types/contabil';
-import { 
-  Calculator, 
-  Receipt, 
-  Layers, 
-  Printer, 
-  CheckCircle2, 
-  AlertCircle, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Calculator,
+  Receipt,
+  Layers,
+  Printer,
+  CheckCircle2,
+  AlertCircle,
+  DollarSign,
+  TrendingUp,
   FileCheck,
   Zap,
   ArrowRight,
@@ -37,7 +37,7 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
   onOpenReportPreview,
   onIntegracaoSucesso
 }) => {
-  const [subAba, setSubAba] = useState<'APURACAO' | 'GUIAS' | 'MEMORIA_CALCULO'>('APURACAO');
+  const [subAba, setSubAba] = useState<'APURACAO' | 'SEGREGAÇÃO' | 'GUIAS' | 'MEMORIA_CALCULO'>('APURACAO');
   const [apuracao, setApuracao] = useState<ApuracaoFiscal | null>(() => {
     return dbService.getApuracaoFiscal(empresa.id, empresa.competenciaAtiva) || null;
   });
@@ -57,48 +57,40 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
   const handleCalcularApuracao = () => {
     setCalculando(true);
     setTimeout(() => {
-      let imposto = 0;
-      let aliq = 0;
-      let det: Record<string, number> = {};
       const isSimples = empresa.regimeTributario === 'SIMPLES_NACIONAL';
 
       if (isSimples) {
-        // Tabela Simples Nacional Anexo I / III (RBT12 estimado R$ 1.200.000,00)
-        aliq = 0.0821; // Alíquota efetiva 8,21%
-        imposto = Math.round((faturamentoMes * aliq) * 100) / 100;
-        det = {
-          'Simples Nacional - CPP (Previdência Patronal)': Math.round((imposto * 0.40) * 100) / 100,
-          'Simples Nacional - ICMS': Math.round((imposto * 0.32) * 100) / 100,
-          'Simples Nacional - PIS/PASEP': Math.round((imposto * 0.06) * 100) / 100,
-          'Simples Nacional - COFINS': Math.round((imposto * 0.14) * 100) / 100,
-          'Simples Nacional - IRPJ': Math.round((imposto * 0.04) * 100) / 100,
-          'Simples Nacional - CSLL': Math.round((imposto * 0.04) * 100) / 100
-        };
-      } else {
-        // Lucro Presumido
-        const icmsDebito = Math.round((totalSaidas * 0.18) * 100) / 100;
-        const icmsCredito = Math.round((totalEntradas * 0.12) * 100) / 100;
-        const icmsPagar = Math.max(0, icmsDebito - icmsCredito);
-
-        const pis = Math.round((faturamentoMes * 0.0065) * 100) / 100;
-        const cofins = Math.round((faturamentoMes * 0.03) * 100) / 100;
-        const iss = Math.round((totalServicos * 0.05) * 100) / 100;
-        const baseIRPJ = (totalSaidas * 0.08) + (totalServicos * 0.32);
-        const irpj = Math.round((baseIRPJ * 0.15) * 100) / 100;
-        const baseCSLL = (totalSaidas * 0.12) + (totalServicos * 0.32);
-        const csll = Math.round((baseCSLL * 0.09) * 100) / 100;
-
-        imposto = icmsPagar + pis + cofins + iss + irpj + csll;
-        aliq = faturamentoMes > 0 ? imposto / faturamentoMes : 0;
-        det = {
-          'ICMS Próprio (Débito x Crédito)': icmsPagar,
-          'PIS Cumulativo (0,65%)': pis,
-          'COFINS Cumulativa (3,00%)': cofins,
-          'ISSQN Municipal (5,00%)': iss,
-          'IRPJ Presumido (15%)': irpj,
-          'CSLL Presumida (9%)': csll
-        };
+        const novaApuracao = dbService.calcularSimplesNacionalComSegregacao(empresa.id, empresa.competenciaAtiva);
+        setApuracao(novaApuracao);
+        setCalculando(false);
+        setMensagem(`Apuração do Simples Nacional com Segregação (ST & Monofásicos) processada! Economia Tributária Gerada: R$ ${(novaApuracao.economiaTributariaSegregacao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
+        setTimeout(() => setMensagem(''), 6000);
+        return;
       }
+
+      // Lucro Presumido
+      const icmsDebito = Math.round((totalSaidas * 0.18) * 100) / 100;
+      const icmsCredito = Math.round((totalEntradas * 0.12) * 100) / 100;
+      const icmsPagar = Math.max(0, icmsDebito - icmsCredito);
+
+      const pis = Math.round((faturamentoMes * 0.0065) * 100) / 100;
+      const cofins = Math.round((faturamentoMes * 0.03) * 100) / 100;
+      const iss = Math.round((totalServicos * 0.05) * 100) / 100;
+      const baseIRPJ = (totalSaidas * 0.08) + (totalServicos * 0.32);
+      const irpj = Math.round((baseIRPJ * 0.15) * 100) / 100;
+      const baseCSLL = (totalSaidas * 0.12) + (totalServicos * 0.32);
+      const csll = Math.round((baseCSLL * 0.09) * 100) / 100;
+
+      const imposto = icmsPagar + pis + cofins + iss + irpj + csll;
+      const aliq = faturamentoMes > 0 ? imposto / faturamentoMes : 0;
+      const det: Record<string, number> = {
+        'ICMS Próprio (Débito x Crédito)': icmsPagar,
+        'PIS Cumulativo (0,65%)': pis,
+        'COFINS Cumulativa (3,00%)': cofins,
+        'ISSQN Municipal (5,00%)': iss,
+        'IRPJ Presumido (15%)': irpj,
+        'CSLL Presumida (9%)': csll
+      };
 
       const novaApuracao: ApuracaoFiscal = {
         id: Date.now(),
@@ -110,14 +102,12 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
         rbt12: 1250000.00,
         impostoDevido: imposto,
         aliquotaEfetiva: aliq,
-        aliquotaEfetivaDAS: isSimples ? aliq : undefined,
-        valorDAS: isSimples ? imposto : undefined,
-        valorICMSApurado: det['ICMS Próprio (Débito x Crédito)'] || det['Simples Nacional - ICMS'] || 0,
-        valorPISApurado: det['PIS Cumulativo (0,65%)'] || det['Simples Nacional - PIS/PASEP'] || 0,
-        valorCOFINSApurado: det['COFINS Cumulativa (3,00%)'] || det['Simples Nacional - COFINS'] || 0,
-        valorISSApurado: det['ISSQN Municipal (5,00%)'] || 0,
-        valorIRPJApurado: det['IRPJ Presumido (15%)'] || det['Simples Nacional - IRPJ'] || 0,
-        valorCSLLApurado: det['CSLL Presumida (9%)'] || det['Simples Nacional - CSLL'] || 0,
+        valorICMSApurado: icmsPagar,
+        valorPISApurado: pis,
+        valorCOFINSApurado: cofins,
+        valorISSApurado: iss,
+        valorIRPJApurado: irpj,
+        valorCSLLApurado: csll,
         detalhamentoImpostos: det,
         guiaGerada: true,
         dataVencimento: `${ano}-${(parseInt(mes) % 12 + 1).toString().padStart(2, '0')}-20`,
@@ -238,7 +228,7 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
               </span>
             </h2>
             <p className="text-[11px] text-neutral-400">
-              Regime: <strong className="text-neutral-200">{empresa.regimeTributario}</strong> • Padrão Domínio Sistemas
+              Regime: <strong className="text-neutral-200">{empresa.regimeTributario}</strong> • Padrão  Sistemas
             </p>
           </div>
         </div>
@@ -247,33 +237,40 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
         <div className="flex items-center bg-[#101010] p-0.5 rounded-lg border border-white/10">
           <button
             onClick={() => setSubAba('APURACAO')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
-              subAba === 'APURACAO'
+            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${subAba === 'APURACAO'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-neutral-400 hover:text-white'
-            }`}
+              }`}
           >
             <Calculator className="w-3.5 h-3.5" />
             <span>Apuração Mensal</span>
           </button>
           <button
-            onClick={() => setSubAba('GUIAS')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
-              subAba === 'GUIAS'
+            onClick={() => setSubAba('SEGREGAÇÃO')}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${subAba === 'SEGREGAÇÃO'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-neutral-400 hover:text-white'
-            }`}
+              }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Segregação ST / Monofásico</span>
+          </button>
+          <button
+            onClick={() => setSubAba('GUIAS')}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${subAba === 'GUIAS'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-neutral-400 hover:text-white'
+              }`}
           >
             <Receipt className="w-3.5 h-3.5" />
             <span>Guias & Códigos DARF</span>
           </button>
           <button
             onClick={() => setSubAba('MEMORIA_CALCULO')}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
-              subAba === 'MEMORIA_CALCULO'
+            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${subAba === 'MEMORIA_CALCULO'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-neutral-400 hover:text-white'
-            }`}
+              }`}
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Notas da Competência</span>
@@ -326,6 +323,37 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
       <div className="flex-1 p-5 overflow-y-auto custom-scrollbar">
         {subAba === 'APURACAO' && (
           <div className="space-y-4">
+            {/* Banner de Inteligência Tributária (Selo de Eficiência do Escritório) */}
+            {apuracao?.economiaTributariaSegregacao && apuracao.economiaTributariaSegregacao > 0 ? (
+              <div className="p-4 bg-emerald-950/40 border border-emerald-500/30 rounded-xl flex items-center justify-between shadow-lg">
+                <div className="flex items-center space-x-3.5">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-300 flex items-center space-x-2">
+                      <span>Inteligência Tributária Aplicada: Segregação ST & Monofásicos</span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono border border-emerald-500/30">
+                        LC 123/2006 Art. 18 § 4º-A
+                      </span>
+                    </h3>
+                    <p className="text-xs text-neutral-300 mt-0.5">
+                      DAS sem segregação seria <span className="line-through text-neutral-400">R$ {apuracao.dasSemSegregacao?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>. Com o expurgo de ICMS ST e PIS/COFINS Monofásicos, o DAS efetivo a recolher é <strong className="text-emerald-400">R$ {apuracao.valorDAS?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right font-mono pl-5 border-l border-emerald-500/20 flex-shrink-0">
+                  <span className="text-[10px] text-emerald-400/80 block uppercase font-bold">Economia Gerada</span>
+                  <span className="text-lg font-black text-emerald-300">
+                    R$ {apuracao.economiaTributariaSegregacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-[10px] text-emerald-400 block font-semibold">
+                    ({apuracao.percentualEconomia?.toFixed(1)}% de redução direta)
+                  </span>
+                </div>
+              </div>
+            ) : null}
+
             {/* KPI Cards de Faturamento e Imposto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-[#181818] border border-white/10 rounded-xl p-4 shadow">
@@ -452,6 +480,153 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {subAba === 'SEGREGAÇÃO' && (
+          <div className="space-y-4">
+            {/* Header da Segregação */}
+            <div className="p-4 bg-[#181818] border border-white/10 rounded-xl flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-neutral-100 flex items-center space-x-2">
+                  <TrendingUp className="w-4 h-4 text-emerald-400" />
+                  <span>Segregação Legal de Receitas do Simples Nacional</span>
+                  <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono border border-emerald-500/30">
+                    Lei Complementar nº 123/2006 Art. 18 § 4º-A
+                  </span>
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Exclusão das parcelas de ICMS (Substituição Tributária) e PIS/COFINS (regime Monofásico) da guia DAS oficial.
+                </p>
+              </div>
+              <button
+                onClick={handleCalcularApuracao}
+                disabled={calculando}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold flex items-center space-x-1.5 shadow-md shadow-emerald-900/30"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>Recalcular Segregação</span>
+              </button>
+            </div>
+
+            {/* 4 Cards de Faixas Tributárias Segregadas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Faixa 1 */}
+              <div className="p-3.5 bg-[#181818] border border-white/10 rounded-xl space-y-1">
+                <span className="text-[10px] text-neutral-400 uppercase font-semibold block">1. Tributação Integral</span>
+                <span className="text-xs text-neutral-300 font-medium block">Mercadorias e Serviços Comuns</span>
+                <p className="text-lg font-bold font-mono text-neutral-100 pt-1">
+                  R$ {(apuracao?.receitaTributadaIntegral || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <div className="text-[11px] text-neutral-500 font-mono flex justify-between pt-1 border-t border-white/5">
+                  <span>Alíquota: <strong>8,39%</strong></span>
+                  <span className="text-neutral-400">DAS: R$ {Math.round(((apuracao?.receitaTributadaIntegral || 0) * 0.0839) * 100 / 100).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Faixa 2 */}
+              <div className="p-3.5 bg-[#181818] border border-blue-500/20 rounded-xl space-y-1">
+                <span className="text-[10px] text-blue-400 uppercase font-semibold block">2. ICMS Substituição Tributária</span>
+                <span className="text-xs text-neutral-300 font-medium block">CST 60 / CSOSN 500 (ST Pago)</span>
+                <p className="text-lg font-bold font-mono text-blue-400 pt-1">
+                  R$ {(apuracao?.receitaSegregadaST || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <div className="text-[11px] text-neutral-500 font-mono flex justify-between pt-1 border-t border-white/5">
+                  <span>Alíquota: <strong className="text-blue-300">5,54%</strong></span>
+                  <span className="text-emerald-400 font-semibold">-34% ICMS</span>
+                </div>
+              </div>
+
+              {/* Faixa 3 */}
+              <div className="p-3.5 bg-[#181818] border border-amber-500/20 rounded-xl space-y-1">
+                <span className="text-[10px] text-amber-400 uppercase font-semibold block">3. PIS/COFINS Monofásicos</span>
+                <span className="text-xs text-neutral-300 font-medium block">CST 02/04 (Alíquota Zero Varejo)</span>
+                <p className="text-lg font-bold font-mono text-amber-400 pt-1">
+                  R$ {(apuracao?.receitaSegregadaMonofasico || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <div className="text-[11px] text-neutral-500 font-mono flex justify-between pt-1 border-t border-white/5">
+                  <span>Alíquota: <strong className="text-amber-300">7,09%</strong></span>
+                  <span className="text-emerald-400 font-semibold">-15,5% Federais</span>
+                </div>
+              </div>
+
+              {/* Faixa 4 */}
+              <div className="p-3.5 bg-emerald-950/30 border border-emerald-500/30 rounded-xl space-y-1">
+                <span className="text-[10px] text-emerald-400 uppercase font-semibold block">4. ST + Monofásicos Simultâneos</span>
+                <span className="text-xs text-emerald-200 font-medium block">Autopeças, Lubrificantes, Cosméticos</span>
+                <p className="text-lg font-bold font-mono text-emerald-300 pt-1">
+                  R$ {(apuracao?.receitaSegregadaSTeMonofasico || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <div className="text-[11px] text-neutral-400 font-mono flex justify-between pt-1 border-t border-emerald-500/20">
+                  <span>Alíquota: <strong className="text-emerald-400">4,24%</strong></span>
+                  <span className="text-emerald-300 font-bold">-49,5% Isenção</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Painel de Auditoria de Itens Faturados */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl shadow-lg overflow-hidden">
+              <div className="p-3 bg-neutral-900 border-b border-white/10 flex items-center justify-between text-xs font-semibold text-neutral-300">
+                <span>ITENS FATURADOS NA COMPETÊNCIA & ENQUADRAMENTO DE SEGREGAÇÃO</span>
+                <span className="font-mono text-neutral-500">Cruzamento de NCM, CFOP e CST</span>
+              </div>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-neutral-900/60 border-b border-white/10 text-neutral-400 font-medium text-[11px]">
+                  <tr>
+                    <th className="py-2 px-3 w-16 text-center">NF-e</th>
+                    <th className="py-2 px-3 w-24">Código</th>
+                    <th className="py-2 px-3">Descrição do Produto / Mercadoria</th>
+                    <th className="py-2 px-3 w-20 text-center">NCM</th>
+                    <th className="py-2 px-3 w-16 text-center">CFOP</th>
+                    <th className="py-2 px-3 w-16 text-center">CST ICMS</th>
+                    <th className="py-2 px-3 w-16 text-center">CST PIS</th>
+                    <th className="py-2 px-3 w-28 text-right">Valor Total</th>
+                    <th className="py-2 px-3 w-40 text-center">Status de Segregação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 font-mono text-[11px]">
+                  {notasCompetencia.filter(n => n.tipo === 'SAIDA' || n.tipo === 'SERVICO').flatMap(n =>
+                    (n.itens || []).map(item => {
+                      const isST = item.cstICMS === '60' || item.cfop === '5.405';
+                      const isMono = item.cstPIS === '04' || item.ncm?.startsWith('8507') || item.ncm?.startsWith('2710');
+                      return (
+                        <tr key={`${n.id}-${item.id}`} className="hover:bg-white/[0.02]">
+                          <td className="py-2 px-3 text-center text-neutral-400">#{n.numero}</td>
+                          <td className="py-2 px-3 text-neutral-300">{item.codigoProduto}</td>
+                          <td className="py-2 px-3 font-sans text-neutral-200">{item.descricao}</td>
+                          <td className="py-2 px-3 text-center text-neutral-400">{item.ncm}</td>
+                          <td className="py-2 px-3 text-center font-bold text-neutral-300">{item.cfop}</td>
+                          <td className="py-2 px-3 text-center text-neutral-400">{item.cstICMS || '00'}</td>
+                          <td className="py-2 px-3 text-center text-neutral-400">{item.cstPIS || '01'}</td>
+                          <td className="py-2 px-3 text-right font-bold text-neutral-100">
+                            R$ {item.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            {isST && isMono ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                                ST + Monofásico (-49,5%)
+                              </span>
+                            ) : isST ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                ICMS ST (-34%)
+                              </span>
+                            ) : isMono ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Monofásico (-15,5%)
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-neutral-800 text-neutral-400">
+                                Tributação Integral
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -637,9 +812,8 @@ export const ApuracaoFiscalModule: React.FC<ApuracaoFiscalModuleProps> = ({
                     <td className="py-2 px-3 text-neutral-300">{n.dataEmissao}</td>
                     <td className="py-2 px-3 font-sans text-neutral-200">{n.participanteNome}</td>
                     <td className="py-2 px-3 text-center">
-                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
-                        n.tipo === 'SAIDA' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'
-                      }`}>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${n.tipo === 'SAIDA' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400'
+                        }`}>
                         {n.tipo}
                       </span>
                     </td>

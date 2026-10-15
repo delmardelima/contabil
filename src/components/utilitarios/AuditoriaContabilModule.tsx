@@ -17,7 +17,10 @@ import {
   Download,
   ShieldCheck,
   AlertOctagon,
-  Eye
+  Eye,
+  Wrench,
+  Sparkles,
+  CheckCheck
 } from 'lucide-react';
 import { Empresa, ContaContabil, LancamentoContabil, BalanceteItem } from '../../types/contabil';
 import { AccountingEngine } from '../../engine/accountingEngine';
@@ -29,15 +32,48 @@ interface AuditoriaContabilModuleProps {
   contas: ContaContabil[];
   lancamentos: LancamentoContabil[];
   onNavigateToConta?: (contaId: number) => void;
+  onRefreshData?: () => void;
 }
 
 export const AuditoriaContabilModule: React.FC<AuditoriaContabilModuleProps> = ({
   empresa,
   contas,
   lancamentos,
-  onNavigateToConta
+  onNavigateToConta,
+  onRefreshData
 }) => {
   const [activeTab, setActiveTab] = useState<'invertidos' | 'furos' | 'dxc' | 'fiscal_contabil' | 'folha_contabil' | 'sped_diagnostico'>('fiscal_contabil');
+  const [notificacao, setNotificacao] = useState<{ tipo: 'success' | 'info'; mensagem: string } | null>(null);
+
+  const handleAutoCorrigirSped = () => {
+    const res = dbService.autoCorrigirContasSemSped(empresa.id);
+    setNotificacao({
+      tipo: 'success',
+      mensagem: `Auto-correção concluída: ${res.corrigidasCount} conta(s) vinculada(s) ao Plano de Contas Referencial da RFB.`
+    });
+    onRefreshData?.();
+    setTimeout(() => setNotificacao(null), 5000);
+  };
+
+  const handleNormalizarParticipantes = () => {
+    const res = dbService.normalizarParticipantesFiscais(empresa.id);
+    setNotificacao({
+      tipo: 'success',
+      mensagem: `Normalização fiscal concluída: ${res.normalizadosCount} participante(s) corrigido(s) com Código IBGE e Indicador IE.`
+    });
+    onRefreshData?.();
+    setTimeout(() => setNotificacao(null), 5000);
+  };
+
+  const handleRenumerarPartidas = () => {
+    const res = dbService.renumerarPartidasCronologicamente(empresa.id);
+    setNotificacao({
+      tipo: 'success',
+      mensagem: `Renumeração concluída: ${res.renumeradasCount} partidas do Livro Diário reordenadas cronologicamente sem furos.`
+    });
+    onRefreshData?.();
+    setTimeout(() => setNotificacao(null), 5000);
+  };
 
   // 1. Cálculos de Balancete
   const trialBalance = AccountingEngine.generateTrialBalance(contas, lancamentos, 5, false, false);
@@ -159,6 +195,22 @@ export const AuditoriaContabilModule: React.FC<AuditoriaContabilModuleProps> = (
           </button>
         </div>
       </div>
+
+      {/* Notificação Auto-Fix */}
+      {notificacao && (
+        <div className="mt-3 p-3 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 flex items-center justify-between text-xs animate-in fade-in flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <CheckCheck className="w-4 h-4 text-emerald-400" />
+            <span className="font-medium">{notificacao.mensagem}</span>
+          </div>
+          <button 
+            onClick={() => setNotificacao(null)}
+            className="text-neutral-400 hover:text-white text-xs px-2 py-0.5"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
 
       {/* Abas Superiores de Auditoria */}
       <div className="flex bg-[#1a1a1a] p-1 rounded-lg border border-white/10 mt-3 text-xs overflow-x-auto flex-shrink-0">
@@ -421,6 +473,15 @@ export const AuditoriaContabilModule: React.FC<AuditoriaContabilModuleProps> = (
               <p className="text-[11px] text-neutral-400">
                 {contasSemPlanoRef.length === 0 ? 'Todas as contas analíticas possuem vínculo com a RFB.' : 'Contas sem vínculo geram rejeição no SPED ECF (Registro J051).'}
               </p>
+              {contasSemPlanoRef.length > 0 && (
+                <button
+                  onClick={handleAutoCorrigirSped}
+                  className="mt-2 w-full py-1.5 px-3 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 shadow transition-colors"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Auto-Vincular Plano Referencial RFB</span>
+                </button>
+              )}
             </div>
 
             <div className={`p-4 rounded-xl border space-y-2 ${
@@ -436,6 +497,15 @@ export const AuditoriaContabilModule: React.FC<AuditoriaContabilModuleProps> = (
               <p className="text-[11px] text-neutral-400">
                 {participantesIncompletos.length === 0 ? 'CNPJs e códigos IBGE de município válidos.' : 'CNPJ/CPF ou Código IBGE inválido rejeita o EFD-ICMS/IPI.'}
               </p>
+              {participantesIncompletos.length > 0 && (
+                <button
+                  onClick={handleNormalizarParticipantes}
+                  className="mt-2 w-full py-1.5 px-3 bg-amber-600 hover:bg-amber-500 text-white rounded text-xs font-semibold flex items-center justify-center gap-1.5 shadow transition-colors"
+                >
+                  <Wrench className="w-3.5 h-3.5" />
+                  <span>Normalizar Participantes (IBGE/IE)</span>
+                </button>
+              )}
             </div>
 
             <div className={`p-4 rounded-xl border space-y-2 ${
@@ -550,6 +620,19 @@ export const AuditoriaContabilModule: React.FC<AuditoriaContabilModuleProps> = (
                     Partida #{n}
                   </span>
                 ))}
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                <span className="text-xs text-neutral-400">
+                  Reorganizar a numeração sequencial de 1 a N sem quebra cronológica:
+                </span>
+                <button
+                  onClick={handleRenumerarPartidas}
+                  className="py-1.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold flex items-center gap-2 shadow transition-colors"
+                >
+                  <Wrench className="w-3.5 h-3.5" />
+                  <span>Renumerar Partidas Cronologicamente</span>
+                </button>
               </div>
             </div>
           )}

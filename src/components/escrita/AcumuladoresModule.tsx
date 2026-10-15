@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
 import { dbService } from '../../db/sqliteService';
 import { AcumuladorFiscal, ContaContabil, HistoricoPadrao } from '../../types/contabil';
-import { 
-  Layers, 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Save, 
-  CheckCircle2, 
-  Search, 
-  Tag, 
+import {
+  Layers,
+  Plus,
+  Trash2,
+  Edit2,
+  Save,
+  CheckCircle2,
+  Search,
+  Tag,
   Settings2,
   DollarSign,
   X,
@@ -61,7 +61,7 @@ export const AcumuladoresModule: React.FC<AcumuladoresModuleProps> = ({
   const [retencaoIRRF, setRetencaoIRRF] = useState<boolean>(false);
   const [retencaoCSRF, setRetencaoCSRF] = useState<boolean>(false);
   const [retencaoINSS, setRetencaoINSS] = useState<boolean>(false);
-  
+
   // Form State - Aba Integração Contábil Detalhada
   const [contaDebitoValor, setContaDebitoValor] = useState<number>(0);
   const [contaCreditoValor, setContaCreditoValor] = useState<number>(0);
@@ -240,7 +240,7 @@ export const AcumuladoresModule: React.FC<AcumuladoresModuleProps> = ({
             <h2 className="text-sm font-semibold text-neutral-100 flex items-center space-x-2">
               <span>Acumuladores Fiscais & Regras Contábeis (`EFACUMULADOR`)</span>
               <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded font-mono font-medium border border-amber-500/30">
-                Padrão Domínio Sistemas
+                Padrão  Sistemas
               </span>
             </h2>
             <p className="text-[11px] text-neutral-400">
@@ -304,9 +304,8 @@ export const AcumuladoresModule: React.FC<AcumuladoresModuleProps> = ({
                       <span className="font-mono text-[11px] text-neutral-300 bg-neutral-900 px-2 py-0.5 rounded border border-white/10">
                         CFOP: {a.cfopPadrao}
                       </span>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        a.tipoOperacao === 'ENTRADA' ? 'bg-sky-500/15 text-sky-400' : 'bg-emerald-500/15 text-emerald-400'
-                      }`}>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${a.tipoOperacao === 'ENTRADA' ? 'bg-sky-500/15 text-sky-400' : 'bg-emerald-500/15 text-emerald-400'
+                        }`}>
                         {a.tipoOperacao || 'SAÍDA'}
                       </span>
                     </div>
@@ -392,33 +391,30 @@ export const AcumuladoresModule: React.FC<AcumuladoresModuleProps> = ({
               <button
                 type="button"
                 onClick={() => setModalTab('GERAL')}
-                className={`py-2.5 px-3 font-medium border-b-2 transition ${
-                  modalTab === 'GERAL'
+                className={`py-2.5 px-3 font-medium border-b-2 transition ${modalTab === 'GERAL'
                     ? 'border-amber-500 text-amber-400 font-bold'
                     : 'border-transparent text-neutral-400 hover:text-neutral-200'
-                }`}
+                  }`}
               >
                 1. Identificação & CFOPs
               </button>
               <button
                 type="button"
                 onClick={() => setModalTab('IMPOSTOS')}
-                className={`py-2.5 px-3 font-medium border-b-2 transition ${
-                  modalTab === 'IMPOSTOS'
+                className={`py-2.5 px-3 font-medium border-b-2 transition ${modalTab === 'IMPOSTOS'
                     ? 'border-amber-500 text-amber-400 font-bold'
                     : 'border-transparent text-neutral-400 hover:text-neutral-200'
-                }`}
+                  }`}
               >
                 2. Impostos & Retenções
               </button>
               <button
                 type="button"
                 onClick={() => setModalTab('CONTABILIDADE')}
-                className={`py-2.5 px-3 font-medium border-b-2 transition ${
-                  modalTab === 'CONTABILIDADE'
+                className={`py-2.5 px-3 font-medium border-b-2 transition ${modalTab === 'CONTABILIDADE'
                     ? 'border-amber-500 text-amber-400 font-bold'
                     : 'border-transparent text-neutral-400 hover:text-neutral-200'
-                }`}
+                  }`}
               >
                 3. Integração Contábil (Partidas)
               </button>

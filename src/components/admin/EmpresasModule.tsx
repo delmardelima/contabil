@@ -1,37 +1,37 @@
 import React, { useState } from 'react';
-import { 
-  Building2, 
-  Plus, 
-  Save, 
-  Trash2, 
-  CheckCircle, 
-  Search, 
-  Check, 
-  Briefcase, 
-  MapPin, 
-  Sliders, 
-  Users, 
-  Calendar, 
-  AlertTriangle, 
-  ShieldCheck, 
-  X, 
-  Edit3, 
+import {
+  Building2,
+  Plus,
+  Save,
+  Trash2,
+  CheckCircle,
+  Search,
+  Check,
+  Briefcase,
+  MapPin,
+  Sliders,
+  Users,
+  Calendar,
+  AlertTriangle,
+  ShieldCheck,
+  X,
+  Edit3,
   Percent,
   FileText
 } from 'lucide-react';
 import { Empresa, RegimeTributario, SocioAdministrador, VigenciaTributaria } from '../../types/contabil';
 import { dbService } from '../../db/sqliteService';
-import { 
-  maskCNPJ, 
-  validarCNPJ, 
-  maskCPF, 
-  validarCPF, 
-  maskCEP, 
-  maskCNAE, 
-  maskPhone, 
-  formatCurrency, 
+import {
+  maskCNPJ,
+  validarCNPJ,
+  maskCPF,
+  validarCPF,
+  maskCEP,
+  maskCNAE,
+  maskPhone,
+  formatCurrency,
   formatPercent,
-  unmask 
+  unmask
 } from '../../utils/formatters';
 
 interface EmpresasModuleProps {
@@ -66,7 +66,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
   // Novo CNAE Secundário
   const [novoCnaeSecundario, setNovoCnaeSecundario] = useState('');
 
-  const filteredEmpresas = empresas.filter(e => 
+  const filteredEmpresas = empresas.filter(e =>
     e.razaoSocial.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.cnpj.includes(searchTerm) ||
     String(e.codigo).includes(searchTerm)
@@ -213,7 +213,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
 
   // Totalizador de Capital Social
   const totalPercentualCapital = (selectedEmpresa.socios || []).reduce(
-    (acc, s) => acc + (Number(s.percentualCapital) || 0), 
+    (acc, s) => acc + (Number(s.percentualCapital) || 0),
     0
   );
   const capitalTotalmenteIntegralizado = Math.abs(totalPercentualCapital - 100) < 0.01;
@@ -289,11 +289,10 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                 <div
                   key={emp.id}
                   onClick={() => setSelectedEmpresa(emp)}
-                  className={`p-3 rounded-lg border text-xs cursor-pointer transition flex flex-col gap-1 ${
-                    isSelected 
-                      ? 'bg-blue-900/30 border-blue-500/50 shadow-md' 
+                  className={`p-3 rounded-lg border text-xs cursor-pointer transition flex flex-col gap-1 ${isSelected
+                      ? 'bg-blue-900/30 border-blue-500/50 shadow-md'
                       : 'bg-[#1c1c1c] border-white/5 hover:border-white/15'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-neutral-400 font-bold">
@@ -328,9 +327,8 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setActiveTab('geral')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${
-                  activeTab === 'geral' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${activeTab === 'geral' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
+                  }`}
               >
                 <Briefcase size={13} />
                 <span>1. Geral & Identificação</span>
@@ -338,9 +336,8 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
 
               <button
                 onClick={() => setActiveTab('endereco')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${
-                  activeTab === 'endereco' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${activeTab === 'endereco' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
+                  }`}
               >
                 <MapPin size={13} />
                 <span>2. Endereço & Localização</span>
@@ -348,9 +345,8 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
 
               <button
                 onClick={() => setActiveTab('atividades')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${
-                  activeTab === 'atividades' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${activeTab === 'atividades' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
+                  }`}
               >
                 <FileText size={13} />
                 <span>3. Atividades (CNAE)</span>
@@ -358,9 +354,8 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
 
               <button
                 onClick={() => setActiveTab('socios')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${
-                  activeTab === 'socios' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${activeTab === 'socios' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
+                  }`}
               >
                 <Users size={13} />
                 <span>4. Quadro Societário</span>
@@ -371,9 +366,8 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
 
               <button
                 onClick={() => setActiveTab('vigencias')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${
-                  activeTab === 'vigencias' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
-                }`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-md transition ${activeTab === 'vigencias' ? 'bg-white/15 text-white font-medium shadow' : 'text-neutral-400 hover:text-white'
+                  }`}
               >
                 <Calendar size={13} />
                 <span>5. Vigências & Parâmetros</span>
@@ -395,7 +389,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
           {/* Corpo do Formulário */}
           <form onSubmit={handleSalvar} className="flex-1 flex flex-col justify-between overflow-hidden">
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-              
+
               {/* GUIA 1: GERAL & IDENTIFICAÇÃO */}
               {activeTab === 'geral' && (
                 <div className="space-y-4">
@@ -438,9 +432,8 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-xs font-medium text-neutral-300">CNPJ (Receita Federal) *</label>
                         {cnpjLimpo.length === 14 && (
-                          <span className={`text-[10px] flex items-center gap-1 font-semibold ${
-                            cnpjValido ? 'text-emerald-400' : 'text-rose-400'
-                          }`}>
+                          <span className={`text-[10px] flex items-center gap-1 font-semibold ${cnpjValido ? 'text-emerald-400' : 'text-rose-400'
+                            }`}>
                             {cnpjValido ? <Check size={11} /> : <AlertTriangle size={11} />}
                             {cnpjValido ? 'CNPJ Válido' : 'Dígito Incorreto'}
                           </span>
@@ -452,11 +445,10 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                         onChange={e => setSelectedEmpresa({ ...selectedEmpresa, cnpj: maskCNPJ(e.target.value) })}
                         placeholder="00.000.000/0000-00"
                         maxLength={18}
-                        className={`w-full px-3 py-2 bg-[#141414] border rounded-lg text-xs font-mono text-white focus:outline-none ${
-                          cnpjLimpo.length === 14 && !cnpjValido 
-                            ? 'border-rose-500/50 focus:border-rose-500' 
+                        className={`w-full px-3 py-2 bg-[#141414] border rounded-lg text-xs font-mono text-white focus:outline-none ${cnpjLimpo.length === 14 && !cnpjValido
+                            ? 'border-rose-500/50 focus:border-rose-500'
                             : 'border-white/10 focus:border-blue-500'
-                        }`}
+                          }`}
                         required
                       />
                     </div>
@@ -623,7 +615,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                         onChange={e => setSelectedEmpresa({ ...selectedEmpresa, uf: e.target.value })}
                         className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
                       >
-                        {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                        {['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].map(uf => (
                           <option key={uf} value={uf}>{uf}</option>
                         ))}
                       </select>
@@ -744,7 +736,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                         <span className="text-xs text-neutral-500 italic">Nenhum CNAE secundário cadastrado.</span>
                       ) : (
                         (selectedEmpresa.cnaesSecundarios || []).map(cnae => (
-                          <div 
+                          <div
                             key={cnae}
                             className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-[#1c1c1c] border border-white/10 text-xs font-mono text-neutral-200"
                           >
@@ -823,11 +815,10 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <div className={`px-3 py-1 rounded-lg border text-xs font-mono flex items-center gap-1.5 ${
-                        capitalTotalmenteIntegralizado 
-                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                      <div className={`px-3 py-1 rounded-lg border text-xs font-mono flex items-center gap-1.5 ${capitalTotalmenteIntegralizado
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                           : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                      }`}>
+                        }`}>
                         <Percent size={13} />
                         <span>Capital: {formatPercent(totalPercentualCapital)}</span>
                         {capitalTotalmenteIntegralizado ? (
@@ -1000,7 +991,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                         className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-500"
                         required
                       />
-                      <p className="text-[10px] text-neutral-400 mt-1">Padrão Domínio: 1.01.01.001.0001 (5 Graus)</p>
+                      <p className="text-[10px] text-neutral-400 mt-1">Padrão : 1.01.01.001.0001 (5 Graus)</p>
                     </div>
 
                     <div className="flex items-center gap-3 pt-6">
@@ -1122,7 +1113,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                 <Users size={16} className="text-blue-400" />
                 <span>Dados do Sócio / Administrador</span>
               </h3>
-              <button 
+              <button
                 onClick={() => setModalSocioAberto(false)}
                 className="text-neutral-400 hover:text-white"
               >
@@ -1255,7 +1246,7 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                 <Calendar size={16} className="text-blue-400" />
                 <span>Nova Vigência Tributária</span>
               </h3>
-              <button 
+              <button
                 onClick={() => setModalVigenciaAberto(false)}
                 className="text-neutral-400 hover:text-white"
               >

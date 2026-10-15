@@ -27,7 +27,9 @@ import {
   DollarSign,
   Calculator,
   CreditCard,
-  Package
+  Package,
+  Calendar,
+  Share2
 } from 'lucide-react';
 
 interface RibbonBarProps {
@@ -59,10 +61,15 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
       { id: 'dlpa', label: 'D.L.P.A.', icon: TrendingUp },
       { id: 'dfc', label: 'D.F.C.', icon: DollarSign },
       { id: 'livros', label: 'Diário & Razão', icon: ScrollText },
+      { id: 'calendarioFiscal', label: 'Calendário Fiscal', icon: Calendar },
       { id: 'documentStudio', label: 'Document Studio A4', icon: FileSpreadsheet },
       { id: 'planoContas', label: 'Plano de Contas', icon: FolderTree },
       { id: 'lotes', label: 'Lotes (CTLOTE)', icon: Layers },
       { id: 'zeramento', label: 'Zeramento (ARE)', icon: RefreshCw },
+      { id: 'razaoAuxiliar', label: 'Razão Auxiliar (Clientes/Forn)', icon: FileSpreadsheet },
+      { id: 'apuracaoTrimestral', label: 'IRPJ & CSLL (Trimestral)', icon: Calculator },
+      { id: 'lalur', label: 'LALUR / LACS (Lucro Real)', icon: BookOpen },
+      { id: 'consolidacao', label: 'Consolidação (CPC 36)', icon: Share2 },
       { id: 'auditoria', label: 'Auditoria & Saldos', icon: ShieldAlert },
       { id: 'redeBackup', label: 'Rede & Backup', icon: Network }
     ];
@@ -70,10 +77,17 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
     topTabs = [
       { id: 'dashboardFiscal', label: 'Dashboard Fiscal', icon: Receipt },
       { id: 'notasFiscais', label: 'Importador XML & NF-e', icon: FileText },
+      { id: 'nfse', label: 'NFS-e Nacional / DPS', icon: Receipt },
+      { id: 'ciap', label: 'CIAP (Bloco G 1/48)', icon: Layers },
+      { id: 'cartoes', label: 'Vendas Cartões (1600)', icon: CreditCard },
+      { id: 'retencoes', label: 'Retenções na Fonte (DARF)', icon: Receipt },
+      { id: 'reinf', label: 'EFD-Reinf XML (v2.01)', icon: FileCode },
+      { id: 'difal', label: 'DIFAL & DeSTDA (GNRE)', icon: Scale },
       { id: 'participantes', label: 'Participantes SPED', icon: Users },
       { id: 'produtos', label: 'Itens & Produtos', icon: Package },
       { id: 'acumuladores', label: 'Acumuladores (CFOP)', icon: Layers },
       { id: 'apuracaoFiscal', label: 'Apuração DAS / Guias', icon: Calculator },
+      { id: 'calendarioFiscal', label: 'Calendário Fiscal', icon: Calendar },
       { id: 'livros', label: 'Livros Fiscais', icon: BookOpen },
       { id: 'documentStudio', label: 'Document Studio A4', icon: FileSpreadsheet }
     ];
@@ -81,14 +95,18 @@ export const RibbonBar: React.FC<RibbonBarProps> = ({
     topTabs = [
       { id: 'dashboardFolha', label: 'Dashboard Folha', icon: Users },
       { id: 'calculoFolha', label: 'Processar Folha / Holerites', icon: Calculator },
+      { id: 'esocial', label: 'Central eSocial XML', icon: FileCode },
+      { id: 'provisoesFolha', label: 'Provisões (Férias/13º)', icon: Layers },
       { id: 'colaboradores', label: 'Empregados e Sócios', icon: Users },
       { id: 'rubricas', label: 'Rubricas & Tabelas INSS/IRRF', icon: Sliders },
+      { id: 'calendarioFiscal', label: 'Calendário Legal', icon: Calendar },
       { id: 'documentStudio', label: 'Document Studio A4', icon: FileSpreadsheet }
     ];
   } else if (moduloAtivo === 'honorarios') {
     topTabs = [
       { id: 'dashboardHonorarios', label: 'Dashboard Financeiro', icon: DollarSign },
       { id: 'faturamentoHonorarios', label: 'Faturamento em Lote & Baixas', icon: Receipt },
+      { id: 'nfse', label: 'NFS-e Nacional / DPS', icon: Receipt },
       { id: 'contratosHonorarios', label: 'Contratos Mensais (MRR)', icon: FileText },
       { id: 'documentStudio', label: 'Document Studio A4', icon: FileSpreadsheet }
     ];

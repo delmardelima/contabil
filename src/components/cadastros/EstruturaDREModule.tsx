@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { 
-  Layers, 
-  Plus, 
-  Save, 
-  Trash2, 
-  ArrowUp, 
-  ArrowDown, 
-  Check, 
-  Percent, 
-  Calculator 
+import {
+  Layers,
+  Plus,
+  Save,
+  Trash2,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  Percent,
+  Calculator
 } from 'lucide-react';
 import { DREEstruturaLinha, Empresa } from '../../types/contabil';
 
@@ -101,7 +101,7 @@ export const EstruturaDREModule: React.FC<EstruturaDREModuleProps> = ({ empresa 
             <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-3">
               <span>Estrutura da D.R.E. (Construtor Dedutivo)</span>
               <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono">
-                Padrão contabil.exe
+                Padrão
               </span>
             </h1>
             <p className="text-xs text-neutral-400">
@@ -166,9 +166,8 @@ export const EstruturaDREModule: React.FC<EstruturaDREModuleProps> = ({ empresa 
                     <tr
                       key={linha.id}
                       onClick={() => setSelectedLinha(linha)}
-                      className={`cursor-pointer transition ${
-                        isSelected ? 'bg-blue-900/30 font-medium' : 'hover:bg-white/5'
-                      }`}
+                      className={`cursor-pointer transition ${isSelected ? 'bg-blue-900/30 font-medium' : 'hover:bg-white/5'
+                        }`}
                     >
                       <td className="py-2 px-3 font-mono text-center text-neutral-400 font-bold">
                         {linha.ordem}
@@ -179,13 +178,12 @@ export const EstruturaDREModule: React.FC<EstruturaDREModuleProps> = ({ empresa 
                         </span>
                       </td>
                       <td className="py-2 px-3 font-mono text-[10px]">
-                        <span className={`px-2 py-0.5 rounded ${
-                          linha.tipoLinha === 'TOTAL_GERAL' 
-                            ? 'bg-emerald-500/20 text-emerald-400 font-bold' 
+                        <span className={`px-2 py-0.5 rounded ${linha.tipoLinha === 'TOTAL_GERAL'
+                            ? 'bg-emerald-500/20 text-emerald-400 font-bold'
                             : linha.tipoLinha === 'SUBTOTAL'
                               ? 'bg-indigo-500/20 text-indigo-300 font-semibold'
                               : 'bg-white/10 text-neutral-300'
-                        }`}>
+                          }`}>
                           {linha.tipoLinha}
                         </span>
                       </td>

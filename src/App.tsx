@@ -47,6 +47,11 @@ import { LotesModule } from './components/movimentos/LotesModule';
 import { AuditoriaContabilModule } from './components/utilitarios/AuditoriaContabilModule';
 import { TransporteSaldosModule } from './components/utilitarios/TransporteSaldosModule';
 import { AtivoImobilizadoModule } from './components/patrimonio/AtivoImobilizadoModule';
+import { CalendarioFiscalModule } from './components/utilitarios/CalendarioFiscalModule';
+import { ConsolidacaoModule } from './components/demonstrativos/ConsolidacaoModule';
+import { ApuracaoTrimestralModule } from './components/contabilidade/ApuracaoTrimestralModule';
+import { LalurLacsModule } from './components/contabilidade/LalurLacsModule';
+import { RazaoAuxiliarModule } from './components/contabilidade/RazaoAuxiliarModule';
 
 // Módulos Escrita Fiscal
 import { DashboardFiscalModule } from './components/escrita/DashboardFiscalModule';
@@ -55,12 +60,20 @@ import { NotasFiscaisModule } from './components/escrita/NotasFiscaisModule';
 import { ApuracaoFiscalModule } from './components/escrita/ApuracaoFiscalModule';
 import { ParticipantesModule } from './components/escrita/ParticipantesModule';
 import { ProdutosServicosModule } from './components/escrita/ProdutosServicosModule';
+import { CartoesModule } from './components/escrita/CartoesModule';
+import { RetencoesModule } from './components/escrita/RetencoesModule';
+import { DifalModule } from './components/escrita/DifalModule';
+import { ReinfXmlModule } from './components/escrita/ReinfXmlModule';
+import { NfseModule } from './components/escrita/NfseModule';
+import { CiapModule } from './components/patrimonio/CiapModule';
 
 // Módulos Folha de Pagamento
 import { DashboardFolhaModule } from './components/folha/DashboardFolhaModule';
 import { ColaboradoresModule } from './components/folha/ColaboradoresModule';
 import { RubricasTabelasModule } from './components/folha/RubricasTabelasModule';
 import { CalculoFolhaModule } from './components/folha/CalculoFolhaModule';
+import { ProvisoesFolhaModule } from './components/folha/ProvisoesFolhaModule';
+import { ESocialXmlModule } from './components/folha/ESocialXmlModule';
 
 // Módulos Honorários
 import { DashboardHonorariosModule } from './components/honorarios/DashboardHonorariosModule';
@@ -94,7 +107,9 @@ import {
   Calculator,
   CreditCard,
   Package,
-  Archive
+  Archive,
+  Calendar,
+  Share2
 } from 'lucide-react';
 
 export interface WorkspaceTab {
@@ -142,9 +157,11 @@ export const App: React.FC = () => {
 
   // Estado Customizado para Impressão de Demonstrativos Especiais
   const [customPrintConfig, setCustomPrintConfig] = useState<{
+    tipo?: any;
     titulo: string;
     subtitulo: string;
-    linhas: { descricao: string; valor: number; isTotal?: boolean; isHeader?: boolean }[];
+    linhas?: { descricao: string; valor: number; isTotal?: boolean; isHeader?: boolean }[];
+    conteudo?: React.ReactNode;
   } | null>(null);
 
   // Recalcular totais e diferença DxC em tempo real
@@ -201,20 +218,33 @@ export const App: React.FC = () => {
       case 'auditoria': return { title: 'Auditoria de Saldos', icon: ShieldAlert };
       case 'transporteSaldos': return { title: 'Transporte de Saldos', icon: ArrowRightLeft };
       case 'ativoImobilizado': return { title: 'Ativo Imobilizado & Depreciação', icon: Archive };
+      case 'apuracaoTrimestral': return { title: 'Apuração IRPJ & CSLL (Trimestral)', icon: Calculator };
+      case 'lalur': return { title: 'LALUR / LACS (Lucro Real)', icon: BookOpen };
+      case 'consolidacao': return { title: 'Consolidação Matriz & Filiais (CPC 36)', icon: Share2 };
+      case 'razaoAuxiliar': return { title: 'Razão Auxiliar (Clientes/Forn)', icon: FileSpreadsheet };
 
       // Escrita Fiscal
       case 'dashboardFiscal': return { title: 'Dashboard Fiscal', icon: Receipt };
       case 'notasFiscais': return { title: 'Notas Fiscais & XML', icon: FileText };
+      case 'nfse': return { title: 'NFS-e Nacional / DPS', icon: Receipt };
+      case 'ciap': return { title: 'CIAP Bloco G (Ativo Permanente)', icon: Layers };
+      case 'cartoes': return { title: 'Vendas Cartões & Operadoras (1600)', icon: CreditCard };
+      case 'retencoes': return { title: 'Retenções na Fonte & DARF', icon: Receipt };
+      case 'reinf': return { title: 'EFD-Reinf em XML (v2.01)', icon: FileCode };
+      case 'difal': return { title: 'DIFAL & DeSTDA (GNRE)', icon: Scale };
       case 'participantes': return { title: 'Participantes SPED', icon: Users };
       case 'produtos': return { title: 'Itens & Produtos', icon: Package };
       case 'acumuladores': return { title: 'Acumuladores Fiscais', icon: Layers };
       case 'apuracaoFiscal': return { title: 'Apuração DAS & Guias', icon: Calculator };
+      case 'calendarioFiscal': return { title: 'Calendário Fiscal & Obrigações', icon: Calendar };
 
       // Folha
       case 'dashboardFolha': return { title: 'Dashboard da Folha', icon: Users };
+      case 'calculoFolha': return { title: 'Cálculo da Folha & Holerite', icon: Calculator };
+      case 'esocial': return { title: 'Central eSocial XML (S-1200/1210)', icon: FileCode };
+      case 'provisoesFolha': return { title: 'Provisões Mensais (Férias/13º)', icon: Layers };
       case 'colaboradores': return { title: 'Colaboradores & Sócios', icon: Users };
       case 'rubricas': return { title: 'Rubricas & Tabelas', icon: Sliders };
-      case 'calculoFolha': return { title: 'Cálculo da Folha & Holerite', icon: Calculator };
 
       // Honorários
       case 'dashboardHonorarios': return { title: 'Dashboard Financeiro', icon: DollarSign };
@@ -382,10 +412,11 @@ export const App: React.FC = () => {
 
   // Disparador de Relatório A4 Customizado
   const handleOpenCustomPrintPreview = (config: {
-    tipo: any;
+    tipo?: any;
     titulo: string;
     subtitulo: string;
-    linhas: { descricao: string; valor: number; isTotal?: boolean; isHeader?: boolean }[];
+    linhas?: { descricao: string; valor: number; isTotal?: boolean; isHeader?: boolean }[];
+    conteudo?: React.ReactNode;
   }) => {
     setCustomPrintConfig(config);
     setIsPrintPreviewOpen(true);
@@ -398,31 +429,36 @@ export const App: React.FC = () => {
   // Renderizador do Conteúdo do Print Preview Modal
   const renderPrintPreviewContent = () => {
     if (customPrintConfig) {
-      return (
-        <div className="space-y-4">
-          <table className="w-full text-left text-[11px] border-collapse">
-            <thead>
-              <tr className="border-b-2 border-neutral-900 font-bold uppercase text-[10px]">
-                <th className="py-2 px-3">Item / Discriminação do Evento</th>
-                <th className="py-2 px-3 text-right w-40">Valor (R$)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200">
-              {customPrintConfig.linhas.map((l, idx) => (
-                <tr 
-                  key={idx} 
-                  className={l.isTotal ? 'font-bold bg-neutral-100 border-t-2 border-neutral-900' : l.isHeader ? 'font-bold text-neutral-800 bg-neutral-50' : ''}
-                >
-                  <td className="py-1.5 px-3">{l.descricao}</td>
-                  <td className={`py-1.5 px-3 text-right font-mono ${l.valor < 0 ? 'text-rose-600' : ''}`}>
-                    {l.isHeader && l.valor === 0 ? '' : l.valor < 0 ? `(${Math.abs(l.valor).toFixed(2)})` : l.valor.toFixed(2)}
-                  </td>
+      if (customPrintConfig.conteudo) {
+        return customPrintConfig.conteudo;
+      }
+      if (customPrintConfig.linhas) {
+        return (
+          <div className="space-y-4">
+            <table className="w-full text-left text-[11px] border-collapse">
+              <thead>
+                <tr className="border-b-2 border-neutral-900 font-bold uppercase text-[10px]">
+                  <th className="py-2 px-3">Item / Discriminação do Evento</th>
+                  <th className="py-2 px-3 text-right w-40">Valor (R$)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
+              </thead>
+              <tbody className="divide-y divide-neutral-200">
+                {customPrintConfig.linhas.map((l, idx) => (
+                  <tr 
+                    key={idx} 
+                    className={l.isTotal ? 'font-bold bg-neutral-100 border-t-2 border-neutral-900' : l.isHeader ? 'font-bold text-neutral-800 bg-neutral-50' : ''}
+                  >
+                    <td className="py-1.5 px-3">{l.descricao}</td>
+                    <td className={`py-1.5 px-3 text-right font-mono ${l.valor < 0 ? 'text-rose-600' : ''}`}>
+                      {l.isHeader && l.valor === 0 ? '' : l.valor < 0 ? `(${Math.abs(l.valor).toFixed(2)})` : l.valor.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      }
     }
 
     if (activeModuleId === 'balancete') {
@@ -792,11 +828,18 @@ export const App: React.FC = () => {
             <div className={`h-full w-full ${activeTabId === 'zeramento' ? 'block' : 'hidden'}`}>
               <ZeramentoModule
                 empresaId={empresaAtiva.id}
+                empresa={empresaAtiva}
                 contas={contas}
                 lancamentos={lancamentos}
                 historicos={historicos}
                 onExecutarZeramento={handleExecutarZeramento}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
               />
+            </div>
+
+            {/* Calendário Fiscal & Obrigações Legais */}
+            <div className={`h-full w-full ${activeTabId === 'calendarioFiscal' ? 'block' : 'hidden'}`}>
+              <CalendarioFiscalModule empresa={empresaAtiva} />
             </div>
 
             {/* Empresas */}
@@ -863,6 +906,10 @@ export const App: React.FC = () => {
                 empresa={empresaAtiva}
                 contas={contas}
                 lancamentos={lancamentos}
+                onRefreshData={() => {
+                  setContas(dbService.getContas(empresaAtiva.id));
+                  setLancamentos(dbService.getLancamentos(empresaAtiva.id));
+                }}
               />
             </div>
 
@@ -892,6 +939,35 @@ export const App: React.FC = () => {
               />
             </div>
 
+            {/* Consolidação Contábil (CPC 36 / Matriz & Filiais) */}
+            <div className={`h-full w-full ${activeTabId === 'consolidacao' ? 'block' : 'hidden'}`}>
+              <ConsolidacaoModule
+                empresa={empresaAtiva}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
+              />
+            </div>
+
+            {/* Apuração Trimestral IRPJ & CSLL (Lucro Presumido) */}
+            <div className={`h-full w-full ${activeTabId === 'apuracaoTrimestral' ? 'block' : 'hidden'}`}>
+              <ApuracaoTrimestralModule
+                empresa={empresaAtiva}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
+                onIntegracaoSucesso={() => {
+                  setLancamentos(dbService.getLancamentos(empresaAtiva.id));
+                }}
+              />
+            </div>
+
+            {/* Livro Eletrônico LALUR & LACS (Lucro Real / Bloco M SPED ECF) */}
+            <div className={`h-full w-full ${activeTabId === 'lalur' ? 'block' : 'hidden'}`}>
+              <LalurLacsModule />
+            </div>
+
+            {/* Razão Auxiliar & Conciliação de Clientes e Fornecedores */}
+            <div className={`h-full w-full ${activeTabId === 'razaoAuxiliar' ? 'block' : 'hidden'}`}>
+              <RazaoAuxiliarModule />
+            </div>
+
             {/* ESCRITA FISCAL */}
             <div className={`h-full w-full ${activeTabId === 'dashboardFiscal' ? 'block' : 'hidden'}`}>
               <DashboardFiscalModule
@@ -910,6 +986,55 @@ export const App: React.FC = () => {
 
             <div className={`h-full w-full ${activeTabId === 'notasFiscais' ? 'block' : 'hidden'}`}>
               <NotasFiscaisModule empresa={empresaAtiva} />
+            </div>
+
+            {/* Vendas Cartões & Operadoras (SPED 1600) */}
+            <div className={`h-full w-full ${activeTabId === 'cartoes' ? 'block' : 'hidden'}`}>
+              <CartoesModule
+                empresa={empresaAtiva}
+                contas={contas}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
+                onIntegracaoSucesso={() => {
+                  setLancamentos(dbService.getLancamentos(empresaAtiva.id));
+                }}
+              />
+            </div>
+
+            {/* Central de Retenções na Fonte (DIRF / EFD-Reinf / DCTFWeb) */}
+            <div className={`h-full w-full ${activeTabId === 'retencoes' ? 'block' : 'hidden'}`}>
+              <RetencoesModule
+                empresa={empresaAtiva}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
+                onIntegracaoSucesso={() => {
+                  setLancamentos(dbService.getLancamentos(empresaAtiva.id));
+                }}
+              />
+            </div>
+
+            {/* Apuração do DIFAL & DeSTDA (GNRE) */}
+            <div className={`h-full w-full ${activeTabId === 'difal' ? 'block' : 'hidden'}`}>
+              <DifalModule
+                empresa={empresaAtiva}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
+                onIntegracaoSucesso={() => {
+                  setLancamentos(dbService.getLancamentos(empresaAtiva.id));
+                }}
+              />
+            </div>
+
+            {/* NFS-e Nacional / DPS & Faturamento de Serviços */}
+            <div className={`h-full w-full ${activeTabId === 'nfse' ? 'block' : 'hidden'}`}>
+              <NfseModule />
+            </div>
+
+            {/* Controle de Crédito de ICMS do Ativo Permanente (CIAP Bloco G) */}
+            <div className={`h-full w-full ${activeTabId === 'ciap' ? 'block' : 'hidden'}`}>
+              <CiapModule />
+            </div>
+
+            {/* Central EFD-Reinf em XML (v2.01.02) */}
+            <div className={`h-full w-full ${activeTabId === 'reinf' ? 'block' : 'hidden'}`}>
+              <ReinfXmlModule />
             </div>
 
             <div className={`h-full w-full ${activeTabId === 'participantes' ? 'block' : 'hidden'}`}>
@@ -951,6 +1076,22 @@ export const App: React.FC = () => {
 
             <div className={`h-full w-full ${activeTabId === 'calculoFolha' ? 'block' : 'hidden'}`}>
               <CalculoFolhaModule
+                empresa={empresaAtiva}
+                onOpenReportPreview={handleOpenCustomPrintPreview}
+                onIntegracaoSucesso={() => {
+                  setLancamentos(dbService.getLancamentos(empresaAtiva.id));
+                }}
+              />
+            </div>
+
+            {/* Central eSocial - Eventos Periódicos S-1200 / S-1210 em XML */}
+            <div className={`h-full w-full ${activeTabId === 'esocial' ? 'block' : 'hidden'}`}>
+              <ESocialXmlModule />
+            </div>
+
+            {/* Provisões Mensais de Férias e 13º Salário */}
+            <div className={`h-full w-full ${activeTabId === 'provisoesFolha' ? 'block' : 'hidden'}`}>
+              <ProvisoesFolhaModule
                 empresa={empresaAtiva}
                 onOpenReportPreview={handleOpenCustomPrintPreview}
                 onIntegracaoSucesso={() => {

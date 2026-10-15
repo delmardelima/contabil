@@ -33,7 +33,9 @@ import {
   CreditCard,
   Archive,
   BarChart2,
-  Package
+  Package,
+  Calendar,
+  Share2
 } from 'lucide-react';
 
 export interface NavItem {
@@ -128,6 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         title: 'AUTOMAÇÃO & SPED',
         items: [
           { id: 'importacaoConciliacao', title: 'Importação OFX & Conciliação', icon: Zap, badge: 'AUTO' },
+          { id: 'razaoAuxiliar', title: 'Razão Auxiliar (Clientes/Forn)', icon: FileSpreadsheet, badge: 'CONCIL' },
           { id: 'exportacaoContabil', title: 'Exportação SPED ECD', icon: FileCode, badge: 'ECD' }
         ]
       },
@@ -140,6 +143,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           { id: 'dre', title: 'Demonstração de Resultado (DRE)', icon: BarChart3 },
           { id: 'dlpa', title: 'Lucros/Prejuízos (DLPA)', icon: TrendingUp },
           { id: 'dfc', title: 'Fluxo de Caixa (DFC)', icon: DollarSign },
+          { id: 'apuracaoTrimestral', title: 'Apuração IRPJ/CSLL (Presumido)', icon: Calculator, badge: 'DARF' },
+          { id: 'lalur', title: 'LALUR / LACS (Lucro Real)', icon: BookOpen, badge: 'REAL' },
+          { id: 'consolidacao', title: 'Consolidação (CPC 36)', icon: Share2, badge: 'CONSOL' },
           { id: 'livros', title: 'Livro Diário & Razão Analítico', icon: BookOpen },
           { id: 'documentStudio', title: 'Document Studio (Termos A4)', icon: FileSpreadsheet }
         ]
@@ -148,6 +154,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         id: 'utilitarios',
         title: 'UTILITÁRIOS & FERRAMENTAS',
         items: [
+          { id: 'calendarioFiscal', title: 'Calendário Fiscal & Obrigações', icon: Calendar },
           { id: 'auditoria', title: 'Auditoria de Saldos Invertidos', icon: ShieldAlert, badge: 'CFC' },
           { id: 'transporteSaldos', title: 'Transporte de Saldos Anual', icon: ArrowRightLeft }
         ]
@@ -160,6 +167,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         title: 'MOVIMENTAÇÃO FISCAL',
         items: [
           { id: 'notasFiscais', title: 'Importador XML & Notas', icon: FileText, badge: 'XML' },
+          { id: 'nfse', title: 'NFS-e Nacional / DPS', icon: Receipt, badge: 'DPS' },
+          { id: 'ciap', title: 'CIAP Bloco G (Ativo Permanente)', icon: Layers, badge: '1/48' },
+          { id: 'cartoes', title: 'Vendas Cartões & Operadoras', icon: CreditCard, badge: '1600' },
+          { id: 'retencoes', title: 'Retenções na Fonte (DARF)', icon: Receipt, badge: 'REINF' },
+          { id: 'reinf', title: 'EFD-Reinf em XML (v2.01)', icon: FileCode, badge: 'XML' },
+          { id: 'difal', title: 'DIFAL & DeSTDA (GNRE)', icon: Scale, badge: 'GNRE' },
           { id: 'apuracaoFiscal', title: 'Apuração DAS / ICMS / PIS', icon: Calculator, badge: 'GUIA' }
         ]
       },
@@ -190,6 +203,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         title: 'PROCESSAMENTO DA FOLHA',
         items: [
           { id: 'calculoFolha', title: 'Cálculo da Folha & Holerites', icon: Calculator, badge: 'A4' },
+          { id: 'esocial', title: 'Central eSocial XML (S-1200/1210)', icon: FileCode, badge: 'eSocial' },
+          { id: 'provisoesFolha', title: 'Provisões de Férias e 13º', icon: Layers, badge: 'CPC' },
           { id: 'colaboradores', title: 'Cadastro de Empregados e Sócios', icon: Users, badge: 'CLT' }
         ]
       },
@@ -217,6 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         title: 'FATURAMENTO & RECEBIMENTOS',
         items: [
           { id: 'faturamentoHonorarios', title: 'Faturamento em Lote & Baixas', icon: Receipt, badge: 'LOTE' },
+          { id: 'nfse', title: 'Emissão de NFS-e DPS', icon: Receipt, badge: 'NFS-e' },
           { id: 'contratosHonorarios', title: 'Contratos Mensais de Clientes', icon: FileText, badge: 'MRR' }
         ]
       },

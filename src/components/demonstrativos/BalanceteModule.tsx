@@ -30,7 +30,7 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
     desconsiderarZeramento
   );
 
-  // Balancete Evolução 12 Meses (Multi-Período Domínio Sistemas)
+  // Balancete Evolução 12 Meses (Multi-Período  Sistemas)
   const multiPeriodItems = AccountingEngine.generateMultiPeriodBalancete(
     contas,
     lancamentos,
@@ -80,25 +80,23 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
           <div className="flex items-center bg-[#101010] p-0.5 rounded-lg border border-white/10">
             <button
               onClick={() => setModoVisualizacao('MENSAL')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
-                modoVisualizacao === 'MENSAL'
+              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${modoVisualizacao === 'MENSAL'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-neutral-400 hover:text-white'
-              }`}
+                }`}
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Balancete Mensal</span>
             </button>
             <button
               onClick={() => setModoVisualizacao('EVOLUCAO_12_MESES')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
-                modoVisualizacao === 'EVOLUCAO_12_MESES'
+              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${modoVisualizacao === 'EVOLUCAO_12_MESES'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-neutral-400 hover:text-white'
-              }`}
+                }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>Evolução 12 Meses (Domínio)</span>
+              <span>Evolução 12 Meses ()</span>
             </button>
           </div>
 
@@ -175,11 +173,10 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
           </button>
 
           {modoVisualizacao === 'MENSAL' && (
-            <div className={`flex items-center space-x-2 px-2.5 py-1 rounded font-mono font-medium text-xs ${
-              diferencaDxC === 0 
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+            <div className={`flex items-center space-x-2 px-2.5 py-1 rounded font-mono font-medium text-xs ${diferencaDxC === 0
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                 : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-            }`}>
+              }`}>
               {diferencaDxC === 0 ? (
                 <>
                   <CheckCircle2 className="w-3.5 h-3.5" />
@@ -222,11 +219,10 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
                     <tr
                       key={item.id}
                       onDoubleClick={() => onOpenRazaoConta && item.tipo === 'A' && onOpenRazaoConta(item.id)}
-                      className={`transition-colors ${
-                        isSintetica
+                      className={`transition-colors ${isSintetica
                           ? 'bg-neutral-900/40 font-semibold text-neutral-100'
                           : 'hover:bg-blue-600/10 cursor-pointer text-neutral-300'
-                      }`}
+                        }`}
                       title={item.tipo === 'A' ? 'Clique duplo para abrir Razão da Conta' : undefined}
                     >
                       <td className="py-2 px-3 font-mono text-neutral-400">{item.classificacao}</td>
@@ -303,9 +299,8 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-white/[0.02] transition-colors ${
-                        isSintetica ? 'bg-neutral-900/30 font-bold text-neutral-100' : 'text-neutral-300'
-                      }`}
+                      className={`hover:bg-white/[0.02] transition-colors ${isSintetica ? 'bg-neutral-900/30 font-bold text-neutral-100' : 'text-neutral-300'
+                        }`}
                     >
                       <td className="py-2 px-3 text-neutral-400 sticky left-0 bg-[#181818] z-10">{item.classificacao}</td>
                       <td className="py-2 px-3 sticky left-28 bg-[#181818] z-10 border-r border-white/10 font-sans">
@@ -314,15 +309,13 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
                         </div>
                       </td>
                       {item.meses.map((val, idx) => (
-                        <td key={idx} className={`py-2 px-2 text-right ${
-                          val > 0 ? (isSintetica ? 'text-neutral-200' : 'text-emerald-400') : (val < 0 ? 'text-rose-400' : 'text-neutral-600')
-                        }`}>
+                        <td key={idx} className={`py-2 px-2 text-right ${val > 0 ? (isSintetica ? 'text-neutral-200' : 'text-emerald-400') : (val < 0 ? 'text-rose-400' : 'text-neutral-600')
+                          }`}>
                           {val !== 0 ? val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                         </td>
                       ))}
-                      <td className={`py-2 px-3 text-right font-bold border-l border-white/10 bg-blue-950/10 ${
-                        item.totalAno > 0 ? 'text-emerald-400' : (item.totalAno < 0 ? 'text-rose-400' : 'text-neutral-500')
-                      }`}>
+                      <td className={`py-2 px-3 text-right font-bold border-l border-white/10 bg-blue-950/10 ${item.totalAno > 0 ? 'text-emerald-400' : (item.totalAno < 0 ? 'text-rose-400' : 'text-neutral-500')
+                        }`}>
                         {item.totalAno.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                     </tr>

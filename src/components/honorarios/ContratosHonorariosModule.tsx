@@ -37,6 +37,13 @@ export const ContratosHonorariosModule: React.FC<ContratosHonorariosModuleProps>
   const [mesReajuste, setMesReajuste] = useState<number>(1);
   const [cobra13Honorario, setCobra13Honorario] = useState<boolean>(true);
 
+  // Reajuste em Lote de Contratos por Índice Oficial
+  const [showReajusteModal, setShowReajusteModal] = useState<boolean>(false);
+  const [indiceReajuste, setIndiceReajuste] = useState<'IPCA' | 'IGPM' | 'SALARIO_MINIMO' | 'FIXO'>('IPCA');
+  const [percentualReajuste, setPercentualReajuste] = useState<number>(4.42);
+  const [contratosSelecionadosReajuste, setContratosSelecionadosReajuste] = useState<number[]>([]);
+  const [mensagemSucesso, setMensagemSucesso] = useState<string>('');
+
   // Campos Avançados de Franquia & Retenções
   const [franquiaEmpregados, setFranquiaEmpregados] = useState<number>(5);
   const [valorExcedenteEmpregado, setValorExcedenteEmpregado] = useState<string>('35,00');
@@ -125,6 +132,61 @@ export const ContratosHonorariosModule: React.FC<ContratosHonorariosModuleProps>
     }
   };
 
+  const handleAbrirReajusteLote = () => {
+    const ativosIds = contratos.filter(c => c.ativo !== false && c.status !== 'CANCELADO').map(c => c.id);
+    setContratosSelecionadosReajuste(ativosIds);
+    setIndiceReajuste('IPCA');
+    setPercentualReajuste(4.42);
+    setShowReajusteModal(true);
+  };
+
+  const handleMudarIndice = (ind: 'IPCA' | 'IGPM' | 'SALARIO_MINIMO' | 'FIXO') => {
+    setIndiceReajuste(ind);
+    if (ind === 'IPCA') setPercentualReajuste(4.42);
+    else if (ind === 'IGPM') setPercentualReajuste(5.10);
+    else if (ind === 'SALARIO_MINIMO') setPercentualReajuste(6.85);
+    else setPercentualReajuste(5.00);
+  };
+
+  const handleToggleSelecionarTodos = () => {
+    const ativosIds = contratos.filter(c => c.ativo !== false && c.status !== 'CANCELADO').map(c => c.id);
+    if (contratosSelecionadosReajuste.length === ativosIds.length) {
+      setContratosSelecionadosReajuste([]);
+    } else {
+      setContratosSelecionadosReajuste(ativosIds);
+    }
+  };
+
+  const handleToggleContratoReajuste = (id: number) => {
+    if (contratosSelecionadosReajuste.includes(id)) {
+      setContratosSelecionadosReajuste(contratosSelecionadosReajuste.filter(i => i !== id));
+    } else {
+      setContratosSelecionadosReajuste([...contratosSelecionadosReajuste, id]);
+    }
+  };
+
+  const handleAplicarReajusteLote = () => {
+    if (contratosSelecionadosReajuste.length === 0) {
+      alert('Selecione ao menos um contrato para reajustar.');
+      return;
+    }
+
+    const res = dbService.reajustarContratosEmLote({
+      indice: indiceReajuste,
+      percentual: Number(percentualReajuste),
+      dataReajuste: new Date().toISOString().split('T')[0],
+      competenciaAplicacao: new Date().toISOString().slice(0, 7),
+      contratosIds: contratosSelecionadosReajuste
+    });
+
+    if (res.success) {
+      setContratos(dbService.getContratosHonorarios());
+      setShowReajusteModal(false);
+      setMensagemSucesso(`Reajuste aplicado com sucesso para ${res.contratosAtualizados} contratos pelo índice ${indiceReajuste} (${percentualReajuste}%)! Aumento total de MRR: R$ ${res.diferencaMRR.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
+      setTimeout(() => setMensagemSucesso(''), 6000);
+    }
+  };
+
   const filtrados = contratos.filter(c => {
     if (!filtroTexto) return true;
     const txt = filtroTexto.toLowerCase();
@@ -191,6 +253,14 @@ export const ContratosHonorariosModule: React.FC<ContratosHonorariosModuleProps>
           </button>
 
           <button
+            onClick={handleAbrirReajusteLote}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded text-xs font-medium flex items-center space-x-1.5 transition shadow-sm"
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Reajuste em Lote por Índice</span>
+          </button>
+
+          <button
             onClick={handleAbrirCriar}
             className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded text-xs font-medium flex items-center space-x-1.5 transition shadow-sm"
           >
@@ -199,6 +269,17 @@ export const ContratosHonorariosModule: React.FC<ContratosHonorariosModuleProps>
           </button>
         </div>
       </div>
+
+      {/* Alerta de Sucesso */}
+      {mensagemSucesso && (
+        <div className="px-5 py-2.5 bg-purple-950/80 border-b border-purple-500/30 text-purple-300 text-xs flex items-center justify-between animate-fadeIn">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+            <span>{mensagemSucesso}</span>
+          </div>
+          <button onClick={() => setMensagemSucesso('')} className="text-purple-400 hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* Barra de Filtros e Busca */}
       <div className="px-5 py-2.5 bg-[#1c1c1c] border-b border-white/5 flex items-center justify-between text-xs">
@@ -505,6 +586,141 @@ export const ContratosHonorariosModule: React.FC<ContratosHonorariosModuleProps>
                 className="px-4 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-500 rounded shadow-sm"
               >
                 Salvar Contrato
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reajuste em Lote de Contratos */}
+      {showReajusteModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#181818] border border-white/15 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden animate-scaleUp">
+            <div className="bg-[#202020] px-5 py-3.5 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <TrendingUp className="w-5 h-5 text-purple-400" />
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Reajuste em Lote de Contratos por Índice Oficial</h3>
+                  <p className="text-[11px] text-neutral-400">Simulação e aplicação automática de reajustes contratuais por índices econômicos vigentes</p>
+                </div>
+              </div>
+              <button onClick={() => setShowReajusteModal(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-medium text-neutral-400 mb-1">Índice Econômico Oficial</label>
+                  <select
+                    value={indiceReajuste}
+                    onChange={e => handleMudarIndice(e.target.value as any)}
+                    className="w-full bg-[#202020] border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none focus:border-purple-500"
+                  >
+                    <option value="IPCA">IPCA (IBGE) - 4,42% a.a.</option>
+                    <option value="IGPM">IGP-M (FGV) - 5,10% a.a.</option>
+                    <option value="SALARIO_MINIMO">Salário Mínimo - 6,85% a.a.</option>
+                    <option value="FIXO">Percentual Fixo Customizado (%)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-neutral-400 mb-1">Percentual de Reajuste (%)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={percentualReajuste}
+                    onChange={e => setPercentualReajuste(Number(e.target.value))}
+                    className="w-full bg-[#202020] border border-white/10 rounded px-3 py-1.5 text-xs text-white outline-none font-mono focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Tabela de Simulação */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] text-neutral-400 font-medium">Contratos Ativos Elegíveis ({contratosSelecionadosReajuste.length} selecionados)</span>
+                  <button
+                    onClick={handleToggleSelecionarTodos}
+                    className="text-[11px] text-purple-400 hover:text-purple-300 font-medium"
+                  >
+                    {contratosSelecionadosReajuste.length === contratos.filter(c => c.ativo !== false).length ? 'Desmarcar Todos' : 'Selecionar Todos'}
+                  </button>
+                </div>
+
+                <div className="max-h-56 overflow-auto custom-scrollbar border border-white/10 rounded-lg">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead className="sticky top-0 bg-[#222222] border-b border-white/10 text-neutral-400 font-semibold text-[10px] uppercase">
+                      <tr>
+                        <th className="py-2 px-2.5 w-8 text-center">Sel.</th>
+                        <th className="py-2 px-2.5">Empresa Cliente</th>
+                        <th className="py-2 px-2.5 w-24 text-right">Valor Atual</th>
+                        <th className="py-2 px-2.5 w-24 text-right text-purple-400">Novo Valor</th>
+                        <th className="py-2 px-2.5 w-24 text-right text-emerald-400">Aumento</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 font-mono text-[11px]">
+                      {contratos.filter(c => c.ativo !== false).map(c => {
+                        const emp = empresas.find(e => e.id === c.empresaId);
+                        const valAtual = c.valorMensalBase ?? c.valorMensal ?? 0;
+                        const novoVal = Math.round(valAtual * (1 + percentualReajuste / 100) * 100) / 100;
+                        const dif = novoVal - valAtual;
+                        const isSel = contratosSelecionadosReajuste.includes(c.id);
+
+                        return (
+                          <tr key={c.id} className={`hover:bg-white/[0.02] ${isSel ? 'bg-purple-900/10' : 'opacity-60'}`}>
+                            <td className="py-1.5 px-2.5 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSel}
+                                onChange={() => handleToggleContratoReajuste(c.id)}
+                                className="rounded border-white/20 bg-neutral-800 text-purple-500 cursor-pointer"
+                              />
+                            </td>
+                            <td className="py-1.5 px-2.5 font-sans font-medium text-neutral-200">
+                              {emp?.razaoSocial || `Empresa ${c.empresaId}`}
+                            </td>
+                            <td className="py-1.5 px-2.5 text-right text-neutral-400">R$ {valAtual.toFixed(2)}</td>
+                            <td className="py-1.5 px-2.5 text-right font-bold text-purple-300">R$ {novoVal.toFixed(2)}</td>
+                            <td className="py-1.5 px-2.5 text-right font-bold text-emerald-400">+ R$ {dif.toFixed(2)}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Totalizador de Ganho de MRR */}
+              <div className="bg-[#121212] p-3 rounded-lg border border-purple-500/20 flex items-center justify-between text-xs font-mono">
+                <span className="text-neutral-400 font-sans">Aumento Total de Faturamento Mensal (MRR):</span>
+                <strong className="text-emerald-400 font-bold text-sm">
+                  + R$ {contratos
+                    .filter(c => contratosSelecionadosReajuste.includes(c.id))
+                    .reduce((acc, c) => {
+                      const v = c.valorMensalBase ?? c.valorMensal ?? 0;
+                      return acc + (Math.round(v * (1 + percentualReajuste / 100) * 100) / 100 - v);
+                    }, 0)
+                    .toLocaleString('pt-BR', { minimumFractionDigits: 2 })} / mês
+                </strong>
+              </div>
+            </div>
+
+            <div className="bg-[#202020] px-5 py-3 border-t border-white/10 flex items-center justify-end space-x-2">
+              <button
+                type="button"
+                onClick={() => setShowReajusteModal(false)}
+                className="px-3 py-1.5 text-xs text-neutral-400 hover:text-white bg-transparent rounded border border-white/10"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleAplicarReajusteLote}
+                className="px-4 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 rounded shadow-sm flex items-center space-x-1.5"
+              >
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Aplicar Reajuste em Lote ({contratosSelecionadosReajuste.length})</span>
               </button>
             </div>
           </div>

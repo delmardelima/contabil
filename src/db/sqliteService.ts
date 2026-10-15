@@ -1,8 +1,8 @@
-import { 
-  Empresa, 
-  ContaContabil, 
-  HistoricoPadrao, 
-  LancamentoContabil, 
+import {
+  Empresa,
+  ContaContabil,
+  HistoricoPadrao,
+  LancamentoContabil,
   DocumentoStudio,
   CentroCusto,
   LancamentoPadrao,
@@ -28,7 +28,46 @@ import {
   ProdutoServico,
   AtivoImobilizado,
   VariaveisColaborador,
-  ProvisaoColaborador
+  ProvisaoColaborador,
+  CalculoFerias,
+  CalculoDecimoTerceiro,
+  CalculoRescisao,
+  ReajusteContratoLote,
+  LinhaLivroEntradas,
+  LinhaLivroSaidas,
+  ResumoApuracaoICMSLivro,
+  ObrigacaoFiscal,
+  PropostaDestinacaoResultado,
+  SocioDistribuicao,
+  AdministradoraCartao,
+  VendaCartaoOperadora,
+  BalanceteConsolidadoLinha,
+  DREConsolidadaLinha,
+  GuiaRetencaoFonte,
+  ProvisaoItemFolha,
+  ProvisaoFolhaResumo,
+  ItemDifalApuracao,
+  ResumoDifalCompetencia,
+  ApuracaoTrimestralIRPJCSLL,
+  LancamentoLalurParteA,
+  ContaParteBLalur,
+  MovimentoParteBLalur,
+  ApuracaoLucroRealLalur,
+  EventoReinf,
+  ResumoReinfCompetencia,
+  NfseEmissao,
+  ItemCiap,
+  ItemCiapCalculado,
+  ApuracaoCiapCompetencia,
+  EventoESocial,
+  ResumoESocialCompetencia,
+  RazaoAuxiliarItem,
+  ApuracaoDctfWeb,
+  BaixaAtivoImobilizado,
+  ItemInventarioPatrimonial,
+  ImovelRuralLCDPR,
+  LancamentoLCDPR,
+  ResumoMensalLCDPR
 } from '../types/contabil';
 
 const STORAGE_KEYS = {
@@ -37,7 +76,7 @@ const STORAGE_KEYS = {
   CURRENT_USER: 'contabil_current_user_v2'
 };
 
-// Seed de dados contábeis profissionais (Padrão CFC / CPC / Domínio)
+// Seed de dados contábeis profissionais (Padrão CFC / CPC / )
 const SEED_EMPRESA: Empresa = {
   id: 1,
   codigo: 1,
@@ -236,7 +275,7 @@ const SEED_AUDITORIA: AuditoriaLog[] = [
   }
 ];
 
-// Plano de Contas Referencial Domínio / CFC
+// Plano de Contas Referencial  / CFC
 const SEED_CONTAS: ContaContabil[] = [
   // 1. ATIVO
   { id: 1, empresaId: 1, classificacao: '1', codigoReduzido: 1, nome: 'ATIVO TOTAL', tipo: 'S', natureza: 'D', grau: 1, saldoAnterior: 1050300.50 },
@@ -462,6 +501,7 @@ const SEED_NOTAS_FISCAIS: NotaFiscal[] = [
     empresaId: 1,
     numero: 1051,
     serie: '1',
+    modelo: '55',
     chaveAcesso: '35261012345678000190550010000010511234567890',
     dataEmissao: '2026-10-02',
     dataEntradaSaida: '2026-10-02',
@@ -480,13 +520,36 @@ const SEED_NOTAS_FISCAIS: NotaFiscal[] = [
     baseCalculoISS: 45000.00,
     valorISS: 2250.00,
     retencaoIRRF: 675.00,
-    integradaContabil: true
+    integradaContabil: true,
+    itens: [
+      {
+        id: 101,
+        numeroItem: 1,
+        codigoProduto: 'SRV-001',
+        descricao: 'Consultoria e Auditoria Contábil Empresarial Mensal',
+        ncm: '00000000',
+        cfop: '5.933',
+        unidade: 'UN',
+        quantidade: 1,
+        valorUnitario: 45000.00,
+        valorTotal: 45000.00,
+        cstPIS: '01',
+        baseCalculoPIS: 45000.00,
+        aliquotaPIS: 0.65,
+        valorPIS: 292.50,
+        cstCOFINS: '01',
+        baseCalculoCOFINS: 45000.00,
+        aliquotaCOFINS: 3.0,
+        valorCOFINS: 1350.00
+      }
+    ]
   },
   {
     id: 2,
     empresaId: 1,
     numero: 8820,
     serie: 'E',
+    modelo: '55',
     chaveAcesso: '35261001234567000188550010000088201987654321',
     dataEmissao: '2026-10-08',
     dataEntradaSaida: '2026-10-08',
@@ -504,13 +567,30 @@ const SEED_NOTAS_FISCAIS: NotaFiscal[] = [
     valorCOFINS: 0,
     baseCalculoISS: 12800.00,
     valorISS: 640.00,
-    integradaContabil: false
+    retencaoIRRF: 192.00,
+    retencaoCSRF: 595.20,
+    integradaContabil: false,
+    itens: [
+      {
+        id: 201,
+        numeroItem: 1,
+        codigoProduto: 'SRV-AWS',
+        descricao: 'Hospedagem em Nuvem e Infraestrutura Cloud Dedicada',
+        ncm: '00000000',
+        cfop: '1.933',
+        unidade: 'UN',
+        quantidade: 1,
+        valorUnitario: 12800.00,
+        valorTotal: 12800.00
+      }
+    ]
   },
   {
     id: 3,
     empresaId: 1,
     numero: 1052,
     serie: '1',
+    modelo: '55',
     chaveAcesso: '35261012345678000190550010000010521234567891',
     dataEmissao: '2026-10-15',
     dataEntradaSaida: '2026-10-15',
@@ -529,7 +609,316 @@ const SEED_NOTAS_FISCAIS: NotaFiscal[] = [
     baseCalculoISS: 38500.00,
     valorISS: 1925.00,
     retencaoIRRF: 577.50,
-    integradaContabil: false
+    integradaContabil: false,
+    itens: [
+      {
+        id: 301,
+        numeroItem: 1,
+        codigoProduto: 'SRV-002',
+        descricao: 'Implantação de ERP Contábil e Treinamento de Equipe',
+        ncm: '00000000',
+        cfop: '5.933',
+        unidade: 'UN',
+        quantidade: 1,
+        valorUnitario: 38500.00,
+        valorTotal: 38500.00,
+        cstPIS: '01',
+        baseCalculoPIS: 38500.00,
+        aliquotaPIS: 0.65,
+        valorPIS: 250.25,
+        cstCOFINS: '01',
+        baseCalculoCOFINS: 38500.00,
+        aliquotaCOFINS: 3.0,
+        valorCOFINS: 1155.00
+      }
+    ]
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    numero: 2040,
+    serie: '1',
+    modelo: '55',
+    chaveAcesso: '35261012345678000190550010000020401234567892',
+    dataEmissao: '2026-10-18',
+    dataEntradaSaida: '2026-10-18',
+    tipo: 'SAIDA',
+    acumuladorId: 1,
+    cfop: '5.102',
+    clienteFornecedorNome: 'INDÚSTRIA E COMÉRCIO BETA LTDA',
+    clienteFornecedorCnpj: '45.678.901/0001-34',
+    valorTotal: 52000.00,
+    baseCalculoICMS: 52000.00,
+    valorICMS: 9360.00,
+    baseCalculoPIS: 52000.00,
+    valorPIS: 338.00,
+    baseCalculoCOFINS: 52000.00,
+    valorCOFINS: 1560.00,
+    baseCalculoISS: 0,
+    valorISS: 0,
+    integradaContabil: false,
+    itens: [
+      {
+        id: 401,
+        numeroItem: 1,
+        codigoProduto: 'EQP-001',
+        descricao: 'Servidor Dell PowerEdge R650 32GB Xeon Silver',
+        ncm: '84715010',
+        cfop: '5.102',
+        unidade: 'UN',
+        quantidade: 2,
+        valorUnitario: 21000.00,
+        valorTotal: 42000.00,
+        cstICMS: '00',
+        baseCalculoICMS: 42000.00,
+        aliquotaICMS: 18.0,
+        valorICMS: 7560.00,
+        cstPIS: '01',
+        baseCalculoPIS: 42000.00,
+        aliquotaPIS: 0.65,
+        valorPIS: 273.00,
+        cstCOFINS: '01',
+        baseCalculoCOFINS: 42000.00,
+        aliquotaCOFINS: 3.0,
+        valorCOFINS: 1260.00
+      },
+      {
+        id: 402,
+        numeroItem: 2,
+        codigoProduto: 'MON-001',
+        descricao: 'Monitor Profissional Dell UltraSharp 27" 4K IPS',
+        ncm: '85285220',
+        cfop: '5.102',
+        unidade: 'UN',
+        quantidade: 4,
+        valorUnitario: 2500.00,
+        valorTotal: 10000.00,
+        cstICMS: '00',
+        baseCalculoICMS: 10000.00,
+        aliquotaICMS: 18.0,
+        valorICMS: 1800.00,
+        cstPIS: '01',
+        baseCalculoPIS: 10000.00,
+        aliquotaPIS: 0.65,
+        valorPIS: 65.00,
+        cstCOFINS: '01',
+        baseCalculoCOFINS: 10000.00,
+        aliquotaCOFINS: 3.0,
+        valorCOFINS: 300.00
+      }
+    ]
+  },
+  {
+    id: 5,
+    empresaId: 1,
+    numero: 2041,
+    serie: '1',
+    modelo: '55',
+    chaveAcesso: '35261012345678000190550010000020411234567893',
+    dataEmissao: '2026-10-22',
+    dataEntradaSaida: '2026-10-22',
+    tipo: 'SAIDA',
+    acumuladorId: 1,
+    cfop: '5.405',
+    clienteFornecedorNome: 'AUTO PEÇAS E CENTRO AUTOMOTIVO VELOZ LTDA',
+    clienteFornecedorCnpj: '21.435.678/0001-99',
+    valorTotal: 42000.00,
+    baseCalculoICMS: 0,
+    valorICMS: 0,
+    baseCalculoPIS: 0,
+    valorPIS: 0,
+    baseCalculoCOFINS: 0,
+    valorCOFINS: 0,
+    baseCalculoISS: 0,
+    valorISS: 0,
+    integradaContabil: false,
+    itens: [
+      {
+        id: 501,
+        numeroItem: 1,
+        codigoProduto: 'AUT-001',
+        descricao: 'Bateria Automotiva Heliar Free 60Ah 12V Selada (ST + Monofásico)',
+        ncm: '85071010',
+        cfop: '5.405',
+        unidade: 'PC',
+        quantidade: 50,
+        valorUnitario: 520.00,
+        valorTotal: 26000.00,
+        cstICMS: '60', // ICMS ST Cobrado Anteriormente
+        baseCalculoICMS: 0,
+        aliquotaICMS: 0,
+        valorICMS: 0,
+        cstPIS: '04', // Monofásico Alíquota Zero no Varejo
+        baseCalculoPIS: 0,
+        aliquotaPIS: 0,
+        valorPIS: 0,
+        cstCOFINS: '04',
+        baseCalculoCOFINS: 0,
+        aliquotaCOFINS: 0,
+        valorCOFINS: 0
+      },
+      {
+        id: 502,
+        numeroItem: 2,
+        codigoProduto: 'AUT-002',
+        descricao: 'Óleo Lubrificante Sintético Mobil 1 5W-30 Galão 4L (ST + Monofásico)',
+        ncm: '27101932',
+        cfop: '5.405',
+        unidade: 'GL',
+        quantidade: 80,
+        valorUnitario: 200.00,
+        valorTotal: 16000.00,
+        cstICMS: '60',
+        baseCalculoICMS: 0,
+        aliquotaICMS: 0,
+        valorICMS: 0,
+        cstPIS: '04',
+        baseCalculoPIS: 0,
+        aliquotaPIS: 0,
+        valorPIS: 0,
+        cstCOFINS: '04',
+        baseCalculoCOFINS: 0,
+        aliquotaCOFINS: 0,
+        valorCOFINS: 0
+      }
+    ]
+  },
+  {
+    id: 6,
+    empresaId: 1,
+    numero: 9105,
+    serie: '1',
+    modelo: '55',
+    chaveAcesso: '43261072381189000110550010000091051987654322',
+    dataEmissao: '2026-10-10',
+    dataEntradaSaida: '2026-10-12',
+    tipo: 'ENTRADA',
+    acumuladorId: 2,
+    cfop: '1.102',
+    clienteFornecedorNome: 'DELL COMPUTADORES DO BRASIL LTDA',
+    clienteFornecedorCnpj: '72.381.189/0001-10',
+    valorTotal: 36000.00,
+    baseCalculoICMS: 36000.00,
+    valorICMS: 6480.00, // 18% Creditado
+    baseCalculoPIS: 36000.00,
+    valorPIS: 234.00,
+    baseCalculoCOFINS: 36000.00,
+    valorCOFINS: 1080.00,
+    baseCalculoISS: 0,
+    valorISS: 0,
+    integradaContabil: false,
+    itens: [
+      {
+        id: 601,
+        numeroItem: 1,
+        codigoProduto: 'EQP-001',
+        descricao: 'Servidor Dell PowerEdge R650 32GB Xeon Silver',
+        ncm: '84715010',
+        cfop: '1.102',
+        unidade: 'UN',
+        quantidade: 2,
+        valorUnitario: 18000.00,
+        valorTotal: 36000.00,
+        cstICMS: '00',
+        baseCalculoICMS: 36000.00,
+        aliquotaICMS: 18.0,
+        valorICMS: 6480.00,
+        cstPIS: '50',
+        baseCalculoPIS: 36000.00,
+        aliquotaPIS: 0.65,
+        valorPIS: 234.00,
+        cstCOFINS: '50',
+        baseCalculoCOFINS: 36000.00,
+        aliquotaCOFINS: 3.0,
+        valorCOFINS: 1080.00
+      }
+    ]
+  },
+  {
+    id: 7,
+    empresaId: 1,
+    numero: 9106,
+    serie: '1',
+    modelo: '55',
+    chaveAcesso: '35261061222333000144550010000091061987654323',
+    dataEmissao: '2026-10-14',
+    dataEntradaSaida: '2026-10-16',
+    tipo: 'ENTRADA',
+    acumuladorId: 2,
+    cfop: '1.403',
+    clienteFornecedorNome: 'DISTRIBUIDORA NACIONAL DE AUTOPEÇAS S/A',
+    clienteFornecedorCnpj: '61.222.333/0001-44',
+    valorTotal: 28000.00,
+    baseCalculoICMS: 0,
+    valorICMS: 0, // ST já recolhido pelo substituto
+    baseCalculoPIS: 0,
+    valorPIS: 0,
+    baseCalculoCOFINS: 0,
+    valorCOFINS: 0,
+    baseCalculoISS: 0,
+    valorISS: 0,
+    integradaContabil: false,
+    itens: [
+      {
+        id: 701,
+        numeroItem: 1,
+        codigoProduto: 'AUT-001',
+        descricao: 'Bateria Automotiva Heliar Free 60Ah 12V Selada',
+        ncm: '85071010',
+        cfop: '1.403',
+        unidade: 'PC',
+        quantidade: 70,
+        valorUnitario: 400.00,
+        valorTotal: 28000.00,
+        cstICMS: '60',
+        baseCalculoICMS: 0,
+        aliquotaICMS: 0,
+        valorICMS: 0
+      }
+    ]
+  },
+  {
+    id: 8,
+    empresaId: 1,
+    numero: 9107,
+    serie: '1',
+    modelo: '55',
+    chaveAcesso: '35261043210987000112550010000091071987654324',
+    dataEmissao: '2026-10-20',
+    dataEntradaSaida: '2026-10-21',
+    tipo: 'ENTRADA',
+    acumuladorId: 2,
+    cfop: '1.556',
+    clienteFornecedorNome: 'KALUNGA COMÉRCIO E INDÚSTRIA GRÁFICA LTDA',
+    clienteFornecedorCnpj: '43.210.987/0001-12',
+    valorTotal: 4500.00,
+    baseCalculoICMS: 0,
+    valorICMS: 0,
+    baseCalculoPIS: 0,
+    valorPIS: 0,
+    baseCalculoCOFINS: 0,
+    valorCOFINS: 0,
+    baseCalculoISS: 0,
+    valorISS: 0,
+    integradaContabil: false,
+    itens: [
+      {
+        id: 801,
+        numeroItem: 1,
+        codigoProduto: 'MAT-001',
+        descricao: 'Papel Sulfite A4 Report 75g Caixa com 10 Resmas e Suprimentos de Escritório',
+        ncm: '48025610',
+        cfop: '1.556',
+        unidade: 'CX',
+        quantidade: 15,
+        valorUnitario: 300.00,
+        valorTotal: 4500.00,
+        cstICMS: '90',
+        baseCalculoICMS: 0,
+        aliquotaICMS: 0,
+        valorICMS: 0
+      }
+    ]
   }
 ];
 
@@ -548,6 +937,153 @@ const SEED_APURACOES_FISCAIS: ApuracaoFiscal[] = [
     valorCSLLApurado: 2404.80,
     status: 'CALCULADA',
     integradaContabil: false
+  }
+];
+
+const SEED_OBRIGACOES_FISCAIS: ObrigacaoFiscal[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    sigla: 'DAS',
+    nome: 'Documento de Arrecadação do Simples Nacional (PGDAS-D)',
+    esfera: 'FEDERAL',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-20',
+    dataLimiteEnvio: '2026-11-20',
+    valorEstimado: 7824.30,
+    status: 'A_VENCER',
+    responsavel: 'Helena Silveira (Fiscal)',
+    codigoBarras: '85830000001-2 36890385261-0 01001202610-8 00000000000-0',
+    observacoes: 'Apuração com segregação de ICMS ST e PIS/COFINS Monofásicos calculada'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    sigla: 'FGTS_DIGITAL',
+    nome: 'FGTS Digital Mensal - Fundo de Garantia (Portaria MTE)',
+    esfera: 'TRABALHISTA',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-20',
+    dataLimiteEnvio: '2026-11-20',
+    valorEstimado: 1954.40,
+    status: 'A_VENCER',
+    responsavel: 'Carlos DP',
+    codigoBarras: '85830000001-9 19544000000-0 20261020000-1 00000000000-0',
+    observacoes: 'Guia Pix emitida via Conectividade / FGTS Digital'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    sigla: 'DCTFWEB',
+    nome: 'DCTFWeb Mensal - Declaração de Débitos e Créditos Previdenciários',
+    esfera: 'FEDERAL',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-15',
+    dataLimiteEnvio: '2026-11-15',
+    valorEstimado: 3880.00,
+    status: 'A_VENCER',
+    responsavel: 'Helena Silveira',
+    observacoes: 'Alimentada automaticamente pelo eSocial e EFD-Reinf'
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    sigla: 'ESOCIAL',
+    nome: 'eSocial S-1299 - Fechamento dos Eventos Periódicos da Folha',
+    esfera: 'TRABALHISTA',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-15',
+    dataLimiteEnvio: '2026-11-15',
+    valorEstimado: 0,
+    status: 'A_VENCER',
+    responsavel: 'Carlos DP',
+    observacoes: 'Transmissão XML dos eventos S-1200 e S-1210'
+  },
+  {
+    id: 5,
+    empresaId: 1,
+    sigla: 'EFD_REINF',
+    nome: 'EFD-Reinf Série R-4000 - Retenções na Fonte de IRRF e CSRF',
+    esfera: 'FEDERAL',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-15',
+    dataLimiteEnvio: '2026-11-15',
+    valorEstimado: 1252.50,
+    status: 'A_VENCER',
+    responsavel: 'Helena Silveira',
+    observacoes: 'Retenções sobre notas de serviços tomados e honorários'
+  },
+  {
+    id: 6,
+    empresaId: 1,
+    sigla: 'DAE_ICMS',
+    nome: 'DAE / GARE ICMS Operações Próprias SP (Cód. 046-2)',
+    esfera: 'ESTADUAL',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-20',
+    dataLimiteEnvio: '2026-11-20',
+    valorEstimado: 2880.00,
+    status: 'A_VENCER',
+    responsavel: 'Helena Silveira',
+    codigoBarras: '85830000002-8 88000000000-0 20261020000-1 00000000000-0'
+  },
+  {
+    id: 7,
+    empresaId: 1,
+    sigla: 'DARM_ISS',
+    nome: 'ISSQN Próprio - Prefeitura Municipal de São Paulo',
+    esfera: 'MUNICIPAL',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-10',
+    dataLimiteEnvio: '2026-11-10',
+    valorEstimado: 4175.00,
+    status: 'A_VENCER',
+    responsavel: 'Helena Silveira'
+  },
+  {
+    id: 8,
+    empresaId: 1,
+    sigla: 'SPED_FISCAL',
+    nome: 'EFD ICMS/IPI - SPED Fiscal Mensal',
+    esfera: 'ESTADUAL',
+    competencia: '2026-10',
+    dataVencimento: '2026-11-20',
+    dataLimiteEnvio: '2026-11-20',
+    valorEstimado: 0,
+    status: 'PENDENTE',
+    responsavel: 'Helena Silveira'
+  },
+  {
+    id: 9,
+    empresaId: 1,
+    sigla: 'SPED_ECD',
+    nome: 'SPED ECD - Escrituração Contábil Digital (Livro Diário/Razão)',
+    esfera: 'FEDERAL',
+    competencia: '2025-12',
+    dataVencimento: '2026-06-30',
+    dataLimiteEnvio: '2026-06-30',
+    valorEstimado: 0,
+    status: 'ENTREGUE',
+    dataTransmissao: '2026-06-25',
+    protocoloTransmissao: 'ECD-SP-2026-9876543210-99',
+    reciboEnvio: 'REC-ECD-3526-8877665544',
+    responsavel: 'Dra. Helena Silveira Santos'
+  },
+  {
+    id: 10,
+    empresaId: 1,
+    sigla: 'SPED_ECF',
+    nome: 'SPED ECF - Escrituração Contábil Fiscal (IRPJ / CSLL)',
+    esfera: 'FEDERAL',
+    competencia: '2025-12',
+    dataVencimento: '2026-07-31',
+    dataLimiteEnvio: '2026-07-31',
+    valorEstimado: 0,
+    status: 'ENTREGUE',
+    dataTransmissao: '2026-07-28',
+    protocoloTransmissao: 'ECF-RFB-2026-1234567890-01',
+    reciboEnvio: 'REC-ECF-RFB-9988776655',
+    responsavel: 'Dra. Helena Silveira Santos'
   }
 ];
 
@@ -1126,6 +1662,902 @@ const SEED_VARIAVEIS_COLABORADORES: VariaveisColaborador[] = [
   }
 ];
 
+const SEED_CALCULOS_FERIAS: CalculoFerias[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    colaboradorId: 3,
+    colaboradorNome: 'Renato Dias Batista',
+    matricula: 103,
+    cargo: 'Assistente Administrativo',
+    salarioBase: 3100.00,
+    periodoAquisitivoInicio: '2025-05-02',
+    periodoAquisitivoFim: '2026-05-01',
+    dataInicioGozo: '2026-10-01',
+    diasGozo: 30,
+    dataFimGozo: '2026-10-30',
+    abonoPecuniario: false,
+    diasAbono: 0,
+    adiantarDecimoTerceiro: false,
+    valorDiasFerias: 3100.00,
+    valorTercoConstitucional: 1033.33,
+    valorAbonoPecuniario: 0,
+    valorTercoAbono: 0,
+    valorAdiantamento13: 0,
+    valorTotalProventos: 4133.33,
+    baseCalculoINSS: 4133.33,
+    valorINSS: 392.97,
+    baseCalculoIRRF: 3550.77,
+    valorIRRF: 143.18,
+    valorTotalDescontos: 536.15,
+    valorLiquidoReceber: 3597.18,
+    dataPagamento: '2026-09-29',
+    status: 'PAGO',
+    integradaContabil: true
+  }
+];
+
+const SEED_CALCULOS_DECIMO_TERCEIRO: CalculoDecimoTerceiro[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    colaboradorId: 3,
+    colaboradorNome: 'Renato Dias Batista',
+    matricula: 103,
+    cargo: 'Assistente Administrativo',
+    salarioBase: 3100.00,
+    competencia: '2026-11',
+    ano: 2026,
+    parcela: 'PRIMEIRA',
+    mesesTrabalhadosAvos: 12,
+    valorIntegral: 3100.00,
+    valorBrutoParcela: 1550.00,
+    valorAdiantamentoDeduzido: 0,
+    baseINSS: 0,
+    valorINSS: 0,
+    baseIRRF: 0,
+    valorIRRF: 0,
+    baseFGTS: 1550.00,
+    valorFGTS: 124.00,
+    valorLiquidoParcela: 1550.00,
+    dataPagamento: '2026-11-28',
+    status: 'CALCULADO',
+    integradaContabil: false
+  }
+];
+
+const SEED_CALCULOS_RESCISAO: CalculoRescisao[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    colaboradorId: 3,
+    colaboradorNome: 'Renato Dias Batista',
+    matricula: 103,
+    cargo: 'Assistente Administrativo',
+    cpf: '456.789.012-34',
+    dataAdmissao: '2025-05-02',
+    dataDemissao: '2026-10-31',
+    salarioBase: 3100.00,
+    motivoRescisao: 'SEM_JUSTA_CAUSA',
+    tipoAvisoPrevio: 'INDENIZADO',
+    diasAvisoPrevio: 33,
+    diasTrabalhadosMes: 30,
+    avosDecimoTerceiro: 10,
+    avosDecimoIndenizado: 1,
+    avosFeriasProporcionais: 6,
+    avosFeriasIndenizadas: 1,
+    temFeriasVencidas: false,
+    saldoSalario: 3100.00,
+    avisoPrevioIndenizado: 3410.00,
+    decimoTerceiroProporcional: 2583.33,
+    decimoTerceiroIndenizado: 258.33,
+    feriasVencidas: 0,
+    tercoFeriasVencidas: 0,
+    feriasProporcionais: 1550.00,
+    tercoFeriasProporcionais: 516.67,
+    feriasIndenizadas: 258.33,
+    tercoFeriasIndenizadas: 86.11,
+    totalBrutoVerbas: 11762.77,
+    inssSaldoSalario: 265.84,
+    inssDecimoTerceiro: 204.38,
+    irrfSaldoSalario: 0,
+    irrfDecimoTerceiro: 0,
+    avisoPrevioDescontado: 0,
+    outrasDeducoes: 0,
+    totalDeducoes: 470.22,
+    saldoLiquidoRescisao: 11292.55,
+    saldoBaseFGTS: 4200.00,
+    multaRescisoriaFGTS: 1680.00,
+    codigoSaqueFGTS: '01',
+    dataPagamento: '2026-11-10',
+    status: 'CALCULADO',
+    integradaContabil: false
+  }
+];
+
+const SEED_ADMINISTRADORAS_CARTAO: AdministradoraCartao[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigo: 1,
+    cnpj: '01.027.058/0001-91',
+    razaoSocial: 'CIELO S.A.',
+    nomeFantasia: 'Cielo',
+    inscricaoEstadual: '111.222.333.444',
+    taxaMDRCreditoVista: 2.39,
+    taxaMDRCreditoParcelado: 3.89,
+    taxaMDRDebito: 1.19,
+    prazoDiasRepasseCredito: 30,
+    prazoDiasRepasseDebito: 1,
+    contaAtivoId: 6,
+    contaDespesaTaxaId: 57,
+    ativo: true
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    codigo: 2,
+    cnpj: '01.425.787/0001-04',
+    razaoSocial: 'REDE S.A.',
+    nomeFantasia: 'Rede',
+    inscricaoEstadual: '222.333.444.555',
+    taxaMDRCreditoVista: 2.19,
+    taxaMDRCreditoParcelado: 3.69,
+    taxaMDRDebito: 1.09,
+    prazoDiasRepasseCredito: 30,
+    prazoDiasRepasseDebito: 1,
+    contaAtivoId: 6,
+    contaDespesaTaxaId: 57,
+    ativo: true
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    codigo: 3,
+    cnpj: '16.501.555/0001-57',
+    razaoSocial: 'STONE PAGAMENTOS S.A.',
+    nomeFantasia: 'Stone',
+    inscricaoEstadual: '333.444.555.666',
+    taxaMDRCreditoVista: 1.99,
+    taxaMDRCreditoParcelado: 3.49,
+    taxaMDRDebito: 0.99,
+    prazoDiasRepasseCredito: 30,
+    prazoDiasRepasseDebito: 1,
+    contaAtivoId: 6,
+    contaDespesaTaxaId: 57,
+    ativo: true
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    codigo: 4,
+    cnpj: '08.561.701/0001-01',
+    razaoSocial: 'PAGSEGURO INTERNET S.A.',
+    nomeFantasia: 'PagBank / PagSeguro',
+    inscricaoEstadual: '444.555.666.777',
+    taxaMDRCreditoVista: 2.49,
+    taxaMDRCreditoParcelado: 3.99,
+    taxaMDRDebito: 1.25,
+    prazoDiasRepasseCredito: 14,
+    prazoDiasRepasseDebito: 1,
+    contaAtivoId: 6,
+    contaDespesaTaxaId: 57,
+    ativo: true
+  }
+];
+
+const SEED_VENDAS_CARTAO: VendaCartaoOperadora[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    competencia: '2026-10',
+    administradoraId: 1,
+    administradoraNome: 'CIELO S.A.',
+    cnpjAdministradora: '01.027.058/0001-91',
+    valorCredito: 48500.00,
+    valorDebito: 24200.00,
+    valorTotalBruto: 72700.00,
+    taxaMDREstimada: 1447.13,
+    valorLiquidoReceber: 71252.87,
+    retencaoIRRF: 21.71,
+    status: 'CONCILIADO'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    competencia: '2026-10',
+    administradoraId: 3,
+    administradoraNome: 'STONE PAGAMENTOS S.A.',
+    cnpjAdministradora: '16.501.555/0001-57',
+    valorCredito: 32400.00,
+    valorDebito: 18100.00,
+    valorTotalBruto: 50500.00,
+    taxaMDREstimada: 823.95,
+    valorLiquidoReceber: 49676.05,
+    retencaoIRRF: 12.36,
+    status: 'PENDENTE'
+  }
+];
+
+const SEED_CONTAS_PARTE_B_LALUR: ContaParteBLalur[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigo: 'PF-001',
+    descricao: 'Prejuízo Fiscal Operacional Acumulado de Exercícios Anteriores (IRPJ)',
+    tipoTributo: 'IRPJ',
+    tipoConta: 'PREJUIZO_FISCAL',
+    dataCadastro: '2024-12-31',
+    saldoInicial: 120000.00,
+    saldoAtual: 120000.00,
+    identificadorSpedEcf: 'M010_PF01'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    codigo: 'BN-001',
+    descricao: 'Base de Cálculo Negativa de CSLL Acumulada de Períodos Anteriores',
+    tipoTributo: 'CSLL',
+    tipoConta: 'BASE_NEGATIVA',
+    dataCadastro: '2024-12-31',
+    saldoInicial: 95000.00,
+    saldoAtual: 95000.00,
+    identificadorSpedEcf: 'M010_BN01'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    codigo: 'DA-002',
+    descricao: 'Depreciação Acelerada Incentivada - Máquinas e Equipamentos Industriais',
+    tipoTributo: 'IRPJ',
+    tipoConta: 'DEPRECIACAO_ACELERADA',
+    dataCadastro: '2025-06-30',
+    saldoInicial: 35000.00,
+    saldoAtual: 35000.00,
+    identificadorSpedEcf: 'M010_DA02'
+  }
+];
+
+const SEED_LANCAMENTOS_PARTE_A: LancamentoLalurParteA[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    ano: 2026,
+    periodo: '2026-1T',
+    data: '2026-03-31',
+    tipo: 'ADICAO',
+    tributo: 'AMBOS',
+    codigoHistorico: 'M300.01',
+    descricao: 'Multas Punitivas por Infração Fiscal / Tributária (Art. 344 do RIR/2018)',
+    valor: 14500.00,
+    contaContabilNome: '4.02.01.05.0003 - Multas e Infrações Fiscais'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    ano: 2026,
+    periodo: '2026-1T',
+    data: '2026-03-31',
+    tipo: 'ADICAO',
+    tributo: 'IRPJ',
+    codigoHistorico: 'M300.05',
+    descricao: 'Brindes, Doações e Despesas de Representação não dedutíveis (Art. 249 Lei 6.404/76)',
+    valor: 8200.00,
+    contaContabilNome: '4.02.01.05.0008 - Doações e Contribuições'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    ano: 2026,
+    periodo: '2026-1T',
+    data: '2026-03-31',
+    tipo: 'ADICAO',
+    tributo: 'AMBOS',
+    codigoHistorico: 'M300.12',
+    descricao: 'Provisões não dedutíveis - Perdas Estimadas de Créditos de Liquidação Duvidosa (PCLD)',
+    valor: 18000.00,
+    contaContabilNome: '4.02.01.03.0005 - Despesa com PCLD'
+  },
+  {
+    id: 4,
+    empresaId: 1,
+    ano: 2026,
+    periodo: '2026-1T',
+    data: '2026-03-31',
+    tipo: 'EXCLUSAO',
+    tributo: 'AMBOS',
+    codigoHistorico: 'M300.30',
+    descricao: 'Receitas de Equivalência Patrimonial / Dividendos de Outras PJs (Art. 379 do RIR/2018)',
+    valor: 35000.00,
+    contaContabilNome: '3.01.02.01.0001 - Receita de Participações Societárias / MEP'
+  },
+  {
+    id: 5,
+    empresaId: 1,
+    ano: 2026,
+    periodo: '2026-1T',
+    data: '2026-03-31',
+    tipo: 'EXCLUSAO',
+    tributo: 'IRPJ',
+    codigoHistorico: 'M300.42',
+    descricao: 'Depreciação Acelerada Incentivada - Controle com contrapartida na Parte B',
+    valor: 12000.00,
+    contaContabilNome: '4.02.01.04.0001 - Despesa de Depreciação',
+    contaParteBVinculadaId: 3,
+    contaParteBNome: 'DA-002 - Depreciação Acelerada Incentivada'
+  }
+];
+
+const SEED_EVENTOS_REINF: EventoReinf[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    tipoEvento: 'R-1000',
+    nomeEvento: 'Informações do Contribuinte',
+    competencia: '2026-10',
+    status: 'TRANSMITIDO',
+    numeroRecibo: '1.202610.948271-01',
+    dataGeracao: '2026-10-01 09:30:00',
+    dataTransmissao: '2026-10-01 09:35:12',
+    xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
+<Reinf xmlns="http://www.reinf.esocial.gov.br/schemas/evtInfoContribuinte/v2_01_02">
+  <evtInfoContri id="ID100000000000001">
+    <ideEvento>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideContri>
+      <tpInsc>1</tpInsc>
+      <nrInsc>12345678000195</nrInsc>
+    </ideContri>
+    <infoContri>
+      <inclusao>
+        <idePeriodo>
+          <iniValid>2026-01</iniValid>
+        </idePeriodo>
+        <infoCadastro>
+          <classTrib>99</classTrib>
+          <indEscrituracao>1</indEscrituracao>
+          <indDesoneracao>0</indDesoneracao>
+          <indAcordoIsenMulta>0</indAcordoIsenMulta>
+          <contato>
+            <nmCtt>Roberto Mendes da Silva</nmCtt>
+            <cpfCtt>12345678901</cpfCtt>
+            <foneFixo>1133334444</foneFixo>
+            <email>fiscal@empresaexemplo.com.br</email>
+          </contato>
+          <softwareHouse>
+            <cnpjSoftHouse>11222333000144</cnpjSoftHouse>
+            <nmRazao>AMILLABS TECNOLOGIA CONTABIL LTDA</nmRazao>
+            <nmCont>Suporte Tecnico</nmCont>
+            <email>suporte@amillabs.com.br</email>
+          </softwareHouse>
+        </infoCadastro>
+      </inclusao>
+    </infoContri>
+  </evtInfoContri>
+</Reinf>`,
+    detalhes: {
+      totalBaseCalculo: 0,
+      totalRetencao: 0
+    }
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    tipoEvento: 'R-2010',
+    nomeEvento: 'Retenção Contribuição Previdenciária - Serviços Tomados',
+    competencia: '2026-10',
+    status: 'VALIDADO',
+    dataGeracao: '2026-10-15 14:00:00',
+    xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
+<Reinf xmlns="http://www.reinf.esocial.gov.br/schemas/evtTomadorServicos/v2_01_02">
+  <evtServTom id="ID201000000000001">
+    <ideEvento>
+      <perApur>2026-10</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideContri>
+      <tpInsc>1</tpInsc>
+      <nrInsc>12345678000195</nrInsc>
+    </ideContri>
+    <infoServTom>
+      <ideEstabObra>
+        <tpInscEstab>1</tpInscEstab>
+        <nrInscEstab>12345678000195</nrInscEstab>
+        <idePrestServ>
+          <cnpjPrestador>22333444000155</cnpjPrestador>
+          <vlrTotalBruto>32000.00</vlrTotalBruto>
+          <vlrTotalBaseRet>32000.00</vlrTotalBaseRet>
+          <vlrTotalRetPrinc>3520.00</vlrTotalRetPrinc>
+          <nfs>
+            <serie>1</serie>
+            <numDocto>4520</numDocto>
+            <dtEmisNF>2026-10-05</dtEmisNF>
+            <vlrBruto>32000.00</vlrBruto>
+            <infoTpServ>
+              <tpServ>100000001</tpServ>
+              <vlrBaseRet>32000.00</vlrBaseRet>
+              <vlrRetencao>3520.00</vlrRetencao>
+            </infoTpServ>
+          </nfs>
+        </idePrestServ>
+      </ideEstabObra>
+    </infoServTom>
+  </evtServTom>
+</Reinf>`,
+    detalhes: {
+      totalBaseCalculo: 32000.00,
+      totalRetencao: 3520.00,
+      codigoReceita: '2631',
+      prestadorTomador: 'SEGURANÇA E VIGILÂNCIA PATRIMONIAL LTDA',
+      cnpjCpf: '22.333.444/0001-55'
+    }
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    tipoEvento: 'R-4020',
+    nomeEvento: 'Retenções na Fonte - Pagamentos a PJ (IRRF / CSRF)',
+    competencia: '2026-10',
+    status: 'VALIDADO',
+    dataGeracao: '2026-10-15 14:15:00',
+    xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
+<Reinf xmlns="http://www.reinf.esocial.gov.br/schemas/evtRetencaoPJ/v2_01_02">
+  <evtRetPJ id="ID402000000000001">
+    <ideEvento>
+      <perApur>2026-10</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideContri>
+      <tpInsc>1</tpInsc>
+      <nrInsc>12345678000195</nrInsc>
+    </ideContri>
+    <ideEstab>
+      <tpInsc>1</tpInsc>
+      <nrInsc>12345678000195</nrInsc>
+      <ideBenef>
+        <cnpjBenef>15419093000144</cnpjBenef>
+        <idePgto>
+          <natRend>13007</natRend>
+          <observacao>Serviços de Assessoria Técnica e Nuvem</observacao>
+          <infoPgto>
+            <dtFG>2026-10-08</dtFG>
+            <vlrBruto>12800.00</vlrBruto>
+            <retencoes>
+              <vlrIR>192.00</vlrIR>
+              <vlrCSLL>128.00</vlrCSLL>
+              <vlrCofins>384.00</vlrCofins>
+              <vlrPP>83.20</vlrPP>
+              <vlrAgreg>595.20</vlrAgreg>
+            </retencoes>
+          </infoPgto>
+        </idePgto>
+      </ideBenef>
+    </ideEstab>
+  </evtRetPJ>
+</Reinf>`,
+    detalhes: {
+      totalBaseCalculo: 12800.00,
+      totalRetencao: 787.20,
+      codigoReceita: '1708 / 5952',
+      prestadorTomador: 'AMAZON WEB SERVICES BRASIL LTDA',
+      cnpjCpf: '15.419.093/0001-44',
+      naturezaRendimento: '13007 - Serviços de Assessoria Técnica Especializada'
+    }
+  }
+];
+
+const SEED_NFSE_EMISSAO: NfseEmissao[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    numeroDPS: 101,
+    serieDPS: '1',
+    numeroNfse: '20260000000101',
+    codigoVerificacao: 'ABC8-9921-XF88',
+    dataEmissao: '2026-10-05 10:15:00',
+    competencia: '2026-10',
+    tomadorId: 1,
+    tomadorRazaoSocial: 'INDUSTRIA METALURGICA PAULISTA S/A',
+    tomadorCnpjCpf: '11.222.333/0001-81',
+    tomadorEmail: 'financeiro@metalurgicapaulista.com.br',
+    tomadorEndereco: 'Av. das Indústrias, 1500 - Galpão 3',
+    tomadorCidade: 'São Paulo',
+    tomadorUf: 'SP',
+    tomadorCodigoIbge: '3550308',
+    itemLc116: '17.19 - Contabilidade, consultoria tributária e auditoria',
+    codigoTributacaoNacional: '17.19.01',
+    discriminacaoServico: 'Honorários Profissionais Contábeis e Assessoria Fiscal/Trabalhista ref. competência 10/2026 conforme Contrato de Prestação de Serviços nº 2026/01.',
+    valorServicos: 6850.00,
+    valorDeducoes: 0,
+    baseCalculoISS: 6850.00,
+    aliquotaISS: 5.0,
+    valorISS: 342.50,
+    issRetido: false,
+    retencaoIRRF: 102.75, // 1,5%
+    retencaoPIS: 44.53, // 0,65%
+    retencaoCOFINS: 205.50, // 3,0%
+    retencaoCSLL: 68.50, // 1,0%
+    retencaoINSS: 0,
+    valorTotalRetencoes: 421.28,
+    valorLiquidoNfse: 6428.72,
+    status: 'EMITIDA',
+    faturaHonorarioId: 1,
+    integradaFiscal: true,
+    integradaContabil: true
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    numeroDPS: 102,
+    serieDPS: '1',
+    numeroNfse: '20260000000102',
+    codigoVerificacao: 'J9K2-7711-BR94',
+    dataEmissao: '2026-10-10 11:30:00',
+    competencia: '2026-10',
+    tomadorId: 2,
+    tomadorRazaoSocial: 'COMERCIO E DISTRIBUIDORA ALIANCA LTDA',
+    tomadorCnpjCpf: '22.333.444/0001-92',
+    tomadorEmail: 'contato@distribuidoraalianca.com.br',
+    tomadorEndereco: 'Rua das Flores, 420',
+    tomadorCidade: 'Campinas',
+    tomadorUf: 'SP',
+    tomadorCodigoIbge: '3509502',
+    itemLc116: '17.19 - Contabilidade, consultoria tributária e auditoria',
+    codigoTributacaoNacional: '17.19.01',
+    discriminacaoServico: 'Serviços contábeis mensais, conciliação e escrituração SPED EFD Contribuições e ECD/ECF ref. 10/2026.',
+    valorServicos: 4200.00,
+    valorDeducoes: 0,
+    baseCalculoISS: 4200.00,
+    aliquotaISS: 5.0,
+    valorISS: 210.00,
+    issRetido: false,
+    retencaoIRRF: 63.00,
+    retencaoPIS: 27.30,
+    retencaoCOFINS: 126.00,
+    retencaoCSLL: 42.00,
+    retencaoINSS: 0,
+    valorTotalRetencoes: 258.30,
+    valorLiquidoNfse: 3941.70,
+    status: 'EMITIDA',
+    faturaHonorarioId: 2,
+    integradaFiscal: true,
+    integradaContabil: true
+  }
+];
+
+const SEED_ITENS_CIAP: ItemCiap[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigoBem: 'CIAP-001',
+    descricaoBem: 'Torno CNC Industrial Mazak Quick Turn',
+    dataEntrada: '2025-01-10',
+    numeroNotaFiscal: '10420',
+    serieNotaFiscal: '1',
+    fornecedorNome: 'MAZAK SULAMERICANA LTDA',
+    fornecedorCnpj: '02.441.988/0001-90',
+    valorTotalBem: 240000.00,
+    valorICMSOriginal: 43200.00,
+    parcelaAtual: 22,
+    totalParcelas: 48,
+    parcelaMesICMS: 900.00,
+    saldoICMSRemanescente: 23400.00,
+    status: 'ATIVO'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    codigoBem: 'CIAP-002',
+    descricaoBem: 'Centro de Usinagem Vertical Romi D800',
+    dataEntrada: '2025-06-15',
+    numeroNotaFiscal: '3201',
+    serieNotaFiscal: '1',
+    fornecedorNome: 'INDUSTRIAS ROMI S.A.',
+    fornecedorCnpj: '56.720.252/0001-88',
+    valorTotalBem: 380000.00,
+    valorICMSOriginal: 68400.00,
+    parcelaAtual: 17,
+    totalParcelas: 48,
+    parcelaMesICMS: 1425.00,
+    saldoICMSRemanescente: 44175.00,
+    status: 'ATIVO'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    codigoBem: 'CIAP-003',
+    descricaoBem: 'Injetora de Plástico Hidráulica 250T',
+    dataEntrada: '2026-02-20',
+    numeroNotaFiscal: '5514',
+    serieNotaFiscal: '2',
+    fornecedorNome: 'HAITIAN BRASIL MAQUINAS LTDA',
+    fornecedorCnpj: '07.391.222/0001-33',
+    valorTotalBem: 180000.00,
+    valorICMSOriginal: 32400.00,
+    parcelaAtual: 9,
+    totalParcelas: 48,
+    parcelaMesICMS: 675.00,
+    saldoICMSRemanescente: 26325.00,
+    status: 'ATIVO'
+  }
+];
+
+const SEED_EVENTOS_ESOCIAL: EventoESocial[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    tipoEvento: 'S-1200',
+    nomeEvento: 'Remuneração de Trabalhador vinculado ao RGPS',
+    colaboradorId: 1,
+    colaboradorNome: 'CARLOS EDUARDO SILVA',
+    colaboradorCpf: '123.456.789-01',
+    matricula: 'EMP-001',
+    competencia: '2026-10',
+    dataGeracao: '2026-10-15 11:00:00',
+    status: 'VALIDADO',
+    bases: {
+      baseINSS: 4500.00,
+      baseFGTS: 4500.00,
+      baseIRRF: 3850.20,
+      valorLiquido: 3752.45
+    },
+    xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
+<eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtRemun/v_S_01_02_00">
+  <evtRemun id="ID1123456780001952026101511000000001">
+    <ideEvento>
+      <indRetif>1</indRetif>
+      <perApur>2026-10</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideEmpregador>
+      <tpInsc>1</tpInsc>
+      <nrInsc>12345678000195</nrInsc>
+    </ideEmpregador>
+    <ideTrabalhador>
+      <cpfTrab>12345678901</cpfTrab>
+      <infoComplem>
+        <nmTrab>CARLOS EDUARDO SILVA</nmTrab>
+        <dtNascto>1988-05-12</dtNascto>
+      </infoComplem>
+    </ideTrabalhador>
+    <dmDev>
+      <ideDmDev>FOLHA_MENSAL_102026</ideDmDev>
+      <infoPerApur>
+        <ideEstabLot>
+          <tpInsc>1</tpInsc>
+          <nrInsc>12345678000195</nrInsc>
+          <codLotacao>LOT-001</codLotacao>
+          <remunPerApur>
+            <matricula>EMP-001</matricula>
+            <itensRemun>
+              <codRubr>1001</codRubr>
+              <ideTabRubr>TAB-RUBR</ideTabRubr>
+              <qtdRubr>30</qtdRubr>
+              <fatorRubr>1.0</fatorRubr>
+              <vrRubr>4500.00</vrRubr>
+              <indApurIR>0</indApurIR>
+            </itensRemun>
+          </remunPerApur>
+        </ideEstabLot>
+      </infoPerApur>
+    </dmDev>
+  </evtRemun>
+</eSocial>`
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    tipoEvento: 'S-1210',
+    nomeEvento: 'Pagamentos de Rendimentos do Trabalho',
+    colaboradorId: 1,
+    colaboradorNome: 'CARLOS EDUARDO SILVA',
+    colaboradorCpf: '123.456.789-01',
+    matricula: 'EMP-001',
+    competencia: '2026-10',
+    dataGeracao: '2026-10-15 11:15:00',
+    status: 'VALIDADO',
+    bases: {
+      baseINSS: 4500.00,
+      baseFGTS: 4500.00,
+      baseIRRF: 3850.20,
+      valorLiquido: 3752.45
+    },
+    xmlContent: `<?xml version="1.0" encoding="UTF-8"?>
+<eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtPgtos/v_S_01_02_00">
+  <evtPgtos id="ID1123456780001952026101511150000001">
+    <ideEvento>
+      <indRetif>1</indRetif>
+      <perApur>2026-10</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideEmpregador>
+      <tpInsc>1</tpInsc>
+      <nrInsc>12345678000195</nrInsc>
+    </ideEmpregador>
+    <ideBenef>
+      <cpfBenef>12345678901</cpfBenef>
+      <infoPgto>
+        <dtPgto>2026-11-05</dtPgto>
+        <tpPgto>1</tpPgto>
+        <perRef>2026-10</perRef>
+        <ideDmDev>FOLHA_MENSAL_102026</ideDmDev>
+        <vrLiq>3752.45</vrLiq>
+      </infoPgto>
+    </ideBenef>
+  </evtPgtos>
+</eSocial>`
+  }
+];
+
+const SEED_BAIXAS_ATIVOS: BaixaAtivoImobilizado[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    ativoId: 2,
+    codigoBem: 'VEIC-001',
+    descricaoBem: 'Veículo Utilitário Fiorino 1.4 Flex',
+    dataAquisicao: '2022-03-10',
+    dataBaixa: '2026-02-15',
+    motivoBaixa: 'VENDA',
+    valorAquisicaoOriginal: 65000.00,
+    depreciacaoAcumuladaData: 48750.00,
+    valorContabilResidual: 16250.00,
+    valorVendaAlienacao: 28000.00,
+    resultadoOperacao: 11750.00,
+    tipoResultado: 'GANHO_CAPITAL',
+    aliquotaIRPJGanho: 15.0,
+    aliquotaCSLLGanho: 9.0,
+    impostoDevidoGanho: 2820.00,
+    numeroNotaFiscalVenda: '1099',
+    serieNotaFiscalVenda: '1',
+    compradorNome: 'AUTO PEÇAS E MOTORES BRASIL LTDA',
+    compradorCnpjCpf: '11.222.333/0001-44',
+    estornoCiapNecessario: false,
+    saldoCiapEstornado: 0,
+    integradoContabil: true,
+    loteContabilId: 105
+  }
+];
+
+const SEED_INVENTARIO_PATRIMONIAL: ItemInventarioPatrimonial[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    ativoId: 1,
+    codigoPatrimonio: 'PAT-00101',
+    descricao: 'Servidor Dell PowerEdge R750 com 128GB RAM',
+    centroCustoId: 1,
+    centroCustoNome: 'Administração Geral',
+    departamento: 'Tecnologia da Informação',
+    responsavelNome: 'LUCAS MENDES',
+    responsavelCpf: '222.333.444-55',
+    localizacaoFisica: 'Data Center - Rack 02 - Slot 04',
+    dataTombamento: '2025-01-15',
+    estadoConservacao: 'EXCELENTE',
+    situacaoInventario: 'LOCALIZADO',
+    qrCodeIdentificador: 'PAT00101-DELL-R750-TI'
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    ativoId: 2,
+    codigoPatrimonio: 'PAT-00102',
+    descricao: 'Torno CNC Mazak Quick Turn Industrial',
+    centroCustoId: 2,
+    centroCustoNome: 'Produção / Operacional',
+    departamento: 'Usinagem Industrial',
+    responsavelNome: 'MARCOS ROBERTO',
+    responsavelCpf: '333.444.555-66',
+    localizacaoFisica: 'Galpão Fabril B - Linha 1',
+    dataTombamento: '2025-01-10',
+    estadoConservacao: 'EXCELENTE',
+    situacaoInventario: 'LOCALIZADO',
+    qrCodeIdentificador: 'PAT00102-MAZAK-CNC'
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    ativoId: 3,
+    codigoPatrimonio: 'PAT-00103',
+    descricao: 'Estação de Trabalho Dell Precision 5820',
+    centroCustoId: 1,
+    centroCustoNome: 'Administração Geral',
+    departamento: 'Controladoria & Auditoria',
+    responsavelNome: 'BEATRIZ LIMA',
+    responsavelCpf: '444.555.666-77',
+    localizacaoFisica: 'Andar 14 - Sala de Auditoria',
+    dataTombamento: '2025-06-20',
+    estadoConservacao: 'BOM',
+    situacaoInventario: 'LOCALIZADO',
+    qrCodeIdentificador: 'PAT00103-DELL-PRECISION'
+  }
+];
+
+const SEED_IMOVEIS_RURAIS: ImovelRuralLCDPR[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    codigoImovel: '001',
+    nirf: '12345678',
+    codigoIncra: '98765432100',
+    nomeImovel: 'Fazenda Agropecuária Santa Cruz',
+    endereco: 'Rodovia SP-330 Km 214 - Zona Rural',
+    municipio: 'Ribeirão Preto',
+    uf: 'SP',
+    codigoIbge: '3543402',
+    tipoExploracao: '1',
+    percentualParticipacao: 100.00
+  }
+];
+
+const SEED_LANCAMENTOS_LCDPR: LancamentoLCDPR[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    ano: 2026,
+    data: '2026-01-15',
+    imovelRuralId: 1,
+    imovelNome: 'Fazenda Agropecuária Santa Cruz',
+    contaBancaria: 'Banco do Brasil C/C 45900-1 (Ag. 0048)',
+    tipoDocumento: '1',
+    numeroDocumento: 'NF-e 1420',
+    participanteNome: 'COOPERATIVA AGROINDUSTRIAL COAMO',
+    participanteCnpjCpf: '75.643.218/0001-90',
+    tipoLancamento: 'RECEITA',
+    descricao: 'Venda de 1.200 sacas de Soja Safra 2025/2026',
+    valorEntrada: 156000.00,
+    valorSaida: 0,
+    saldoProgressivo: 156000.00
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    ano: 2026,
+    data: '2026-01-28',
+    imovelRuralId: 1,
+    imovelNome: 'Fazenda Agropecuária Santa Cruz',
+    contaBancaria: 'Banco do Brasil C/C 45900-1 (Ag. 0048)',
+    tipoDocumento: '1',
+    numeroDocumento: 'NF-e 8841',
+    participanteNome: 'FERTILIZANTES E DEFENSIVOS PAULISTA S/A',
+    participanteCnpjCpf: '03.882.119/0001-52',
+    tipoLancamento: 'DESPESA',
+    descricao: 'Aquisição de Adubação NPK e Defensivos para Milho Safrinha',
+    valorEntrada: 0,
+    valorSaida: 48200.00,
+    saldoProgressivo: 107800.00
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    ano: 2026,
+    data: '2026-02-10',
+    imovelRuralId: 1,
+    imovelNome: 'Fazenda Agropecuária Santa Cruz',
+    contaBancaria: 'Banco do Brasil C/C 45900-1 (Ag. 0048)',
+    tipoDocumento: '1',
+    numeroDocumento: 'NF-e 9920',
+    participanteNome: 'PETROBRAS DISTRIBUIDORA DE COMBUSTÍVEIS',
+    participanteCnpjCpf: '33.000.167/0001-01',
+    tipoLancamento: 'DESPESA',
+    descricao: 'Aquisição de Óleo Diesel S10 para Tratores e Colheitadeiras',
+    valorEntrada: 0,
+    valorSaida: 24500.00,
+    saldoProgressivo: 83300.00
+  }
+];
+
 export class DatabaseService {
   private empresas: Empresa[] = [];
   private contas: ContaContabil[] = [];
@@ -1161,6 +2593,23 @@ export class DatabaseService {
   private regrasConciliacao: RegraConciliacao[] = [];
   private variaveisColaboradores: VariaveisColaborador[] = [];
   private ativosImobilizados: AtivoImobilizado[] = [];
+  private calculosFerias: CalculoFerias[] = [];
+  private calculosDecimoTerceiro: CalculoDecimoTerceiro[] = [];
+  private calculosRescisao: CalculoRescisao[] = [];
+  private obrigacoesFiscais: ObrigacaoFiscal[] = [];
+  private administradorasCartao: AdministradoraCartao[] = [];
+  private vendasCartao: VendaCartaoOperadora[] = [];
+  private contasParteBLalur: ContaParteBLalur[] = [];
+  private lancamentosParteA: LancamentoLalurParteA[] = [];
+  private movimentosParteBLalur: MovimentoParteBLalur[] = [];
+  private eventosReinf: EventoReinf[] = [];
+  private nfseEmitidas: NfseEmissao[] = [];
+  private itensCiap: ItemCiap[] = [];
+  private eventosESocial: EventoESocial[] = [];
+  private baixasAtivos: BaixaAtivoImobilizado[] = [];
+  private itensInventario: ItemInventarioPatrimonial[] = [];
+  private imoveisRurais: ImovelRuralLCDPR[] = [];
+  private lancamentosLcdpr: LancamentoLCDPR[] = [];
 
   constructor() {
     this.initDatabase();
@@ -1198,6 +2647,22 @@ export class DatabaseService {
         this.regrasConciliacao = snap.regrasConciliacao || SEED_REGRAS_CONCILIACAO;
         this.variaveisColaboradores = snap.variaveisColaboradores || SEED_VARIAVEIS_COLABORADORES;
         this.ativosImobilizados = snap.ativosImobilizados || SEED_ATIVOS_IMOBILIZADOS;
+        this.calculosFerias = snap.calculosFerias || SEED_CALCULOS_FERIAS;
+        this.calculosDecimoTerceiro = snap.calculosDecimoTerceiro || SEED_CALCULOS_DECIMO_TERCEIRO;
+        this.calculosRescisao = snap.calculosRescisao || SEED_CALCULOS_RESCISAO;
+        this.obrigacoesFiscais = snap.obrigacoesFiscais || SEED_OBRIGACOES_FISCAIS;
+        this.administradorasCartao = snap.administradorasCartao || SEED_ADMINISTRADORAS_CARTAO;
+        this.vendasCartao = snap.vendasCartao || SEED_VENDAS_CARTAO;
+        this.contasParteBLalur = snap.contasParteBLalur || SEED_CONTAS_PARTE_B_LALUR;
+        this.lancamentosParteA = snap.lancamentosParteA || SEED_LANCAMENTOS_PARTE_A;
+        this.eventosReinf = snap.eventosReinf || SEED_EVENTOS_REINF;
+        this.nfseEmitidas = snap.nfseEmitidas || SEED_NFSE_EMISSAO;
+        this.itensCiap = snap.itensCiap || SEED_ITENS_CIAP;
+        this.eventosESocial = snap.eventosESocial || SEED_EVENTOS_ESOCIAL;
+        this.baixasAtivos = snap.baixasAtivos || SEED_BAIXAS_ATIVOS;
+        this.itensInventario = snap.itensInventario || SEED_INVENTARIO_PATRIMONIAL;
+        this.imoveisRurais = snap.imoveisRurais || SEED_IMOVEIS_RURAIS;
+        this.lancamentosLcdpr = snap.lancamentosLcdpr || SEED_LANCAMENTOS_LCDPR;
       } catch (e) {
         this.carregarSeeds();
       }
@@ -1207,12 +2672,12 @@ export class DatabaseService {
 
     const rawRede = localStorage.getItem(STORAGE_KEYS.REDE_CONFIG);
     if (rawRede) {
-      try { this.redeConfig = JSON.parse(rawRede); } catch(e) {}
+      try { this.redeConfig = JSON.parse(rawRede); } catch (e) { }
     }
 
     const rawUser = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
     if (rawUser) {
-      try { this.currentUser = JSON.parse(rawUser); } catch(e) {}
+      try { this.currentUser = JSON.parse(rawUser); } catch (e) { }
     }
   }
 
@@ -1243,6 +2708,22 @@ export class DatabaseService {
     this.regrasConciliacao = [...SEED_REGRAS_CONCILIACAO];
     this.variaveisColaboradores = [...SEED_VARIAVEIS_COLABORADORES];
     this.ativosImobilizados = [...SEED_ATIVOS_IMOBILIZADOS];
+    this.calculosFerias = [...SEED_CALCULOS_FERIAS];
+    this.calculosDecimoTerceiro = [...SEED_CALCULOS_DECIMO_TERCEIRO];
+    this.calculosRescisao = [...SEED_CALCULOS_RESCISAO];
+    this.obrigacoesFiscais = [...SEED_OBRIGACOES_FISCAIS];
+    this.administradorasCartao = [...SEED_ADMINISTRADORAS_CARTAO];
+    this.vendasCartao = [...SEED_VENDAS_CARTAO];
+    this.contasParteBLalur = [...SEED_CONTAS_PARTE_B_LALUR];
+    this.lancamentosParteA = [...SEED_LANCAMENTOS_PARTE_A];
+    this.eventosReinf = [...SEED_EVENTOS_REINF];
+    this.nfseEmitidas = [...SEED_NFSE_EMISSAO];
+    this.itensCiap = [...SEED_ITENS_CIAP];
+    this.eventosESocial = [...SEED_EVENTOS_ESOCIAL];
+    this.baixasAtivos = [...SEED_BAIXAS_ATIVOS];
+    this.itensInventario = [...SEED_INVENTARIO_PATRIMONIAL];
+    this.imoveisRurais = [...SEED_IMOVEIS_RURAIS];
+    this.lancamentosLcdpr = [...SEED_LANCAMENTOS_LCDPR];
 
     this.persistSnapshot();
   }
@@ -1274,6 +2755,22 @@ export class DatabaseService {
       regrasConciliacao: this.regrasConciliacao,
       variaveisColaboradores: this.variaveisColaboradores,
       ativosImobilizados: this.ativosImobilizados,
+      calculosFerias: this.calculosFerias,
+      calculosDecimoTerceiro: this.calculosDecimoTerceiro,
+      calculosRescisao: this.calculosRescisao,
+      obrigacoesFiscais: this.obrigacoesFiscais,
+      administradorasCartao: this.administradorasCartao,
+      vendasCartao: this.vendasCartao,
+      contasParteBLalur: this.contasParteBLalur,
+      lancamentosParteA: this.lancamentosParteA,
+      eventosReinf: this.eventosReinf,
+      nfseEmitidas: this.nfseEmitidas,
+      itensCiap: this.itensCiap,
+      eventosESocial: this.eventosESocial,
+      baixasAtivos: this.baixasAtivos,
+      itensInventario: this.itensInventario,
+      imoveisRurais: this.imoveisRurais,
+      lancamentosLcdpr: this.lancamentosLcdpr,
       timestamp: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEYS.SNAPSHOT, JSON.stringify(snap));
@@ -1398,7 +2895,7 @@ export class DatabaseService {
         this.registrarAuditoria('SISTEMA', 'RESTAURAÇÃO', 'Banco de dados restaurado com sucesso.');
         return true;
       }
-    } catch (e) {}
+    } catch (e) { }
     return false;
   }
 
@@ -1408,6 +2905,7 @@ export class DatabaseService {
 
   // APIs Empresa
   public getEmpresas(): Empresa[] { return [...this.empresas]; }
+  public getEmpresa(id: number): Empresa | undefined { return this.empresas.find(e => e.id === id); }
   public getActiveEmpresa(): Empresa {
     return this.empresas.find(e => e.id === this.activeEmpresaId) || this.empresas[0] || SEED_EMPRESA;
   }
@@ -1741,6 +3239,274 @@ export class DatabaseService {
     if (idx >= 0) this.apuracoesFiscais[idx] = ap;
     else { ap.id = Date.now(); this.apuracoesFiscais.unshift(ap); }
     this.persistSnapshot();
+  }
+
+  // --------------------------------------------------------------------------
+  // LIVROS FISCAIS OFICIAIS (ESCRITA FISCAL / PADRÃO  SISTEMAS)
+  // --------------------------------------------------------------------------
+  public gerarLivroEntradas(empresaId?: number, dataInicial?: string, dataFinal?: string): LinhaLivroEntradas[] {
+    const empId = empresaId || this.activeEmpresaId;
+    let notas = this.notasFiscais.filter(n => n.empresaId === empId && n.tipo === 'ENTRADA');
+
+    if (dataInicial) {
+      notas = notas.filter(n => (n.dataEntradaSaida || n.dataEmissao) >= dataInicial);
+    }
+    if (dataFinal) {
+      notas = notas.filter(n => (n.dataEntradaSaida || n.dataEmissao) <= dataFinal);
+    }
+
+    notas.sort((a, b) => new Date(a.dataEntradaSaida || a.dataEmissao).getTime() - new Date(b.dataEntradaSaida || b.dataEmissao).getTime() || (Number(a.numero) || 0) - (Number(b.numero) || 0));
+
+    return notas.map((n, idx) => {
+      const part = this.participantes.find(p => p.cnpjCpf === n.clienteFornecedorCnpj || p.id === n.participanteId);
+      const isST = n.cfop?.startsWith('1.403') || n.cfop?.startsWith('2.403');
+      const isUsoConsumo = n.cfop?.startsWith('1.556') || n.cfop?.startsWith('2.556');
+      const baseICMS = n.baseCalculoICMS || 0;
+      const valorICMS = n.valorICMS || 0;
+      const aliqICMS = baseICMS > 0 && valorICMS > 0 ? Math.round((valorICMS / baseICMS) * 100) : 0;
+
+      const isentas = isST ? (n.valorTotal - baseICMS) : 0;
+      const outras = isUsoConsumo ? n.valorTotal : (!isST && baseICMS === 0 ? n.valorTotal : 0);
+
+      return {
+        id: n.id || idx + 1,
+        dataEntrada: n.dataEntradaSaida || n.dataEmissao,
+        dataEmissao: n.dataEmissao,
+        especie: n.modelo === '55' ? 'NF-e 55' : 'Doc. Fiscal',
+        serie: n.serie || '1',
+        numero: n.numero,
+        emitenteNome: n.clienteFornecedorNome || part?.nomeRazaoSocial || 'FORNECEDOR',
+        emitenteCnpjCpf: n.clienteFornecedorCnpj || part?.cnpjCpf || '',
+        emitenteUf: part?.uf || 'SP',
+        cfop: n.cfop || '1.102',
+        valorContabil: n.valorTotal,
+        baseCalculoICMS: baseICMS,
+        aliquotaICMS: aliqICMS,
+        impostoCreditadoICMS: valorICMS,
+        isentasNaoTributadasICMS: Math.max(0, isentas),
+        outrasICMS: Math.max(0, outras),
+        impostoCreditadoIPI: 0,
+        observacoes: isST ? 'ICMS Retido por ST na origem' : (isUsoConsumo ? 'Material Uso/Consumo s/ crédito' : 'Operação tributada integralmente')
+      };
+    });
+  }
+
+  public gerarLivroSaidas(empresaId?: number, dataInicial?: string, dataFinal?: string): LinhaLivroSaidas[] {
+    const empId = empresaId || this.activeEmpresaId;
+    let notas = this.notasFiscais.filter(n => n.empresaId === empId && (n.tipo === 'SAIDA' || n.tipo === 'SERVICO'));
+
+    if (dataInicial) {
+      notas = notas.filter(n => n.dataEmissao >= dataInicial);
+    }
+    if (dataFinal) {
+      notas = notas.filter(n => n.dataEmissao <= dataFinal);
+    }
+
+    notas.sort((a, b) => new Date(a.dataEmissao).getTime() - new Date(b.dataEmissao).getTime() || (Number(a.numero) || 0) - (Number(b.numero) || 0));
+
+    return notas.map((n, idx) => {
+      const part = this.participantes.find(p => p.cnpjCpf === n.clienteFornecedorCnpj || p.id === n.participanteId);
+      const isST = n.cfop?.startsWith('5.405') || n.cfop?.startsWith('6.405');
+      const isServico = n.tipo === 'SERVICO' || n.cfop?.startsWith('5.933');
+      const baseICMS = isServico ? 0 : (n.baseCalculoICMS || 0);
+      const valorICMS = isServico ? 0 : (n.valorICMS || 0);
+      const aliqICMS = baseICMS > 0 && valorICMS > 0 ? Math.round((valorICMS / baseICMS) * 100) : 0;
+
+      const isentas = isST ? (n.valorTotal - baseICMS) : 0;
+      const outras = isServico ? n.valorTotal : (!isST && baseICMS === 0 ? n.valorTotal : 0);
+
+      return {
+        id: n.id || idx + 1,
+        dataEmissao: n.dataEmissao,
+        dataSaida: n.dataEntradaSaida || n.dataEmissao,
+        especie: isServico ? 'NFS-e' : (n.modelo === '55' ? 'NF-e 55' : 'NFC-e 65'),
+        serie: n.serie || '1',
+        numero: n.numero,
+        destinatarioNome: n.clienteFornecedorNome || part?.nomeRazaoSocial || 'CLIENTE',
+        destinatarioCnpjCpf: n.clienteFornecedorCnpj || part?.cnpjCpf || '',
+        destinatarioUf: part?.uf || 'SP',
+        cfop: n.cfop || (isServico ? '5.933' : '5.102'),
+        valorContabil: n.valorTotal,
+        baseCalculoICMS: baseICMS,
+        aliquotaICMS: aliqICMS,
+        impostoDebitadoICMS: valorICMS,
+        isentasNaoTributadasICMS: Math.max(0, isentas),
+        outrasICMS: Math.max(0, outras),
+        icmsSTRetido: isST ? 0 : undefined,
+        observacoes: isServico ? `ISS Retido: R$ ${(n.retencaoIRRF || 0).toFixed(2)}` : (isST ? 'ICMS ST Cobrado Anteriormente' : 'Venda tributada integralmente')
+      };
+    });
+  }
+
+  public gerarApuracaoICMSLivro(empresaId?: number, competencia?: string): ResumoApuracaoICMSLivro {
+    const empId = empresaId || this.activeEmpresaId;
+    const comp = competencia || this.getEmpresa(empId)?.competenciaAtiva || '2026-10';
+    const [ano, mes] = comp.split('-');
+
+    const notasComp = this.notasFiscais.filter(n => n.empresaId === empId && n.dataEmissao.startsWith(`${ano}-${mes}`));
+    const notasEntrada = notasComp.filter(n => n.tipo === 'ENTRADA');
+    const notasSaida = notasComp.filter(n => n.tipo === 'SAIDA');
+    const notasServico = notasComp.filter(n => n.tipo === 'SERVICO' || n.cfop === '5.933');
+
+    const totalDebitoPorSaidas = notasSaida.reduce((acc, n) => acc + (n.valorICMS || 0), 0);
+    const outrosDebitos = 0;
+    const estornoCreditos = 0;
+    const totalDebitos = totalDebitoPorSaidas + outrosDebitos + estornoCreditos;
+
+    const totalCreditoPorEntradas = notasEntrada.reduce((acc, n) => acc + (n.valorICMS || 0), 0);
+    const outrosCreditos = 0;
+    const estornoDebitos = 0;
+    const saldoCredorAnterior = 0;
+    const totalCreditos = totalCreditoPorEntradas + outrosCreditos + estornoDebitos + saldoCredorAnterior;
+
+    const saldoDevedorApurado = Math.max(0, totalDebitos - totalCreditos);
+    const saldoCredorATransportar = Math.max(0, totalCreditos - totalDebitos);
+
+    // ISSQN
+    const receitaServicos = notasServico.reduce((acc, n) => acc + n.valorTotal, 0);
+    const deducoesBaseISS = 0;
+    const baseCalculoISS = Math.max(0, receitaServicos - deducoesBaseISS);
+    const aliquotaISS = 5.0; // 5%
+    const issProprioDevido = Math.round((baseCalculoISS * (aliquotaISS / 100)) * 100) / 100;
+    const issRetidoFonte = notasServico.reduce((acc, n) => acc + (n.retencaoIRRF || 0), 0);
+    const issLiquidoARecolher = Math.max(0, issProprioDevido - issRetidoFonte);
+
+    return {
+      competencia: comp,
+      totalDebitoPorSaidas,
+      outrosDebitos,
+      estornoCreditos,
+      totalDebitos,
+      totalCreditoPorEntradas,
+      outrosCreditos,
+      estornoDebitos,
+      saldoCredorAnterior,
+      totalCreditos,
+      saldoDevedorApurado,
+      saldoCredorATransportar,
+      receitaServicos,
+      deducoesBaseISS,
+      baseCalculoISS,
+      aliquotaISS,
+      issProprioDevido,
+      issRetidoFonte,
+      issLiquidoARecolher
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // MOTOR LEGAL: SIMPLES NACIONAL COM SEGREGAÇÃO (ST ICMS & MONOFÁSICO PIS/COFINS)
+  // LC 123/2006 Art. 18 § 4º-A & Resolução CGSN 140/2018
+  // --------------------------------------------------------------------------
+  public calcularSimplesNacionalComSegregacao(empresaId?: number, competencia?: string): ApuracaoFiscal {
+    const empId = empresaId || this.activeEmpresaId;
+    const emp = this.getEmpresa(empId);
+    const comp = competencia || emp?.competenciaAtiva || '2026-10';
+    const [ano, mes] = comp.split('-');
+
+    const notas = this.getNotasFiscais(empId).filter(n => n.dataEmissao.startsWith(`${ano}-${mes}`));
+    const notasSaida = notas.filter(n => n.tipo === 'SAIDA' || n.tipo === 'SERVICO');
+
+    let receitaTributadaIntegral = 0;
+    let receitaSegregadaST = 0;
+    let receitaSegregadaMonofasico = 0;
+    let receitaSegregadaSTeMonofasico = 0;
+
+    for (const nf of notasSaida) {
+      if (nf.itens && nf.itens.length > 0) {
+        for (const item of nf.itens) {
+          const isST = item.cstICMS === '60' || item.cstICMS === '10' || item.cstICMS === '30' || item.cstICMS === '70' || item.cfop === '5.405' || item.cfop === '6.405';
+          const isMonofasico = item.cstPIS === '04' || item.cstPIS === '02' || item.cstCOFINS === '04' || item.ncm?.startsWith('8507') || item.ncm?.startsWith('2710') || item.ncm?.startsWith('8708') || item.ncm?.startsWith('3004');
+
+          if (isST && isMonofasico) {
+            receitaSegregadaSTeMonofasico += item.valorTotal;
+          } else if (isST) {
+            receitaSegregadaST += item.valorTotal;
+          } else if (isMonofasico) {
+            receitaSegregadaMonofasico += item.valorTotal;
+          } else {
+            receitaTributadaIntegral += item.valorTotal;
+          }
+        }
+      } else {
+        // Fallback por cabeçalho da nota
+        const isST = nf.cfop?.startsWith('5.405') || nf.cfop?.startsWith('6.405');
+        if (isST) {
+          receitaSegregadaSTeMonofasico += nf.valorTotal;
+        } else {
+          receitaTributadaIntegral += nf.valorTotal;
+        }
+      }
+    }
+
+    const receitaBrutaTotal = receitaTributadaIntegral + receitaSegregadaST + receitaSegregadaMonofasico + receitaSegregadaSTeMonofasico;
+    const rbt12 = 1250000.00; // Receita Bruta 12 Meses: Faixa 3 Anexo I (Alíquota nominal 9,50%, dedução R$ 13.860,00)
+
+    // Alíquota efetiva base do Anexo I
+    const aliqEfetivaBase = rbt12 > 0 ? ((rbt12 * 0.0950) - 13860.00) / rbt12 : 0.0839; // ~8,3912%
+
+    // Fatias percentuais dos tributos no Anexo I:
+    // CPP: 41.50%, ICMS: 34.00%, PIS: 2.76%, COFINS: 12.74%, IRPJ: 5.50%, CSLL: 3.50%
+    const aliqIntegral = aliqEfetivaBase;
+    const aliqSemICMS = aliqEfetivaBase * (1 - 0.3400); // 5,538%
+    const aliqSemPISCOFINS = aliqEfetivaBase * (1 - 0.0276 - 0.1274); // 7,090%
+    const aliqSemICMSEMonofasico = aliqEfetivaBase * (1 - 0.3400 - 0.0276 - 0.1274); // 4,237%
+
+    const dasIntegral = receitaTributadaIntegral * aliqIntegral;
+    const dasST = receitaSegregadaST * aliqSemICMS;
+    const dasMonofasico = receitaSegregadaMonofasico * aliqSemPISCOFINS;
+    const dasSTeMonofasico = receitaSegregadaSTeMonofasico * aliqSemICMSEMonofasico;
+
+    const valorDASReal = Math.round((dasIntegral + dasST + dasMonofasico + dasSTeMonofasico) * 100) / 100;
+    const dasSemSegregacao = Math.round((receitaBrutaTotal * aliqEfetivaBase) * 100) / 100;
+    const economiaTributaria = Math.round((dasSemSegregacao - valorDASReal) * 100) / 100;
+    const percentualEconomia = dasSemSegregacao > 0 ? (economiaTributaria / dasSemSegregacao) * 100 : 0;
+
+    const det: Record<string, number> = {
+      'Simples Nacional - CPP (Previdência Patronal)': Math.round((valorDASReal * 0.4150) * 100) / 100,
+      'Simples Nacional - ICMS Próprio (s/ ST)': Math.round((dasIntegral * 0.3400 + dasMonofasico * 0.3400) * 100) / 100,
+      'Simples Nacional - PIS/PASEP (s/ Monofásicos)': Math.round((dasIntegral * 0.0276 + dasST * 0.0276) * 100) / 100,
+      'Simples Nacional - COFINS (s/ Monofásicos)': Math.round((dasIntegral * 0.1274 + dasST * 0.1274) * 100) / 100,
+      'Simples Nacional - IRPJ': Math.round((valorDASReal * 0.0550) * 100) / 100,
+      'Simples Nacional - CSLL': Math.round((valorDASReal * 0.0350) * 100) / 100
+    };
+
+    const apuracao: ApuracaoFiscal = {
+      id: Date.now(),
+      empresaId: empId,
+      competencia: comp,
+      regime: 'SIMPLES_NACIONAL',
+      regimeTributario: 'SIMPLES_NACIONAL',
+      receitaBruta: receitaBrutaTotal,
+      faturamentoTotal: receitaBrutaTotal,
+      rbt12,
+      impostoDevido: valorDASReal,
+      valorDAS: valorDASReal,
+      aliquotaEfetiva: receitaBrutaTotal > 0 ? (valorDASReal / receitaBrutaTotal) : aliqEfetivaBase,
+      aliquotaEfetivaDAS: receitaBrutaTotal > 0 ? (valorDASReal / receitaBrutaTotal) : aliqEfetivaBase,
+      valorICMSApurado: det['Simples Nacional - ICMS Próprio (s/ ST)'],
+      valorPISApurado: det['Simples Nacional - PIS/PASEP (s/ Monofásicos)'],
+      valorCOFINSApurado: det['Simples Nacional - COFINS (s/ Monofásicos)'],
+      valorISSApurado: 0,
+      valorIRPJApurado: det['Simples Nacional - IRPJ'],
+      valorCSLLApurado: det['Simples Nacional - CSLL'],
+      detalhamentoImpostos: det,
+      guiaGerada: true,
+      dataVencimento: `${ano}-${(parseInt(mes) % 12 + 1).toString().padStart(2, '0')}-20`,
+      status: 'CALCULADA',
+      // Campos de Segregação
+      receitaTributadaIntegral: Math.round(receitaTributadaIntegral * 100) / 100,
+      receitaSegregadaST: Math.round(receitaSegregadaST * 100) / 100,
+      receitaSegregadaMonofasico: Math.round(receitaSegregadaMonofasico * 100) / 100,
+      receitaSegregadaSTeMonofasico: Math.round(receitaSegregadaSTeMonofasico * 100) / 100,
+      dasSemSegregacao,
+      economiaTributariaSegregacao: economiaTributaria,
+      percentualEconomia: Math.round(percentualEconomia * 100) / 100,
+      anexoSimples: 'Anexo I - Comércio'
+    };
+
+    this.saveApuracaoFiscal(apuracao);
+    return apuracao;
   }
 
   // Integração Automática: Escrita Fiscal -> Contabilidade
@@ -2129,7 +3895,7 @@ export class DatabaseService {
       // 1/12 avos de férias e 1/3 constitucional
       const provFerias = isCLT ? Math.round((sal / 12) * 100) / 100 : 0;
       const provTerco = isCLT ? Math.round((provFerias / 3) * 100) / 100 : 0;
-      
+
       // 1/12 avos de 13º salário
       const prov13 = isCLT ? Math.round((sal / 12) * 100) / 100 : 0;
 
@@ -2262,6 +4028,798 @@ export class DatabaseService {
       loteId,
       totalProvisao: totalGeral
     };
+  }
+
+  // --------------------------------------------------------------------------
+  // CÁLCULO E GESTÃO DE FÉRIAS (CLT / ART. 129 A 145)
+  // --------------------------------------------------------------------------
+  public getCalculosFerias(empresaId?: number): CalculoFerias[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.calculosFerias.filter(f => f.empresaId === empId);
+  }
+
+  public salvarCalculoFerias(f: CalculoFerias): void {
+    const idx = this.calculosFerias.findIndex(item => item.id === f.id);
+    if (idx >= 0) {
+      this.calculosFerias[idx] = f;
+    } else {
+      if (!f.id) f.id = Date.now();
+      this.calculosFerias.unshift(f);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('FÉRIAS', 'GRAVAÇÃO', `Cálculo de férias do colaborador ${f.colaboradorNome} salvo com sucesso. Líquido: R$ ${f.valorLiquidoReceber.toFixed(2)}.`);
+  }
+
+  public deleteCalculoFerias(id: number): void {
+    this.calculosFerias = this.calculosFerias.filter(f => f.id !== id);
+    this.persistSnapshot();
+  }
+
+  public calcularFeriasColaborador(params: {
+    empresaId: number;
+    colaboradorId: number;
+    periodoAquisitivoInicio: string;
+    periodoAquisitivoFim: string;
+    dataInicioGozo: string;
+    diasGozo: number;
+    abonoPecuniario: boolean;
+    diasAbono: number;
+    adiantarDecimoTerceiro: boolean;
+  }): CalculoFerias {
+    const colab = this.getColaboradores(params.empresaId).find(c => c.id === params.colaboradorId);
+    if (!colab) throw new Error('Colaborador não encontrado.');
+
+    const sal = colab.salarioBase || 0;
+    const diasG = params.diasGozo || 30;
+    const diasAb = params.abonoPecuniario ? (params.diasAbono || 10) : 0;
+
+    // 1. Proventos
+    const valorDiasFerias = Math.round(((sal / 30) * diasG) * 100) / 100;
+    const valorTerco = Math.round((valorDiasFerias / 3) * 100) / 100;
+    const valorAbono = diasAb > 0 ? Math.round(((sal / 30) * diasAb) * 100) / 100 : 0;
+    const valorTercoAb = diasAb > 0 ? Math.round((valorAbono / 3) * 100) / 100 : 0;
+    const valorAdiant13 = params.adiantarDecimoTerceiro ? Math.round((sal * 0.5) * 100) / 100 : 0;
+    const totalProventos = valorDiasFerias + valorTerco + valorAbono + valorTercoAb + valorAdiant13;
+
+    // 2. Base e Desconto INSS (Abono pecuniário e 1/3 abono são isentos de INSS)
+    const baseINSS = valorDiasFerias + valorTerco;
+    let valorINSS = 0;
+    if (colab.tipoVinculo === 'CLT') {
+      if (baseINSS <= 1518.00) valorINSS = Math.round((baseINSS * 0.075) * 100) / 100;
+      else if (baseINSS <= 2793.88) valorINSS = Math.round((baseINSS * 0.09 - 22.77) * 100) / 100;
+      else if (baseINSS <= 4190.83) valorINSS = Math.round((baseINSS * 0.12 - 106.59) * 100) / 100;
+      else if (baseINSS <= 8157.41) valorINSS = Math.round((baseINSS * 0.14 - 190.40) * 100) / 100;
+      else valorINSS = 951.63;
+    }
+
+    // 3. Base e Desconto IRRF (Tributação Exclusiva em Férias - Não soma com o mês)
+    const depIRRF = colab.dependentesIRRF || 0;
+    const deducaoDependentes = depIRRF * 189.59;
+    const baseIRRF = Math.max(0, baseINSS - valorINSS - deducaoDependentes);
+    let valorIRRF = 0;
+    if (baseIRRF > 2259.20) {
+      if (baseIRRF <= 2826.65) valorIRRF = Math.round((baseIRRF * 0.075 - 169.44) * 100) / 100;
+      else if (baseIRRF <= 3751.05) valorIRRF = Math.round((baseIRRF * 0.15 - 381.44) * 100) / 100;
+      else if (baseIRRF <= 4664.68) valorIRRF = Math.round((baseIRRF * 0.225 - 662.77) * 100) / 100;
+      else valorIRRF = Math.round((baseIRRF * 0.275 - 896.00) * 100) / 100;
+    }
+
+    const totalDescontos = valorINSS + valorIRRF;
+    const liquido = Math.round((totalProventos - totalDescontos) * 100) / 100;
+
+    // Data fim do gozo
+    const dtGozo = new Date(params.dataInicioGozo);
+    const dtFim = new Date(dtGozo);
+    dtFim.setDate(dtFim.getDate() + diasG - 1);
+    const dataFimStr = dtFim.toISOString().split('T')[0];
+
+    // Data de pagamento: 2 dias antes do início do gozo (Art. 145 CLT)
+    const dtPagto = new Date(dtGozo);
+    dtPagto.setDate(dtPagto.getDate() - 2);
+    const dataPagtoStr = dtPagto.toISOString().split('T')[0];
+
+    return {
+      id: Date.now(),
+      empresaId: params.empresaId,
+      colaboradorId: colab.id,
+      colaboradorNome: colab.nome,
+      matricula: colab.matricula,
+      cargo: colab.cargo || 'Colaborador',
+      salarioBase: sal,
+      periodoAquisitivoInicio: params.periodoAquisitivoInicio,
+      periodoAquisitivoFim: params.periodoAquisitivoFim,
+      dataInicioGozo: params.dataInicioGozo,
+      diasGozo: diasG,
+      dataFimGozo: dataFimStr,
+      abonoPecuniario: params.abonoPecuniario,
+      diasAbono: diasAb,
+      adiantarDecimoTerceiro: params.adiantarDecimoTerceiro,
+      valorDiasFerias,
+      valorTercoConstitucional: valorTerco,
+      valorAbonoPecuniario: valorAbono,
+      valorTercoAbono: valorTercoAb,
+      valorAdiantamento13: valorAdiant13,
+      valorTotalProventos: totalProventos,
+      baseCalculoINSS: baseINSS,
+      valorINSS,
+      baseCalculoIRRF: baseIRRF,
+      valorIRRF,
+      valorTotalDescontos: totalDescontos,
+      valorLiquidoReceber: liquido,
+      dataPagamento: dataPagtoStr,
+      status: 'CALCULADO',
+      integradaContabil: false
+    };
+  }
+
+  public integrarFeriasContabil(feriasId: number): { success: boolean; loteId: number } {
+    const ferias = this.calculosFerias.find(f => f.id === feriasId);
+    if (!ferias) return { success: false, loteId: 0 };
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId: ferias.empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Quitação de Férias - ${ferias.colaboradorNome} (${ferias.diasGozo} dias)`,
+      dataLote: ferias.dataPagamento,
+      status: 'FECHADO',
+      totalDebito: ferias.valorTotalProventos,
+      totalCredito: ferias.valorTotalProventos
+    };
+
+    // 1. D: 26 - Provisão de Férias a Pagar (baixa da provisão constituída)
+    // C: 21 - Salários e Férias a Pagar (valor líquido a pagar ao funcionário)
+    this.addLancamento({
+      empresaId: ferias.empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: ferias.dataPagamento,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 26,
+      contaCreditoId: 21,
+      valor: ferias.valorLiquidoReceber,
+      historicoId: 3,
+      complementoHistorico: `Quitação líquida de férias gozo ${ferias.dataInicioGozo} a ${ferias.dataFimGozo} - ${ferias.colaboradorNome}`,
+      usuarioNome: 'Módulo Folha'
+    });
+
+    // 2. Retenção de INSS s/ Férias: C: 22 (INSS a Recolher)
+    if (ferias.valorINSS > 0) {
+      this.addLancamento({
+        empresaId: ferias.empresaId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId,
+        dataLancamento: ferias.dataPagamento,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 26,
+        contaCreditoId: 22,
+        valor: ferias.valorINSS,
+        historicoId: 3,
+        complementoHistorico: `INSS retido sobre férias - ${ferias.colaboradorNome}`,
+        usuarioNome: 'Módulo Folha'
+      });
+    }
+
+    // 3. Retenção de IRRF s/ Férias: C: 23 (IRRF a Recolher)
+    if (ferias.valorIRRF > 0) {
+      this.addLancamento({
+        empresaId: ferias.empresaId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId,
+        dataLancamento: ferias.dataPagamento,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 26,
+        contaCreditoId: 23,
+        valor: ferias.valorIRRF,
+        historicoId: 3,
+        complementoHistorico: `IRRF retido na fonte sobre férias - ${ferias.colaboradorNome}`,
+        usuarioNome: 'Módulo Folha'
+      });
+    }
+
+    this.lotes.push(lote);
+    ferias.integradaContabil = true;
+    ferias.status = 'PAGO';
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_FÉRIAS', 'PROCESSAMENTO', `Férias do colaborador ${ferias.colaboradorNome} integradas no lote nº ${lote.numero}.`);
+
+    return { success: true, loteId };
+  }
+
+  // --------------------------------------------------------------------------
+  // CÁLCULO E GESTÃO DE 13º SALÁRIO (1ª E 2ª PARCELA)
+  // --------------------------------------------------------------------------
+  public getCalculosDecimoTerceiro(empresaId?: number, ano?: number): CalculoDecimoTerceiro[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.calculosDecimoTerceiro.filter(d => d.empresaId === empId && (!ano || d.ano === ano));
+  }
+
+  public salvarCalculoDecimoTerceiro(d: CalculoDecimoTerceiro): void {
+    const idx = this.calculosDecimoTerceiro.findIndex(item => item.id === d.id);
+    if (idx >= 0) {
+      this.calculosDecimoTerceiro[idx] = d;
+    } else {
+      if (!d.id) d.id = Date.now();
+      this.calculosDecimoTerceiro.unshift(d);
+    }
+    this.persistSnapshot();
+  }
+
+  public calcularDecimoTerceiro(empresaId: number, ano: number, parcela: 'PRIMEIRA' | 'SEGUNDA'): CalculoDecimoTerceiro[] {
+    const colabs = this.getColaboradores(empresaId).filter(c => c.status === 'ATIVO' && c.tipoVinculo === 'CLT');
+    const resultados: CalculoDecimoTerceiro[] = [];
+
+    for (const colab of colabs) {
+      const sal = colab.salarioBase || 0;
+
+      // Cálculo de avos no ano
+      let mesesAvos = 12;
+      if (colab.dataAdmissao) {
+        const dtAdm = new Date(colab.dataAdmissao);
+        if (dtAdm.getFullYear() === ano) {
+          const mesAdm = dtAdm.getMonth() + 1;
+          const diaAdm = dtAdm.getDate();
+          mesesAvos = 12 - mesAdm + 1;
+          if (diaAdm > 14) mesesAvos -= 1; // Art. 1º § 2º Lei 4.090/62 (mais de 14 dias)
+        }
+      }
+      mesesAvos = Math.max(1, Math.min(12, mesesAvos));
+
+      const valorIntegral = Math.round(((sal / 12) * mesesAvos) * 100) / 100;
+
+      if (parcela === 'PRIMEIRA') {
+        const valorBruto = Math.round((valorIntegral * 0.5) * 100) / 100;
+        const fgts = Math.round((valorBruto * 0.08) * 100) / 100;
+
+        const calc: CalculoDecimoTerceiro = {
+          id: Date.now() + colab.id,
+          empresaId,
+          colaboradorId: colab.id,
+          colaboradorNome: colab.nome,
+          matricula: colab.matricula,
+          cargo: colab.cargo || 'Colaborador',
+          salarioBase: sal,
+          competencia: `${ano}-11`,
+          ano,
+          parcela: 'PRIMEIRA',
+          mesesTrabalhadosAvos: mesesAvos,
+          valorIntegral,
+          valorBrutoParcela: valorBruto,
+          valorAdiantamentoDeduzido: 0,
+          baseINSS: 0,
+          valorINSS: 0,
+          baseIRRF: 0,
+          valorIRRF: 0,
+          baseFGTS: valorBruto,
+          valorFGTS: fgts,
+          valorLiquidoParcela: valorBruto,
+          dataPagamento: `${ano}-11-30`,
+          status: 'CALCULADO',
+          integradaContabil: false
+        };
+        resultados.push(calc);
+        this.salvarCalculoDecimoTerceiro(calc);
+      } else {
+        // Segunda parcela: valor integral menos adiantamento, com INSS e IRRF
+        const adiantamentoExistente = this.calculosDecimoTerceiro.find(d =>
+          d.empresaId === empresaId && d.colaboradorId === colab.id && d.ano === ano && d.parcela === 'PRIMEIRA'
+        );
+        const valorAdiantado = adiantamentoExistente ? adiantamentoExistente.valorBrutoParcela : Math.round((valorIntegral * 0.5) * 100) / 100;
+
+        // INSS sobre valor total do 13º
+        let valorINSS = 0;
+        if (valorIntegral <= 1518.00) valorINSS = Math.round((valorIntegral * 0.075) * 100) / 100;
+        else if (valorIntegral <= 2793.88) valorINSS = Math.round((valorIntegral * 0.09 - 22.77) * 100) / 100;
+        else if (valorIntegral <= 4190.83) valorINSS = Math.round((valorIntegral * 0.12 - 106.59) * 100) / 100;
+        else if (valorIntegral <= 8157.41) valorINSS = Math.round((valorIntegral * 0.14 - 190.40) * 100) / 100;
+        else valorINSS = 951.63;
+
+        // IRRF sobre valor total do 13º
+        const depIRRF = colab.dependentesIRRF || 0;
+        const deducaoDep = depIRRF * 189.59;
+        const baseIRRF = Math.max(0, valorIntegral - valorINSS - deducaoDep);
+        let valorIRRF = 0;
+        if (baseIRRF > 2259.20) {
+          if (baseIRRF <= 2826.65) valorIRRF = Math.round((baseIRRF * 0.075 - 169.44) * 100) / 100;
+          else if (baseIRRF <= 3751.05) valorIRRF = Math.round((baseIRRF * 0.15 - 381.44) * 100) / 100;
+          else if (baseIRRF <= 4664.68) valorIRRF = Math.round((baseIRRF * 0.225 - 662.77) * 100) / 100;
+          else valorIRRF = Math.round((baseIRRF * 0.275 - 896.00) * 100) / 100;
+        }
+
+        const saldoLiquido = Math.max(0, Math.round((valorIntegral - valorAdiantado - valorINSS - valorIRRF) * 100) / 100);
+        const baseFGTS = Math.max(0, valorIntegral - valorAdiantado);
+        const fgts = Math.round((baseFGTS * 0.08) * 100) / 100;
+
+        const calc: CalculoDecimoTerceiro = {
+          id: Date.now() + colab.id,
+          empresaId,
+          colaboradorId: colab.id,
+          colaboradorNome: colab.nome,
+          matricula: colab.matricula,
+          cargo: colab.cargo || 'Colaborador',
+          salarioBase: sal,
+          competencia: `${ano}-12`,
+          ano,
+          parcela: 'SEGUNDA',
+          mesesTrabalhadosAvos: mesesAvos,
+          valorIntegral,
+          valorBrutoParcela: valorIntegral,
+          valorAdiantamentoDeduzido: valorAdiantado,
+          baseINSS: valorIntegral,
+          valorINSS,
+          baseIRRF,
+          valorIRRF,
+          baseFGTS,
+          valorFGTS: fgts,
+          valorLiquidoParcela: saldoLiquido,
+          dataPagamento: `${ano}-12-20`,
+          status: 'CALCULADO',
+          integradaContabil: false
+        };
+        resultados.push(calc);
+        this.salvarCalculoDecimoTerceiro(calc);
+      }
+    }
+
+    this.registrarAuditoria('13º_SALÁRIO', 'PROCESSAMENTO', `Cálculo da ${parcela} parcela do 13º salário ano ${ano} processado para ${resultados.length} colaboradores.`);
+    return resultados;
+  }
+
+  public integrarDecimoTerceiroContabil(empresaId: number, ano: number, parcela: 'PRIMEIRA' | 'SEGUNDA'): {
+    success: boolean;
+    loteId: number;
+    totalValor: number;
+  } {
+    const calculos = this.calculosDecimoTerceiro.filter(d => d.empresaId === empresaId && d.ano === ano && d.parcela === parcela && !d.integradaContabil);
+    if (calculos.length === 0) return { success: false, loteId: 0, totalValor: 0 };
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const dataLote = parcela === 'PRIMEIRA' ? `${ano}-11-30` : `${ano}-12-20`;
+    let totalLote = 0;
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Quitação do 13º Salário (${parcela === 'PRIMEIRA' ? '1ª Parcela Adiantamento' : '2ª Parcela Quitação'}) - Exercício ${ano}`,
+      dataLote,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    for (const d of calculos) {
+      if (parcela === 'PRIMEIRA') {
+        // D: 27 - Provisão 13º Salário a Pagar / C: 21 - Salários e 13º a Pagar
+        this.addLancamento({
+          empresaId,
+          numeroPartida: this.lancamentos.length + 1,
+          loteId,
+          dataLancamento: dataLote,
+          tipoPartida: 'SIMPLES',
+          contaDebitoId: 27,
+          contaCreditoId: 21,
+          valor: d.valorLiquidoParcela,
+          historicoId: 3,
+          complementoHistorico: `Adiantamento 50% de 13º Salário - ${d.colaboradorNome}`,
+          usuarioNome: 'Módulo Folha'
+        });
+        totalLote += d.valorLiquidoParcela;
+      } else {
+        // Segunda Parcela: Quitação do valor líquido restante + retenções
+        this.addLancamento({
+          empresaId,
+          numeroPartida: this.lancamentos.length + 1,
+          loteId,
+          dataLancamento: dataLote,
+          tipoPartida: 'SIMPLES',
+          contaDebitoId: 27,
+          contaCreditoId: 21,
+          valor: d.valorLiquidoParcela,
+          historicoId: 3,
+          complementoHistorico: `Quitação final de 13º Salário - ${d.colaboradorNome}`,
+          usuarioNome: 'Módulo Folha'
+        });
+        totalLote += d.valorLiquidoParcela;
+
+        if (d.valorINSS > 0) {
+          this.addLancamento({
+            empresaId,
+            numeroPartida: this.lancamentos.length + 1,
+            loteId,
+            dataLancamento: dataLote,
+            tipoPartida: 'SIMPLES',
+            contaDebitoId: 27,
+            contaCreditoId: 22,
+            valor: d.valorINSS,
+            historicoId: 3,
+            complementoHistorico: `INSS retido na fonte s/ 13º Salário integral - ${d.colaboradorNome}`,
+            usuarioNome: 'Módulo Folha'
+          });
+          totalLote += d.valorINSS;
+        }
+
+        if (d.valorIRRF > 0) {
+          this.addLancamento({
+            empresaId,
+            numeroPartida: this.lancamentos.length + 1,
+            loteId,
+            dataLancamento: dataLote,
+            tipoPartida: 'SIMPLES',
+            contaDebitoId: 27,
+            contaCreditoId: 23,
+            valor: d.valorIRRF,
+            historicoId: 3,
+            complementoHistorico: `IRRF retido na fonte s/ 13º Salário integral - ${d.colaboradorNome}`,
+            usuarioNome: 'Módulo Folha'
+          });
+          totalLote += d.valorIRRF;
+        }
+      }
+      d.integradaContabil = true;
+      d.status = 'PAGO';
+    }
+
+    lote.totalDebito = Math.round(totalLote * 100) / 100;
+    lote.totalCredito = Math.round(totalLote * 100) / 100;
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_13', 'PROCESSAMENTO', `${parcela} parcela do 13º salário ${ano} integrada no lote nº ${lote.numero}, total R$ ${totalLote.toFixed(2)}.`);
+
+    return { success: true, loteId, totalValor: totalLote };
+  }
+
+  // --------------------------------------------------------------------------
+  // CÁLCULO E GESTÃO DE RESCISÃO CONTRATUAL (TRCT OFICIAL - PORTARIA 1.057/MTE)
+  // --------------------------------------------------------------------------
+  public getCalculosRescisao(empresaId?: number): CalculoRescisao[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.calculosRescisao.filter(r => r.empresaId === empId);
+  }
+
+  public salvarCalculoRescisao(r: CalculoRescisao): void {
+    const idx = this.calculosRescisao.findIndex(item => item.id === r.id);
+    if (idx >= 0) {
+      this.calculosRescisao[idx] = r;
+    } else {
+      if (!r.id) r.id = Date.now();
+      this.calculosRescisao.unshift(r);
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('RESCISÃO', 'GRAVAÇÃO', `Cálculo de rescisão (TRCT) do colaborador ${r.colaboradorNome} salvo. Líquido: R$ ${r.saldoLiquidoRescisao.toFixed(2)}.`);
+  }
+
+  public deleteCalculoRescisao(id: number): void {
+    this.calculosRescisao = this.calculosRescisao.filter(r => r.id !== id);
+    this.persistSnapshot();
+  }
+
+  public calcularRescisaoColaborador(params: {
+    empresaId: number;
+    colaboradorId: number;
+    dataDemissao: string;
+    motivoRescisao: 'SEM_JUSTA_CAUSA' | 'PEDIDO_DEMISSAO' | 'COM_JUSTA_CAUSA' | 'TERMINO_CONTRATO' | 'ACORDO_MUTUO';
+    tipoAvisoPrevio: 'INDENIZADO' | 'TRABALHADO' | 'DISPENSADO' | 'DESCONTADO';
+    temFeriasVencidas: boolean;
+    saldoBaseFGTS: number;
+  }): CalculoRescisao {
+    const colab = this.getColaboradores(params.empresaId).find(c => c.id === params.colaboradorId);
+    if (!colab) throw new Error('Colaborador não encontrado.');
+
+    const sal = colab.salarioBase || 0;
+    const dtDem = new Date(params.dataDemissao);
+    const dtAdm = new Date(colab.dataAdmissao || `${dtDem.getFullYear() - 1}-01-01`);
+
+    // Anos completos de serviço para a Lei 12.506/2011 (Aviso Prévio Proporcional)
+    const diffTime = Math.abs(dtDem.getTime() - dtAdm.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const anosCompletos = Math.floor(diffDays / 365);
+    const diasAvisoPrevio = Math.min(90, 30 + (anosCompletos * 3));
+
+    // Dias trabalhados no mês do desligamento
+    const diasTrabalhadosMes = dtDem.getDate();
+
+    // 1. Saldo de Salário
+    const saldoSalario = Math.round(((sal / 30) * diasTrabalhadosMes) * 100) / 100;
+
+    // 2. Aviso Prévio Indenizado
+    let avisoPrevioIndenizado = 0;
+    let avisoPrevioDescontado = 0;
+    if (params.motivoRescisao === 'SEM_JUSTA_CAUSA' && params.tipoAvisoPrevio === 'INDENIZADO') {
+      avisoPrevioIndenizado = Math.round(((sal / 30) * diasAvisoPrevio) * 100) / 100;
+    } else if (params.motivoRescisao === 'ACORDO_MUTUO' && params.tipoAvisoPrevio === 'INDENIZADO') {
+      avisoPrevioIndenizado = Math.round((((sal / 30) * diasAvisoPrevio) * 0.5) * 100) / 100; // 50% pelo Art. 484-A
+    } else if (params.motivoRescisao === 'PEDIDO_DEMISSAO' && params.tipoAvisoPrevio === 'DESCONTADO') {
+      avisoPrevioDescontado = sal;
+    }
+
+    // 3. 13º Salário Proporcional e Indenizado
+    const mesDemissao = dtDem.getMonth() + 1;
+    let avos13 = mesDemissao;
+    if (diasTrabalhadosMes < 15) avos13 -= 1;
+    avos13 = Math.max(0, Math.min(12, avos13));
+
+    let decimoTerceiroProporcional = 0;
+    let decimoTerceiroIndenizado = 0;
+    let avos13Indenizado = 0;
+
+    if (params.motivoRescisao !== 'COM_JUSTA_CAUSA') {
+      decimoTerceiroProporcional = Math.round(((sal / 12) * avos13) * 100) / 100;
+      if (avisoPrevioIndenizado > 0) {
+        // Projeção do aviso prévio projeta mais 1 avo de 13º se > 15 dias
+        avos13Indenizado = Math.round(diasAvisoPrevio / 30);
+        decimoTerceiroIndenizado = Math.round(((sal / 12) * avos13Indenizado) * 100) / 100;
+      }
+    }
+
+    // 4. Férias Vencidas e Proporcionais
+    let feriasVencidas = 0;
+    let tercoVencidas = 0;
+    if (params.temFeriasVencidas && params.motivoRescisao !== 'COM_JUSTA_CAUSA') {
+      feriasVencidas = sal;
+      tercoVencidas = Math.round((sal / 3) * 100) / 100;
+    }
+
+    let avosFerias = Math.max(1, Math.min(12, (diffDays % 365) / 30));
+    avosFerias = Math.floor(avosFerias);
+    let feriasProporcionais = 0;
+    let tercoProporcionais = 0;
+    let feriasIndenizadas = 0;
+    let tercoIndenizadas = 0;
+    let avosFeriasIndenizadas = 0;
+
+    if (params.motivoRescisao !== 'COM_JUSTA_CAUSA') {
+      feriasProporcionais = Math.round(((sal / 12) * avosFerias) * 100) / 100;
+      tercoProporcionais = Math.round((feriasProporcionais / 3) * 100) / 100;
+
+      if (avisoPrevioIndenizado > 0) {
+        avosFeriasIndenizadas = Math.round(diasAvisoPrevio / 30);
+        feriasIndenizadas = Math.round(((sal / 12) * avosFeriasIndenizadas) * 100) / 100;
+        tercoIndenizadas = Math.round((feriasIndenizadas / 3) * 100) / 100;
+      }
+    }
+
+    const totalBruto = saldoSalario + avisoPrevioIndenizado + decimoTerceiroProporcional + decimoTerceiroIndenizado +
+      feriasVencidas + tercoVencidas + feriasProporcionais + tercoProporcionais +
+      feriasIndenizadas + tercoIndenizadas;
+
+    // 5. Deduções
+    // INSS sobre Saldo de Salário
+    let inssSaldo = 0;
+    if (saldoSalario <= 1518.00) inssSaldo = Math.round((saldoSalario * 0.075) * 100) / 100;
+    else if (saldoSalario <= 2793.88) inssSaldo = Math.round((saldoSalario * 0.09 - 22.77) * 100) / 100;
+    else if (saldoSalario <= 4190.83) inssSaldo = Math.round((saldoSalario * 0.12 - 106.59) * 100) / 100;
+    else inssSaldo = Math.min(951.63, Math.round((saldoSalario * 0.14 - 190.40) * 100) / 100);
+
+    // INSS sobre 13º Salário Rescisório
+    let inss13 = 0;
+    if (decimoTerceiroProporcional > 0) {
+      if (decimoTerceiroProporcional <= 1518.00) inss13 = Math.round((decimoTerceiroProporcional * 0.075) * 100) / 100;
+      else inss13 = Math.round((decimoTerceiroProporcional * 0.09 - 22.77) * 100) / 100;
+    }
+
+    // IRRF
+    const totalDeducoes = inssSaldo + inss13 + avisoPrevioDescontado;
+    const liquidoRescisao = Math.max(0, Math.round((totalBruto - totalDeducoes) * 100) / 100);
+
+    // Multa FGTS
+    let percMulta = 0;
+    let codSaque = '01';
+    if (params.motivoRescisao === 'SEM_JUSTA_CAUSA') {
+      percMulta = 0.40;
+      codSaque = '01';
+    } else if (params.motivoRescisao === 'ACORDO_MUTUO') {
+      percMulta = 0.20;
+      codSaque = '02';
+    } else if (params.motivoRescisao === 'TERMINO_CONTRATO') {
+      percMulta = 0.00;
+      codSaque = '04';
+    } else {
+      percMulta = 0.00;
+      codSaque = 'NÃO_LIBERADO';
+    }
+    const multaFGTS = Math.round((params.saldoBaseFGTS * percMulta) * 100) / 100;
+
+    // Data de pagamento da rescisão: até 10 dias corridos após o término (Art. 477 § 6º CLT)
+    const dtPag = new Date(dtDem);
+    dtPag.setDate(dtPag.getDate() + 10);
+    const dataPagtoStr = dtPag.toISOString().split('T')[0];
+
+    return {
+      id: Date.now(),
+      empresaId: params.empresaId,
+      colaboradorId: colab.id,
+      colaboradorNome: colab.nome,
+      matricula: colab.matricula,
+      cargo: colab.cargo || 'Colaborador',
+      cpf: colab.cpf,
+      dataAdmissao: colab.dataAdmissao || '2025-01-01',
+      dataDemissao: params.dataDemissao,
+      salarioBase: sal,
+      motivoRescisao: params.motivoRescisao,
+      tipoAvisoPrevio: params.tipoAvisoPrevio,
+      diasAvisoPrevio,
+      diasTrabalhadosMes,
+      avosDecimoTerceiro: avos13,
+      avosDecimoIndenizado: avos13Indenizado,
+      avosFeriasProporcionais: avosFerias,
+      avosFeriasIndenizadas: avosFeriasIndenizadas,
+      temFeriasVencidas: params.temFeriasVencidas,
+      saldoSalario,
+      avisoPrevioIndenizado,
+      decimoTerceiroProporcional,
+      decimoTerceiroIndenizado,
+      feriasVencidas,
+      tercoFeriasVencidas: tercoVencidas,
+      feriasProporcionais,
+      tercoFeriasProporcionais: tercoProporcionais,
+      feriasIndenizadas,
+      tercoFeriasIndenizadas: tercoIndenizadas,
+      totalBrutoVerbas: totalBruto,
+      inssSaldoSalario: inssSaldo,
+      inssDecimoTerceiro: inss13,
+      irrfSaldoSalario: 0,
+      irrfDecimoTerceiro: 0,
+      avisoPrevioDescontado,
+      outrasDeducoes: 0,
+      totalDeducoes,
+      saldoLiquidoRescisao: liquidoRescisao,
+      saldoBaseFGTS: params.saldoBaseFGTS,
+      multaRescisoriaFGTS: multaFGTS,
+      codigoSaqueFGTS: codSaque,
+      dataPagamento: dataPagtoStr,
+      status: 'CALCULADO',
+      integradaContabil: false
+    };
+  }
+
+  public integrarRescisaoContabil(rescisaoId: number): { success: boolean; loteId: number; totalLiquido: number } {
+    const r = this.calculosRescisao.find(item => item.id === rescisaoId);
+    if (!r) return { success: false, loteId: 0, totalLiquido: 0 };
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId: r.empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Rescisão de Contrato (TRCT) - ${r.colaboradorNome}`,
+      dataLote: r.dataPagamento,
+      status: 'FECHADO',
+      totalDebito: r.totalBrutoVerbas,
+      totalCredito: r.totalBrutoVerbas
+    };
+
+    // 1. D: 56 (Despesas Rescisórias / Indenizações) -> C: 21 (Rescisões a Pagar)
+    this.addLancamento({
+      empresaId: r.empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: r.dataPagamento,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 56,
+      contaCreditoId: 21,
+      valor: r.saldoLiquidoRescisao,
+      historicoId: 3,
+      complementoHistorico: `Quitação líquida de rescisão contratual (TRCT) - ${r.colaboradorNome}`,
+      usuarioNome: 'Módulo Folha'
+    });
+
+    // 2. Retenção de INSS
+    const totalINSS = r.inssSaldoSalario + r.inssDecimoTerceiro;
+    if (totalINSS > 0) {
+      this.addLancamento({
+        empresaId: r.empresaId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId,
+        dataLancamento: r.dataPagamento,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 56,
+        contaCreditoId: 22,
+        valor: totalINSS,
+        historicoId: 3,
+        complementoHistorico: `INSS retido na fonte em rescisão (TRCT) - ${r.colaboradorNome}`,
+        usuarioNome: 'Módulo Folha'
+      });
+    }
+
+    this.lotes.push(lote);
+    r.integradaContabil = true;
+    r.status = 'QUITADO';
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_RESCISÃO', 'PROCESSAMENTO', `Rescisão do colaborador ${r.colaboradorNome} integrada no lote nº ${lote.numero}.`);
+
+    return { success: true, loteId, totalLiquido: r.saldoLiquidoRescisao };
+  }
+
+  // --------------------------------------------------------------------------
+  // MÓDULO HONORÁRIOS CONTÁBEIS (HO) - REAJUSTE EM LOTE
+  // --------------------------------------------------------------------------
+  public reajustarContratosEmLote(params: ReajusteContratoLote): {
+    success: boolean;
+    contratosAtualizados: number;
+    diferencaMRR: number;
+  } {
+    let count = 0;
+    let mrrAnterior = 0;
+    let mrrNovo = 0;
+
+    for (const id of params.contratosIds) {
+      const c = this.contratosHonorarios.find(item => item.id === id);
+      if (c && c.ativo !== false) {
+        const valAtual = c.valorMensalBase || c.valorMensal || 0;
+        mrrAnterior += valAtual;
+
+        const novoVal = Math.round(valAtual * (1 + params.percentual / 100) * 100) / 100;
+        mrrNovo += novoVal;
+
+        c.valorMensalBase = novoVal;
+        c.valorMensal = novoVal;
+        c.indexadorReajuste = params.indice;
+        count++;
+      }
+    }
+
+    const diferencaMRR = Math.round((mrrNovo - mrrAnterior) * 100) / 100;
+    this.persistSnapshot();
+    this.registrarAuditoria(
+      'HONORÁRIOS',
+      'REAJUSTE_LOTE',
+      `Reajuste em lote concluído para ${count} contratos pelo índice ${params.indice} (${params.percentual}%). Aumento de MRR: R$ ${diferencaMRR.toFixed(2)}.`
+    );
+
+    return {
+      success: true,
+      contratosAtualizados: count,
+      diferencaMRR
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // CONCILIAÇÃO BANCÁRIA: MEMORIZAR REGRA COM 1 CLIQUE (AUTO-LEARNING)
+  // --------------------------------------------------------------------------
+  public memorizarRegraConciliacao(
+    empresaId: number,
+    palavraChave: string,
+    contaDebitoId: number,
+    contaCreditoId: number,
+    historicoId?: number,
+    complemento?: string
+  ): RegraConciliacao {
+    const palavraClean = palavraChave.trim().toUpperCase();
+    const jaExiste = this.regrasConciliacao.find(
+      r => r.empresaId === empresaId && r.palavraChave.toUpperCase() === palavraClean
+    );
+
+    let regra: RegraConciliacao;
+    if (jaExiste) {
+      jaExiste.contaDebitoId = contaDebitoId;
+      jaExiste.contaCreditoId = contaCreditoId;
+      if (historicoId) jaExiste.historicoId = historicoId;
+      if (complemento) jaExiste.complementoPadrao = complemento;
+      regra = jaExiste;
+    } else {
+      regra = {
+        id: Date.now(),
+        empresaId,
+        palavraChave: palavraClean,
+        contaDebitoId,
+        contaCreditoId,
+        historicoId: historicoId || 1,
+        complementoPadrao: complemento || palavraClean
+      };
+      this.regrasConciliacao.push(regra);
+    }
+
+    this.persistSnapshot();
+    this.registrarAuditoria('CONCILIAÇÃO', 'MEMORIZAR_REGRA', `Regra De-Para memorizada para "${palavraClean}": D:${contaDebitoId} / C:${contaCreditoId}.`);
+    return regra;
   }
 
   // --------------------------------------------------------------------------
@@ -2602,8 +5160,8 @@ export class DatabaseService {
   }
 
   public saveVariaveisColaborador(v: VariaveisColaborador) {
-    const idx = this.variaveisColaboradores.findIndex(item => 
-      (v.id && item.id === v.id) || 
+    const idx = this.variaveisColaboradores.findIndex(item =>
+      (v.id && item.id === v.id) ||
       (item.colaboradorId === v.colaboradorId && item.competencia === v.competencia)
     );
     if (idx >= 0) {
@@ -2660,7 +5218,7 @@ export class DatabaseService {
       // Depreciação Linear Mensal: (Valor Original - Residual) * (Taxa Anual / 100 / 12)
       const baseCalculo = Math.max(0, ativo.valorOriginal - (ativo.valorResidual || 0));
       const valorMensal = Math.round((baseCalculo * (ativo.taxaDepreciacaoAnual / 100 / 12)) * 100) / 100;
-      
+
       const depAtual = ativo.depreciacaoAcumulada || 0;
       const depAcumuladaProjetada = Math.min(baseCalculo, depAtual + valorMensal);
       const saldoResidualContabil = Math.max(ativo.valorResidual || 0, ativo.valorOriginal - depAcumuladaProjetada);
@@ -3128,6 +5686,369 @@ export class DatabaseService {
     return linhas.join('\r\n');
   }
 
+  // --------------------------------------------------------------------------
+  // CONTROLE DE OBRIGAÇÕES ACESSÓRIAS & CALENDÁRIO FISCAL
+  // --------------------------------------------------------------------------
+  public getObrigacoesFiscais(empresaId?: number, competencia?: string): ObrigacaoFiscal[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.obrigacoesFiscais
+      .filter(o => o.empresaId === empId && (!competencia || o.competencia === competencia))
+      .sort((a, b) => new Date(a.dataVencimento).getTime() - new Date(b.dataVencimento).getTime());
+  }
+
+  public saveObrigacaoFiscal(ob: ObrigacaoFiscal) {
+    const idx = this.obrigacoesFiscais.findIndex(item => item.id === ob.id);
+    if (idx >= 0) this.obrigacoesFiscais[idx] = ob;
+    else { ob.id = Date.now(); this.obrigacoesFiscais.push(ob); }
+    this.persistSnapshot();
+    this.registrarAuditoria('OBRIGAÇÕES', 'SALVAR', `Obrigação ${ob.sigla} da competência ${ob.competencia} atualizada.`);
+  }
+
+  public deleteObrigacaoFiscal(id: number) {
+    this.obrigacoesFiscais = this.obrigacoesFiscais.filter(o => o.id !== id);
+    this.persistSnapshot();
+  }
+
+  public marcarObrigacaoEntregue(id: number, protocolo: string, recibo?: string) {
+    const ob = this.obrigacoesFiscais.find(o => o.id === id);
+    if (ob) {
+      ob.status = 'ENTREGUE';
+      ob.dataTransmissao = new Date().toISOString().split('T')[0];
+      ob.protocoloTransmissao = protocolo;
+      if (recibo) ob.reciboEnvio = recibo;
+      this.persistSnapshot();
+      this.registrarAuditoria('OBRIGAÇÕES', 'TRANSMISSÃO', `Obrigação ${ob.sigla} marcada como entregue com protocolo ${protocolo}.`);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // ASSISTENTE DE FECHAMENTO ANUAL & DESTINAÇÃO DO RESULTADO (LEI 6.404/76)
+  // --------------------------------------------------------------------------
+  public calcularDestinacaoResultado(empresaId: number, exercicio: number, percentualDistribuicao: number = 90): PropostaDestinacaoResultado {
+    const emp = this.getEmpresa(empresaId) || this.getActiveEmpresa();
+
+    // Apura o lucro a partir das receitas e despesas
+    const receitas = this.contas.filter(c => c.tipo === 'A' && c.classificacao.startsWith('4')).reduce((acc, c) => acc + (c.saldoAtual || c.saldoAnterior || 0), 0);
+    const despesas = this.contas.filter(c => c.tipo === 'A' && (c.classificacao.startsWith('5') || c.classificacao.startsWith('6'))).reduce((acc, c) => acc + (c.saldoAtual || c.saldoAnterior || 0), 0);
+
+    let lucroLiquidoApurado = Math.abs(receitas - despesas);
+    if (lucroLiquidoApurado === 0) lucroLiquidoApurado = 148500.00; // Valor de referência para demonstração
+
+    const percentualReservaLegal = 5; // 5% do Lucro Líquido (Art. 193 Lei 6.404/76)
+    const valorReservaLegal = Math.round((lucroLiquidoApurado * (percentualReservaLegal / 100)) * 100) / 100;
+    const baseDistribuivel = lucroLiquidoApurado - valorReservaLegal;
+
+    const valorTotalDistribuir = Math.round((baseDistribuivel * (percentualDistribuicao / 100)) * 100) / 100;
+    const valorRetencaoExpansao = Math.round((baseDistribuivel - valorTotalDistribuir) * 100) / 100;
+
+    const socios = emp.socios || [
+      { id: 1, nome: 'Carlos Eduardo Mendes', cpf: '123.456.789-00', percentualCapital: 60, retiraProLabore: true, dataEntrada: '2018-05-10' },
+      { id: 2, nome: 'Dra. Mariana Costa Mendes', cpf: '234.567.890-11', percentualCapital: 40, retiraProLabore: false, dataEntrada: '2018-05-10' }
+    ];
+
+    const distribuicaoSocios: SocioDistribuicao[] = socios.map(s => ({
+      socioId: s.id,
+      socioNome: s.nome,
+      cpf: s.cpf,
+      percentual: s.percentualCapital,
+      valorDividendo: Math.round((valorTotalDistribuir * (s.percentualCapital / 100)) * 100) / 100
+    }));
+
+    return {
+      empresaId,
+      exercicio,
+      lucroLiquidoApurado,
+      percentualReservaLegal,
+      valorReservaLegal,
+      percentualDistribuicao,
+      valorTotalDistribuir,
+      distribuicaoSocios,
+      valorRetencaoExpansao,
+      dataAprovacao: `${exercicio}-12-31`
+    };
+  }
+
+  public integrarDestinacaoResultadoContabil(empresaId: number, proposta: PropostaDestinacaoResultado): { success: boolean; loteId: number; partidas: number } {
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Encerramento do Exercício ${proposta.exercicio} - Destinação do Resultado`,
+      dataLote: `${proposta.exercicio}-12-31`,
+      status: 'FECHADO',
+      totalDebito: proposta.lucroLiquidoApurado,
+      totalCredito: proposta.lucroLiquidoApurado
+    };
+
+    let partidaNum = this.lancamentos.length + 1;
+
+    // 1. D: Lucro Líquido do Exercício (ARE) -> C: Reserva Legal (5%)
+    this.addLancamento({
+      empresaId,
+      numeroPartida: partidaNum++,
+      loteId,
+      dataLancamento: `${proposta.exercicio}-12-31`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 41, // Lucro Líquido do Exercício
+      contaCreditoId: 42, // Reserva Legal
+      valor: proposta.valorReservaLegal,
+      historicoId: 8,
+      complementoHistorico: `Constituição de Reserva Legal (5%) ref. Exercício ${proposta.exercicio} conf. Art. 193 Lei 6.404/76`
+    });
+
+    // 2. D: Lucro Líquido -> C: Dividendos e Lucros a Pagar aos Sócios
+    this.addLancamento({
+      empresaId,
+      numeroPartida: partidaNum++,
+      loteId,
+      dataLancamento: `${proposta.exercicio}-12-31`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 41, // Lucro Líquido do Exercício
+      contaCreditoId: 28, // Lucros e Dividendos a Pagar
+      valor: proposta.valorTotalDistribuir,
+      historicoId: 8,
+      complementoHistorico: `Distribuição de Dividendos e Lucros aos Sócios (${proposta.percentualDistribuicao}% do resultado) ref. Exercício ${proposta.exercicio}`
+    });
+
+    // 3. D: Lucro Líquido -> C: Reserva de Lucros para Expansão (Retenção)
+    if (proposta.valorRetencaoExpansao > 0) {
+      this.addLancamento({
+        empresaId,
+        numeroPartida: partidaNum++,
+        loteId,
+        dataLancamento: `${proposta.exercicio}-12-31`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 41,
+        contaCreditoId: 43, // Reserva Estatutária / Expansão
+        valor: proposta.valorRetencaoExpansao,
+        historicoId: 8,
+        complementoHistorico: `Retenção de Lucros para Investimentos e Expansão ref. Exercício ${proposta.exercicio}`
+      });
+    }
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('FECHAMENTO', 'DESTINAÇÃO_LUCRO', `Destinação do Resultado do Exercício ${proposta.exercicio} integrada com sucesso no lote nº ${lote.numero}.`);
+
+    return {
+      success: true,
+      loteId,
+      partidas: proposta.valorRetencaoExpansao > 0 ? 3 : 2
+    };
+  }
+
+  // ----------------------------------------------------
+  // GESTÃO DE ADMINISTRADORAS E VENDAS COM CARTÕES (SPED 1600)
+  // ----------------------------------------------------
+  public getAdministradorasCartao(empresaId: number): AdministradoraCartao[] {
+    return this.administradorasCartao.filter(a => a.empresaId === empresaId);
+  }
+
+  public saveAdministradoraCartao(admin: AdministradoraCartao): void {
+    const idx = this.administradorasCartao.findIndex(a => a.id === admin.id);
+    if (idx >= 0) {
+      this.administradorasCartao[idx] = admin;
+    } else {
+      this.administradorasCartao.push({
+        ...admin,
+        id: admin.id || Date.now()
+      });
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('FISCAL', 'ADMINISTRADORA_CARTAO', `Administradora "${admin.razaoSocial}" salva com sucesso.`);
+  }
+
+  public deleteAdministradoraCartao(id: number): void {
+    this.administradorasCartao = this.administradorasCartao.filter(a => a.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getVendasCartao(empresaId: number, competencia: string): VendaCartaoOperadora[] {
+    let itens = this.vendasCartao.filter(v => v.empresaId === empresaId && v.competencia === competencia);
+    if (itens.length === 0) {
+      itens = this.extrairVendasCartaoDasNotasFiscais(empresaId, competencia);
+      this.vendasCartao.push(...itens);
+      this.persistSnapshot();
+    }
+    return itens;
+  }
+
+  public saveVendaCartao(venda: VendaCartaoOperadora): void {
+    const idx = this.vendasCartao.findIndex(v => v.id === venda.id);
+    if (idx >= 0) {
+      this.vendasCartao[idx] = venda;
+    } else {
+      this.vendasCartao.push({
+        ...venda,
+        id: venda.id || Date.now()
+      });
+    }
+    this.persistSnapshot();
+  }
+
+  public extrairVendasCartaoDasNotasFiscais(empresaId: number, competencia: string): VendaCartaoOperadora[] {
+    const notas = this.getNotasFiscais(empresaId).filter(n => n.tipo === 'SAIDA' && n.dataEmissao.startsWith(competencia));
+    const totalVendas = notas.reduce((acc, n) => acc + n.valorTotal, 0);
+    const admins = this.getAdministradorasCartao(empresaId);
+
+    if (admins.length === 0) return [];
+
+    const resultado: VendaCartaoOperadora[] = [];
+    const parcelas = [0.45, 0.35, 0.20]; // Proporção de mercado simulada
+
+    admins.slice(0, 3).forEach((adm, idx) => {
+      const share = parcelas[idx] || 0.15;
+      const valorTotalBruto = Math.round((totalVendas * share) * 100) / 100;
+      const valorCredito = Math.round((valorTotalBruto * 0.65) * 100) / 100;
+      const valorDebito = Math.round((valorTotalBruto - valorCredito) * 100) / 100;
+
+      const taxaMDREstimada = Math.round(((valorCredito * (adm.taxaMDRCreditoVista / 100)) + (valorDebito * (adm.taxaMDRDebito / 100))) * 100) / 100;
+      const valorLiquidoReceber = Math.round((valorTotalBruto - taxaMDREstimada) * 100) / 100;
+      const retencaoIRRF = Math.round((taxaMDREstimada * 0.015) * 100) / 100; // 1,5% s/ comissão
+
+      resultado.push({
+        id: Date.now() + idx,
+        empresaId,
+        competencia,
+        administradoraId: adm.id,
+        administradoraNome: adm.razaoSocial,
+        cnpjAdministradora: adm.cnpj,
+        valorCredito,
+        valorDebito,
+        valorTotalBruto,
+        taxaMDREstimada,
+        valorLiquidoReceber,
+        retencaoIRRF,
+        status: 'CONCILIADO'
+      });
+    });
+
+    return resultado;
+  }
+
+  public integrarVendasCartaoContabil(empresaId: number, venda: VendaCartaoOperadora): { success: boolean; loteId: number } {
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Integração de Vendas com Cartões: ${venda.administradoraNome} (${venda.competencia})`,
+      dataLote: `${venda.competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: venda.valorTotalBruto,
+      totalCredito: venda.valorTotalBruto
+    };
+
+    let partidaNum = this.lancamentos.length + 1;
+
+    // 1. D: Administradora de Cartão a Receber (Ativo) -> R$ Líquido
+    this.addLancamento({
+      empresaId,
+      numeroPartida: partidaNum++,
+      loteId,
+      dataLancamento: `${venda.competencia}-28`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 6, // Administradoras / Banco
+      contaCreditoId: 44, // Receita de Vendas / Clientes
+      valor: venda.valorLiquidoReceber,
+      historicoId: 1,
+      complementoHistorico: `Vendas com Cartão ${venda.administradoraNome} líq. repasse ref. ${venda.competencia}`
+    });
+
+    // 2. D: Despesas com Taxas de Cartão MDR (Resultado) -> Taxa Retida
+    this.addLancamento({
+      empresaId,
+      numeroPartida: partidaNum++,
+      loteId,
+      dataLancamento: `${venda.competencia}-28`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 57, // Despesas Financeiras / Taxas MDR
+      contaCreditoId: 44, // Receita Bruta
+      valor: venda.taxaMDREstimada,
+      historicoId: 2,
+      complementoHistorico: `Taxa MDR retida s/ vendas de cartão ${venda.administradoraNome}`
+    });
+
+    venda.status = 'INTEGRADO';
+    venda.dataIntegracao = new Date().toISOString();
+    this.saveVendaCartao(venda);
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('CONTABILIDADE', 'INTEGRACAO_CARTOES', `Vendas de cartão ${venda.administradoraNome} integradas no lote nº ${lote.numero}.`);
+
+    return { success: true, loteId };
+  }
+
+  // ----------------------------------------------------
+  // CONSOLIDAÇÃO DE DEMONSTRAÇÕES CONTÁBEIS (CPC 36 - MATRIZ & FILIAIS)
+  // ----------------------------------------------------
+  public gerarBalanceteConsolidado(empresaId: number): BalanceteConsolidadoLinha[] {
+    const contasAnaliticas = this.contas.filter(c => c.empresaId === empresaId);
+
+    return contasAnaliticas.map(c => {
+      const saldoMatriz = c.saldoAtual !== undefined ? Math.abs(c.saldoAtual) : Math.abs(c.saldoAnterior || 0);
+      // Simulação da Filial 01 (45% da Matriz conforme padrão do CPC 36 para grupo econômico)
+      const saldoFiliais = Math.round((saldoMatriz * 0.45) * 100) / 100;
+
+      // Eliminação de saldos intercompany (contas correntes entre filiais 1.01.03 ou 2.01.03)
+      let eliminacoes = 0;
+      if (c.classificacao.includes('03') || c.nome.toLowerCase().includes('intercompany') || c.nome.toLowerCase().includes('filial')) {
+        eliminacoes = Math.round((saldoFiliais * 0.8) * 100) / 100;
+      }
+
+      const saldoConsolidado = Math.round((saldoMatriz + saldoFiliais - eliminacoes) * 100) / 100;
+
+      return {
+        classificacao: c.classificacao,
+        nome: c.nome,
+        grau: c.grau,
+        tipo: c.tipo,
+        saldoMatriz,
+        saldoFiliais,
+        eliminacoes,
+        saldoConsolidado
+      };
+    });
+  }
+
+  public gerarDREConsolidada(empresaId: number): DREConsolidadaLinha[] {
+    const balanceteConsolidado = this.gerarBalanceteConsolidado(empresaId);
+
+    const calcGrupo = (prefix: string) => {
+      const itens = balanceteConsolidado.filter(b => b.tipo === 'A' && b.classificacao.startsWith(prefix));
+      const mat = itens.reduce((acc, i) => acc + i.saldoMatriz, 0);
+      const fil = itens.reduce((acc, i) => acc + i.saldoFiliais, 0);
+      const elim = itens.reduce((acc, i) => acc + i.eliminacoes, 0);
+      return { mat, fil, elim, cons: mat + fil - elim };
+    };
+
+    const rec = calcGrupo('4.01') || calcGrupo('3.01');
+    const ded = calcGrupo('4.02') || calcGrupo('3.02');
+    const recLiq = { mat: rec.mat - ded.mat, fil: rec.fil - ded.fil, elim: 0, cons: rec.cons - ded.cons };
+    const custos = calcGrupo('4.03') || calcGrupo('5.01');
+    const lucroBruto = { mat: recLiq.mat - custos.mat, fil: recLiq.fil - custos.fil, elim: 0, cons: recLiq.cons - custos.cons };
+    const desp = calcGrupo('5.02') || calcGrupo('5');
+    const resultado = { mat: lucroBruto.mat - desp.mat, fil: lucroBruto.fil - desp.fil, elim: 0, cons: lucroBruto.cons - desp.cons };
+
+    return [
+      { descricao: '1. RECEITA OPERACIONAL BRUTA', valorMatriz: rec.mat, valorFiliais: rec.fil, eliminacoesIntercompany: rec.elim, valorConsolidado: rec.cons, isHeader: true },
+      { descricao: '2. (-) DEDUÇÕES E TRIBUTOS SOBRE VENDAS', valorMatriz: ded.mat, valorFiliais: ded.fil, eliminacoesIntercompany: ded.elim, valorConsolidado: ded.cons },
+      { descricao: '3. (=) RECEITA LÍQUIDA CONSOLIDADA', valorMatriz: recLiq.mat, valorFiliais: recLiq.fil, eliminacoesIntercompany: 0, valorConsolidado: recLiq.cons, isTotal: true },
+      { descricao: '4. (-) CUSTOS DAS MERCADORIAS E SERVIÇOS', valorMatriz: custos.mat, valorFiliais: custos.fil, eliminacoesIntercompany: custos.elim, valorConsolidado: custos.cons },
+      { descricao: '5. (=) RESULTADO OPERACIONAL BRUTO', valorMatriz: lucroBruto.mat, valorFiliais: lucroBruto.fil, eliminacoesIntercompany: 0, valorConsolidado: lucroBruto.cons, isTotal: true },
+      { descricao: '6. (-) DESPESAS OPERACIONAIS E ADMINISTRATIVAS', valorMatriz: desp.mat, valorFiliais: desp.fil, eliminacoesIntercompany: desp.elim, valorConsolidado: desp.cons },
+      { descricao: '7. (=) LUCRO LÍQUIDO CONSOLIDADO DO GRUPO (CPC 36)', valorMatriz: resultado.mat, valorFiliais: resultado.fil, eliminacoesIntercompany: 0, valorConsolidado: resultado.cons, isTotal: true }
+    ];
+  }
+
   // Rotina de Transporte de Saldos Anuais
   public executarTransporteSaldos(anoOrigem: number, anoDestino: number): { success: boolean; contasTransportadas: number } {
     let count = 0;
@@ -3144,6 +6065,2331 @@ export class DatabaseService {
     this.persistSnapshot();
     this.registrarAuditoria('ENCERRAMENTO', 'TRANSPORTE_SALDOS', `Transporte de saldos concluído de ${anoOrigem} para ${anoDestino}. (${count} contas atualizadas).`);
     return { success: true, contasTransportadas: count };
+  }
+
+  // ----------------------------------------------------
+  // ROTINAS DE AUTO-CORREÇÃO DA AUDITORIA CONTÁBIL (AUTO-FIX)
+  // ----------------------------------------------------
+  public autoCorrigirContasSemSped(empresaId: number): { corrigidasCount: number } {
+    let count = 0;
+    for (const c of this.contas) {
+      if (c.empresaId === empresaId && (!c.codigoReferencialRFB || !c.naturezaSped)) {
+        if (c.classificacao.startsWith('1')) {
+          c.naturezaSped = '01';
+          c.codigoReferencialRFB = `1.01.01.${c.codigoReduzido.toString().padStart(4, '0')}`;
+        } else if (c.classificacao.startsWith('2.03')) {
+          c.naturezaSped = '03';
+          c.codigoReferencialRFB = `2.03.01.${c.codigoReduzido.toString().padStart(4, '0')}`;
+        } else if (c.classificacao.startsWith('2')) {
+          c.naturezaSped = '02';
+          c.codigoReferencialRFB = `2.01.01.${c.codigoReduzido.toString().padStart(4, '0')}`;
+        } else if (c.classificacao.startsWith('3') || c.classificacao.startsWith('4')) {
+          c.naturezaSped = '04';
+          c.codigoReferencialRFB = `3.01.01.${c.codigoReduzido.toString().padStart(4, '0')}`;
+        } else {
+          c.naturezaSped = '05';
+          c.codigoReferencialRFB = `5.01.01.${c.codigoReduzido.toString().padStart(4, '0')}`;
+        }
+        count++;
+      }
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('AUDITORIA', 'AUTO_CORRECAO_SPED', `Auto-correção aplicada em ${count} contas contábeis sem vínculo referencial da RFB.`);
+    return { corrigidasCount: count };
+  }
+
+  public renumerarPartidasCronologicamente(empresaId: number): { renumeradasCount: number } {
+    const lancs = this.lancamentos.filter(l => l.empresaId === empresaId);
+    lancs.sort((a, b) => a.dataLancamento.localeCompare(b.dataLancamento) || a.numeroPartida - b.numeroPartida);
+
+    let count = 0;
+    lancs.forEach((l, idx) => {
+      l.numeroPartida = idx + 1;
+      count++;
+    });
+
+    this.persistSnapshot();
+    this.registrarAuditoria('AUDITORIA', 'RENUMERACAO_PARTIDAS', `Renumeração cronológica realizada em ${count} partidas do Livro Diário.`);
+    return { renumeradasCount: count };
+  }
+
+  public normalizarParticipantesFiscais(empresaId: number): { normalizadosCount: number } {
+    let count = 0;
+    for (const p of this.participantes) {
+      if (p.empresaId === empresaId) {
+        if (!p.codigoIbge || p.codigoIbge.trim().length !== 7) {
+          p.codigoIbge = p.uf === 'RJ' ? '3304557' : p.uf === 'MG' ? '3106200' : p.uf === 'PR' ? '4106902' : '3550308';
+          count++;
+        }
+        if (!p.indicadorIE) {
+          p.indicadorIE = '1';
+        }
+      }
+    }
+    this.persistSnapshot();
+    this.registrarAuditoria('AUDITORIA', 'NORMALIZACAO_PARTICIPANTES', `Cadastros fiscais de ${count} participantes normalizados para conformidade SPED Registro 0150.`);
+    return { normalizadosCount: count };
+  }
+
+  // --------------------------------------------------------------------------
+  // PROVISÕES MENSAIS DE FÉRIAS E 13º SALÁRIO (MAPA A4 / CPC)
+  // --------------------------------------------------------------------------
+  public getProvisoesFolhaResumo(empresaId?: number, competencia?: string): ProvisaoFolhaResumo {
+    const empId = empresaId || this.activeEmpresaId;
+    const comp = competencia || this.getActiveEmpresa().competenciaAtiva;
+    const colabs = this.getColaboradores(empId).filter(c => c.status === 'ATIVO' && c.tipoVinculo === 'CLT');
+
+    const itens: ProvisaoItemFolha[] = colabs.map((colab, idx) => {
+      const sal = colab.salarioBase || 0;
+      const provFerias = Math.round((sal / 12) * 100) / 100;
+      const provTerco = Math.round((provFerias / 3) * 100) / 100;
+      const totalFeriasColab = provFerias + provTerco;
+      const fgtsFerias = Math.round((totalFeriasColab * 0.08) * 100) / 100;
+      const inssFerias = Math.round((totalFeriasColab * 0.20) * 100) / 100;
+      const totalGeralFerias = totalFeriasColab + fgtsFerias + inssFerias;
+
+      const prov13o = Math.round((sal / 12) * 100) / 100;
+      const fgts13o = Math.round((prov13o * 0.08) * 100) / 100;
+      const inss13o = Math.round((prov13o * 0.20) * 100) / 100;
+      const totalGeral13o = prov13o + fgts13o + inss13o;
+
+      const totalMes = totalGeralFerias + totalGeral13o;
+
+      return {
+        id: idx + 1,
+        colaboradorId: colab.id,
+        colaboradorNome: colab.nome,
+        colaboradorCargo: colab.cargo,
+        dataAdmissao: colab.dataAdmissao,
+        salarioBase: sal,
+        mesesAquisitivosFerias: 10,
+        mesesAquisitivos13o: 10,
+        valorProvisaoFerias: provFerias,
+        valorTercoConstitucional: provTerco,
+        valorFGTSFerias: fgtsFerias,
+        valorINSSPatronalFerias: inssFerias,
+        totalProvisaoFerias: totalGeralFerias,
+        valorProvisao13o: prov13o,
+        valorFGTS13o: fgts13o,
+        valorINSSPatronal13o: inss13o,
+        totalProvisao13o: totalGeral13o,
+        totalProvisaoMes: totalMes
+      };
+    });
+
+    const totalFerias = itens.reduce((acc, i) => acc + i.valorProvisaoFerias, 0);
+    const totalTerco = itens.reduce((acc, i) => acc + i.valorTercoConstitucional, 0);
+    const totalFGTSFerias = itens.reduce((acc, i) => acc + i.valorFGTSFerias, 0);
+    const totalINSSFerias = itens.reduce((acc, i) => acc + i.valorINSSPatronalFerias, 0);
+
+    const total13o = itens.reduce((acc, i) => acc + i.valorProvisao13o, 0);
+    const totalFGTS13o = itens.reduce((acc, i) => acc + i.valorFGTS13o, 0);
+    const totalINSS13o = itens.reduce((acc, i) => acc + i.valorINSSPatronal13o, 0);
+
+    const totalGeralProvisao = itens.reduce((acc, i) => acc + i.totalProvisaoMes, 0);
+
+    const jaIntegrado = this.lancamentos.some(l =>
+      l.empresaId === empId &&
+      l.dataLancamento.startsWith(comp) &&
+      l.complementoHistorico.toLowerCase().includes('provisão de 1/12')
+    );
+
+    return {
+      competencia: comp,
+      empresaId: empId,
+      totalFerias,
+      totalTerco,
+      totalFGTSFerias,
+      totalINSSFerias,
+      total13o,
+      totalFGTS13o,
+      totalINSS13o,
+      totalGeralProvisao,
+      integradoContabil: jaIntegrado,
+      dataIntegracao: jaIntegrado ? `${comp}-28` : undefined,
+      itens
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // CENTRAL DE RETENÇÕES TRIBUTÁRIAS NA FONTE (IRRF / CSRF / INSS / ISS)
+  // --------------------------------------------------------------------------
+  public getGuiasRetencaoFonte(empresaId?: number, competencia?: string): GuiaRetencaoFonte[] {
+    const empId = empresaId || this.activeEmpresaId;
+    const comp = competencia || this.getActiveEmpresa().competenciaAtiva;
+    const notas = this.getNotasFiscais(empId).filter(n => n.dataEmissao.startsWith(comp));
+
+    const guias: GuiaRetencaoFonte[] = [];
+
+    // 1. Serviços Tomados (Entradas) - Retenções a Recolher (Passivo)
+    const notasEntrada = notas.filter(n => n.tipo === 'ENTRADA');
+
+    // A) IRRF Tomados (Código 1708)
+    const notasIRRFTomado = notasEntrada.filter(n => (n.retencaoIRRF || 0) > 0);
+    const totalIRRFTomado = notasIRRFTomado.reduce((acc, n) => acc + (n.retencaoIRRF || 0), 0);
+    const baseIRRFTomado = notasIRRFTomado.reduce((acc, n) => acc + n.valorTotal, 0);
+    if (totalIRRFTomado > 0) {
+      guias.push({
+        id: 1,
+        empresaId: empId,
+        competencia: comp,
+        codigoReceita: '1708',
+        descricaoTributo: 'IRRF - Rendimentos de Serviços Profissionais PJ',
+        tipoOperacao: 'TOMADO',
+        baseCalculo: baseIRRFTomado,
+        aliquota: 1.5,
+        valorPrincipal: totalIRRFTomado,
+        dataVencimento: `${comp.substring(0, 4)}-${String(Number(comp.substring(5, 7)) + 1).padStart(2, '0')}-20`,
+        status: 'ABERTO',
+        codigoBarrasDarf: '85830000001-9 70800012026-3 10202600170-8 00000000000-0',
+        integradaContabil: false,
+        detalhesNotas: notasIRRFTomado.map(n => ({
+          notaId: n.id,
+          numeroNota: n.numero,
+          participanteNome: n.clienteFornecedorNome || 'Fornecedor',
+          cnpjCpf: n.clienteFornecedorCnpj || '',
+          valorNota: n.valorTotal,
+          valorRetido: n.retencaoIRRF || 0
+        }))
+      });
+    }
+
+    // B) CSRF 4,65% Tomados (Código 5952)
+    const notasCSRFTomado = notasEntrada.filter(n => (n.retencaoCSRF || 0) > 0);
+    const totalCSRFTomado = notasCSRFTomado.reduce((acc, n) => acc + (n.retencaoCSRF || 0), 0);
+    const baseCSRFTomado = notasCSRFTomado.reduce((acc, n) => acc + n.valorTotal, 0);
+    if (totalCSRFTomado > 0) {
+      guias.push({
+        id: 2,
+        empresaId: empId,
+        competencia: comp,
+        codigoReceita: '5952',
+        descricaoTributo: 'CSRF - Retenção de Contribuições (PIS/COFINS/CSLL 4,65%)',
+        tipoOperacao: 'TOMADO',
+        baseCalculo: baseCSRFTomado,
+        aliquota: 4.65,
+        valorPrincipal: totalCSRFTomado,
+        dataVencimento: `${comp.substring(0, 4)}-${String(Number(comp.substring(5, 7)) + 1).padStart(2, '0')}-20`,
+        status: 'ABERTO',
+        codigoBarrasDarf: '85830000005-9 52000012026-1 10202600595-2 00000000000-0',
+        integradaContabil: false,
+        detalhesNotas: notasCSRFTomado.map(n => ({
+          notaId: n.id,
+          numeroNota: n.numero,
+          participanteNome: n.clienteFornecedorNome || 'Fornecedor',
+          cnpjCpf: n.clienteFornecedorCnpj || '',
+          valorNota: n.valorTotal,
+          valorRetido: n.retencaoCSRF || 0
+        }))
+      });
+    }
+
+    // C) INSS Cessão de Mão de Obra Tomados (Código 2631)
+    const notasINSSTomado = notasEntrada.filter(n => (n.retencaoINSS || 0) > 0);
+    const totalINSSTomado = notasINSSTomado.reduce((acc, n) => acc + (n.retencaoINSS || 0), 0);
+    const baseINSSTomado = notasINSSTomado.reduce((acc, n) => acc + n.valorTotal, 0);
+    if (totalINSSTomado > 0) {
+      guias.push({
+        id: 3,
+        empresaId: empId,
+        competencia: comp,
+        codigoReceita: '2631',
+        descricaoTributo: 'INSS - Retenção 11% Cessão de Mão de Obra',
+        tipoOperacao: 'TOMADO',
+        baseCalculo: baseINSSTomado,
+        aliquota: 11.0,
+        valorPrincipal: totalINSSTomado,
+        dataVencimento: `${comp.substring(0, 4)}-${String(Number(comp.substring(5, 7)) + 1).padStart(2, '0')}-20`,
+        status: 'ABERTO',
+        codigoBarrasDarf: '85830000002-6 31000012026-5 10202600263-1 00000000000-0',
+        integradaContabil: false,
+        detalhesNotas: notasINSSTomado.map(n => ({
+          notaId: n.id,
+          numeroNota: n.numero,
+          participanteNome: n.clienteFornecedorNome || 'Fornecedor',
+          cnpjCpf: n.clienteFornecedorCnpj || '',
+          valorNota: n.valorTotal,
+          valorRetido: n.retencaoINSS || 0
+        }))
+      });
+    }
+
+    // 2. Serviços Prestados (Saídas) - Retenções a Compensar no Ativo
+    const notasSaida = notas.filter(n => n.tipo === 'SAIDA');
+    const notasIRRFPrestado = notasSaida.filter(n => (n.retencaoIRRF || 0) > 0);
+    const totalIRRFPrestado = notasIRRFPrestado.reduce((acc, n) => acc + (n.retencaoIRRF || 0), 0);
+    const baseIRRFPrestado = notasIRRFPrestado.reduce((acc, n) => acc + n.valorTotal, 0);
+    if (totalIRRFPrestado > 0) {
+      guias.push({
+        id: 4,
+        empresaId: empId,
+        competencia: comp,
+        codigoReceita: 'IRRF_COMP',
+        descricaoTributo: 'IRRF a Compensar na Fonte (Crédito Tributário - Serviços Próprios)',
+        tipoOperacao: 'PRESTADO',
+        baseCalculo: baseIRRFPrestado,
+        aliquota: 1.5,
+        valorPrincipal: totalIRRFPrestado,
+        dataVencimento: `${comp.substring(0, 4)}-${String(Number(comp.substring(5, 7)) + 1).padStart(2, '0')}-20`,
+        status: 'COMPENSADO',
+        integradaContabil: true,
+        detalhesNotas: notasIRRFPrestado.map(n => ({
+          notaId: n.id,
+          numeroNota: n.numero,
+          participanteNome: n.clienteFornecedorNome || 'Cliente',
+          cnpjCpf: n.clienteFornecedorCnpj || '',
+          valorNota: n.valorTotal,
+          valorRetido: n.retencaoIRRF || 0
+        }))
+      });
+    }
+
+    return guias;
+  }
+
+  public integrarRetencoesContabil(empresaId: number, competencia: string, guiaId: number): { success: boolean; loteId: number } {
+    const guias = this.getGuiasRetencaoFonte(empresaId, competencia);
+    const guia = guias.find(g => g.id === guiaId);
+    if (!guia || guia.valorPrincipal <= 0) return { success: false, loteId: 0 };
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Retenção na Fonte ${guia.codigoReceita} - ${guia.descricaoTributo} Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: guia.valorPrincipal,
+      totalCredito: guia.valorPrincipal
+    };
+
+    if (guia.tipoOperacao === 'TOMADO') {
+      // D: Fornecedores Nacionais (conta 30) - Abatimento da retenção da duplicata
+      // C: Impostos Retidos a Recolher (conta 27)
+      this.addLancamento({
+        empresaId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId,
+        dataLancamento: `${competencia}-28`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 30,
+        contaCreditoId: 27,
+        valor: guia.valorPrincipal,
+        historicoId: 2,
+        complementoHistorico: `Retenção na fonte ${guia.codigoReceita} ref. notas fiscais de tomados da comp. ${competencia}`,
+        usuarioNome: 'Central de Retenções'
+      });
+    } else {
+      // D: Impostos a Recuperar/Compensar no Ativo (conta 12)
+      // C: Clientes a Receber (conta 11)
+      this.addLancamento({
+        empresaId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId,
+        dataLancamento: `${competencia}-28`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 12,
+        contaCreditoId: 11,
+        valor: guia.valorPrincipal,
+        historicoId: 2,
+        complementoHistorico: `Retenção sofrida na fonte ref. serviços prestados comp. ${competencia}`,
+        usuarioNome: 'Central de Retenções'
+      });
+    }
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_RETENÇÕES', 'PROCESSAMENTO', `Guia de retenção ${guia.codigoReceita} (R$ ${guia.valorPrincipal.toFixed(2)}) integrada com sucesso.`);
+
+    return { success: true, loteId };
+  }
+
+  // --------------------------------------------------------------------------
+  // DIFAL - DIFERENCIAL DE ALÍQUOTA & DESTDA (EC 87/2015 / LC 190/2022)
+  // --------------------------------------------------------------------------
+  public getResumoDifalCompetencia(empresaId?: number, competencia?: string): ResumoDifalCompetencia {
+    const empId = empresaId || this.activeEmpresaId;
+    const comp = competencia || this.getActiveEmpresa().competenciaAtiva;
+    const emp = this.getEmpresas().find(e => e.id === empId) || this.getActiveEmpresa();
+
+    // Notas de entrada interestaduais para Uso e Consumo ou Ativo
+    const itens: ItemDifalApuracao[] = [
+      {
+        id: 1,
+        notaFiscalId: 101,
+        numeroNota: '4482',
+        dataEmissao: `${comp}-05`,
+        destinatarioRemetente: 'DELL COMPUTADORES DO BRASIL LTDA',
+        cnpjCpf: '72.381.189/0001-10',
+        ufOrigem: 'RS',
+        ufDestino: emp.uf || 'SP',
+        tipoOperacao: 'ENTRADA_ATIVO_IMOBILIZADO',
+        cfop: '2.551',
+        valorOperacao: 18500.00,
+        baseCalculoICMS: 18500.00,
+        aliquotaInterestadual: 12.0,
+        aliquotaInternaDestino: 18.0,
+        percentualDifal: 6.0,
+        fundoCombatePobrezaPerc: 0.0,
+        valorFCP: 0.0,
+        valorDifal: 1110.00,
+        valorTotalDevido: 1110.00,
+        integradoContabil: false
+      },
+      {
+        id: 2,
+        notaFiscalId: 102,
+        numeroNota: '9821',
+        dataEmissao: `${comp}-14`,
+        destinatarioRemetente: 'KALUNGA COMÉRCIO E INDÚSTRIA GRÁFICA LTDA',
+        cnpjCpf: '43.283.811/0001-50',
+        ufOrigem: 'MG',
+        ufDestino: emp.uf || 'SP',
+        tipoOperacao: 'ENTRADA_USO_CONSUMO',
+        cfop: '2.556',
+        valorOperacao: 4200.00,
+        baseCalculoICMS: 4200.00,
+        aliquotaInterestadual: 12.0,
+        aliquotaInternaDestino: 18.0,
+        percentualDifal: 6.0,
+        fundoCombatePobrezaPerc: 0.0,
+        valorFCP: 0.0,
+        valorDifal: 252.00,
+        valorTotalDevido: 252.00,
+        integradoContabil: false
+      },
+      {
+        id: 3,
+        notaFiscalId: 103,
+        numeroNota: '1209',
+        dataEmissao: `${comp}-22`,
+        destinatarioRemetente: 'TECH IMPORTAÇÃO E DISTRIBUIÇÃO ELETRÔNICOS S/A',
+        cnpjCpf: '11.222.333/0001-99',
+        ufOrigem: 'SC',
+        ufDestino: emp.uf || 'SP',
+        tipoOperacao: 'ENTRADA_USO_CONSUMO',
+        cfop: '2.556',
+        valorOperacao: 8900.00,
+        baseCalculoICMS: 8900.00,
+        aliquotaInterestadual: 4.0, // Alíquota Resolução SF 13/2012 para importados
+        aliquotaInternaDestino: 18.0,
+        percentualDifal: 14.0,
+        fundoCombatePobrezaPerc: 1.0,
+        valorFCP: 89.00,
+        valorDifal: 1246.00,
+        valorTotalDevido: 1335.00,
+        integradoContabil: false
+      }
+    ];
+
+    const totalBaseCalculo = itens.reduce((acc, i) => acc + i.baseCalculoICMS, 0);
+    const totalDifalDevido = itens.reduce((acc, i) => acc + i.valorDifal, 0);
+    const totalFCP = itens.reduce((acc, i) => acc + (i.valorFCP || 0), 0);
+    const totalGeralGuia = totalDifalDevido + totalFCP;
+
+    const jaIntegrado = this.lancamentos.some(l =>
+      l.empresaId === empId &&
+      l.dataLancamento.startsWith(comp) &&
+      l.complementoHistorico.toLowerCase().includes('diferencial de alíquota icms')
+    );
+
+    return {
+      competencia: comp,
+      empresaId: empId,
+      totalOperacoes: itens.length,
+      totalBaseCalculo,
+      totalDifalDevido,
+      totalFCP,
+      totalGeralGuia,
+      status: jaIntegrado ? 'INTEGRADO' : 'APURADO',
+      codigoReceitaGNRE: '10008-0',
+      linhaDigitavelGNRE: '85830000002-7 69700012026-9 10202600100-0 80000000000-0',
+      itens
+    };
+  }
+
+  public integrarDifalContabil(empresaId: number, competencia: string): { success: boolean; loteId: number; total: number } {
+    const resumo = this.getResumoDifalCompetencia(empresaId, competencia);
+    if (resumo.totalGeralGuia <= 0) return { success: false, loteId: 0, total: 0 };
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `ICMS Diferencial de Alíquota (DIFAL / GNRE) Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: resumo.totalGeralGuia,
+      totalCredito: resumo.totalGeralGuia
+    };
+
+    // D: Despesas Tributárias / ICMS Diferencial de Alíquota (conta 58)
+    // C: ICMS a Recolher (conta 27)
+    this.addLancamento({
+      empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: `${competencia}-28`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 58,
+      contaCreditoId: 27,
+      valor: resumo.totalGeralGuia,
+      historicoId: 2,
+      complementoHistorico: `Diferencial de Alíquota ICMS (DIFAL EC 87/15) s/ compras interestaduais de uso/ativo comp. ${competencia}`,
+      usuarioNome: 'Módulo Fiscal DIFAL'
+    });
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_DIFAL', 'PROCESSAMENTO', `DIFAL de ${competencia} integrado com sucesso: R$ ${resumo.totalGeralGuia.toFixed(2)} no lote nº ${lote.numero}.`);
+
+    return { success: true, loteId, total: resumo.totalGeralGuia };
+  }
+
+  // --------------------------------------------------------------------------
+  // APURAÇÃO TRIMESTRAL IRPJ / CSLL (LUCRO PRESUMIDO - LEI 9.249/95)
+  // --------------------------------------------------------------------------
+  public getApuracaoTrimestralIRPJCSLL(empresaId?: number, ano?: number, trimestre?: 1 | 2 | 3 | 4): ApuracaoTrimestralIRPJCSLL {
+    const empId = empresaId || this.activeEmpresaId;
+    const anoRef = ano || 2026;
+    const tri = trimestre || 3; // Padrão 3º Trimestre (Jul a Set) ou 4º
+
+    const descricoes = {
+      1: `1º Trimestre / ${anoRef} (Janeiro a Março)`,
+      2: `2º Trimestre / ${anoRef} (Abril a Junho)`,
+      3: `3º Trimestre / ${anoRef} (Julho a Setembro)`,
+      4: `4º Trimestre / ${anoRef} (Outubro a Dezembro)`
+    };
+
+    // Receita de Serviços do Trimestre
+    const recComercio = 45000.00;
+    const recServicos = 245000.00;
+    const totalRec = recComercio + recServicos;
+
+    // Presunções IRPJ: 8% Comércio + 32% Serviços
+    const basePresIRPJCom = Math.round((recComercio * 0.08) * 100) / 100;
+    const basePresIRPJSrv = Math.round((recServicos * 0.32) * 100) / 100;
+    const baseTotalIRPJ = basePresIRPJCom + basePresIRPJSrv;
+
+    const irpjNormal = Math.round((baseTotalIRPJ * 0.15) * 100) / 100;
+    const limiteTrimestre = 60000.00; // R$ 20.000 por mês
+    const excedente = Math.max(0, baseTotalIRPJ - limiteTrimestre);
+    const adicionalIRPJ = Math.round((excedente * 0.10) * 100) / 100;
+    const totalIRPJ = irpjNormal + adicionalIRPJ;
+    const irrfRetido = 3675.00; // Retenções na fonte sofridas no trimestre
+    const liqIRPJ = Math.max(0, totalIRPJ - irrfRetido);
+
+    // Presunções CSLL: 12% Comércio + 32% Serviços
+    const basePresCSLLCom = Math.round((recComercio * 0.12) * 100) / 100;
+    const basePresCSLLSrv = Math.round((recServicos * 0.32) * 100) / 100;
+    const baseTotalCSLL = basePresCSLLCom + basePresCSLLSrv;
+    const totalCSLL = Math.round((baseTotalCSLL * 0.09) * 100) / 100;
+    const csrfRetido = 2450.00; // CSLL retida na fonte 1%
+    const liqCSLL = Math.max(0, totalCSLL - csrfRetido);
+
+    const mesFim = tri === 1 ? '03' : tri === 2 ? '06' : tri === 3 ? '09' : '12';
+    const mesVenc1 = tri === 1 ? '04' : tri === 2 ? '07' : tri === 3 ? '10' : '01';
+    const anoVenc = tri === 4 ? anoRef + 1 : anoRef;
+
+    const jaIntegrado = this.lancamentos.some(l =>
+      l.empresaId === empId &&
+      l.complementoHistorico.toLowerCase().includes(`irpj lucro presumido ${tri}º tri`)
+    );
+
+    return {
+      id: tri,
+      empresaId: empId,
+      ano: anoRef,
+      trimestre: tri,
+      periodoDescricao: descricoes[tri],
+      receitaBrutaComercio: recComercio,
+      receitaBrutaServicos: recServicos,
+      totalReceitaBruta: totalRec,
+      basePresumidaIRPJComercio: basePresIRPJCom,
+      basePresumidaIRPJServicos: basePresIRPJSrv,
+      baseCalculoTotalIRPJ: baseTotalIRPJ,
+      aliquotaNormalIRPJ: 15.0,
+      valorIRPJNormal: irpjNormal,
+      limiteTrimestralAdicional: limiteTrimestre,
+      baseExcedenteAdicional: excedente,
+      valorAdicionalIRPJ: adicionalIRPJ,
+      totalIRPJDevido: totalIRPJ,
+      irrfRetidoDedutivel: irrfRetido,
+      valorLiquidoIRPJARecolher: liqIRPJ,
+      codigoReceitaDARFIRPJ: '2089',
+      basePresumidaCSLLComercio: basePresCSLLCom,
+      basePresumidaCSLLServicos: basePresCSLLSrv,
+      baseCalculoTotalCSLL: baseTotalCSLL,
+      aliquotaCSLL: 9.0,
+      totalCSLLDevido: totalCSLL,
+      csrfRetidoDedutivel: csrfRetido,
+      valorLiquidoCSLLARecolher: liqCSLL,
+      codigoReceitaDARFCSLL: '2372',
+      optouQuotas: false,
+      quantidadeQuotas: 1,
+      dataVencimentoQuota1: `${anoVenc}-${mesVenc1}-30`,
+      integradoContabil: jaIntegrado,
+      dataIntegracao: jaIntegrado ? `${anoRef}-${mesFim}-30` : undefined
+    };
+  }
+
+  public integrarApuracaoTrimestralContabil(empresaId: number, apuracaoId: number): { success: boolean; loteId: number } {
+    const apuracao = this.getApuracaoTrimestralIRPJCSLL(empresaId, 2026, apuracaoId as 1 | 2 | 3 | 4);
+    if (!apuracao) return { success: false, loteId: 0 };
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const totalGeral = apuracao.valorLiquidoIRPJARecolher + apuracao.valorLiquidoCSLLARecolher;
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Provisão Trimestral IRPJ e CSLL - ${apuracao.periodoDescricao}`,
+      dataLote: `${apuracao.ano}-09-30`,
+      status: 'FECHADO',
+      totalDebito: totalGeral,
+      totalCredito: totalGeral
+    };
+
+    // 1. Provisão de IRPJ (D: Despesas Tributárias Resultado conta 58, C: IRPJ a Recolher Passivo conta 27)
+    this.addLancamento({
+      empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: `${apuracao.ano}-09-30`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 58,
+      contaCreditoId: 27,
+      valor: apuracao.valorLiquidoIRPJARecolher,
+      historicoId: 2,
+      complementoHistorico: `Provisão IRPJ Lucro Presumido ${apuracao.trimestre}º Tri/${apuracao.ano} Cód 2089`,
+      usuarioNome: 'Apuração IRPJ/CSLL'
+    });
+
+    // 2. Provisão de CSLL (D: Despesas Tributárias Resultado conta 58, C: CSLL a Recolher Passivo conta 27)
+    this.addLancamento({
+      empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: `${apuracao.ano}-09-30`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 58,
+      contaCreditoId: 27,
+      valor: apuracao.valorLiquidoCSLLARecolher,
+      historicoId: 2,
+      complementoHistorico: `Provisão CSLL Lucro Presumido ${apuracao.trimestre}º Tri/${apuracao.ano} Cód 2372`,
+      usuarioNome: 'Apuração IRPJ/CSLL'
+    });
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_TRIMESTRAL_IRPJ_CSLL', 'PROCESSAMENTO', `Apuração ${apuracao.periodoDescricao} integrada: IRPJ R$ ${apuracao.valorLiquidoIRPJARecolher.toFixed(2)}, CSLL R$ ${apuracao.valorLiquidoCSLLARecolher.toFixed(2)}.`);
+
+    return { success: true, loteId };
+  }
+
+  // --------------------------------------------------------------------------
+  // LALUR & LACS (LIVRO ELETRÔNICO DE APURAÇÃO DO LUCRO REAL - SPED ECF BLOCO M)
+  // --------------------------------------------------------------------------
+  public getContasParteBLalur(empresaId?: number): ContaParteBLalur[] {
+    const empId = empresaId || this.activeEmpresaId;
+    return this.contasParteBLalur.filter(c => c.empresaId === empId);
+  }
+
+  public saveContaParteBLalur(conta: ContaParteBLalur): void {
+    const idx = this.contasParteBLalur.findIndex(c => c.id === conta.id);
+    if (idx >= 0) {
+      this.contasParteBLalur[idx] = conta;
+    } else {
+      conta.id = Date.now();
+      this.contasParteBLalur.push(conta);
+    }
+    this.persistSnapshot();
+  }
+
+  public deleteContaParteBLalur(id: number): void {
+    this.contasParteBLalur = this.contasParteBLalur.filter(c => c.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getLancamentosParteA(empresaId?: number, periodo?: string): LancamentoLalurParteA[] {
+    const empId = empresaId || this.activeEmpresaId;
+    let list = this.lancamentosParteA.filter(l => l.empresaId === empId);
+    if (periodo) {
+      list = list.filter(l => l.periodo === periodo);
+    }
+    return list;
+  }
+
+  public saveLancamentoParteA(lanc: LancamentoLalurParteA): void {
+    const idx = this.lancamentosParteA.findIndex(l => l.id === lanc.id);
+    if (idx >= 0) {
+      this.lancamentosParteA[idx] = lanc;
+    } else {
+      lanc.id = Date.now();
+      this.lancamentosParteA.push(lanc);
+    }
+    this.persistSnapshot();
+  }
+
+  public deleteLancamentoParteA(id: number): void {
+    this.lancamentosParteA = this.lancamentosParteA.filter(l => l.id !== id);
+    this.persistSnapshot();
+  }
+
+  public getApuracaoLucroRealLalur(empresaId?: number, ano?: number, periodo?: string): ApuracaoLucroRealLalur {
+    const empId = empresaId || this.activeEmpresaId;
+    const anoRef = ano || 2026;
+    const per = periodo || `${anoRef}-1T`;
+
+    // 1. Lucro Líquido Contábil antes dos tributos (Base DRE)
+    const lucroLiquidoAntesTributos = 385000.00;
+
+    // 2. Adições e Exclusões da Parte A
+    const lancamentos = this.getLancamentosParteA(empId, per);
+    const adicoes = lancamentos.filter(l => l.tipo === 'ADICAO');
+    const exclusoes = lancamentos.filter(l => l.tipo === 'EXCLUSAO');
+
+    // Totais IRPJ
+    const totalAdicoesIRPJ = adicoes
+      .filter(l => l.tributo === 'IRPJ' || l.tributo === 'AMBOS')
+      .reduce((sum, l) => sum + l.valor, 0);
+    const totalExclusoesIRPJ = exclusoes
+      .filter(l => l.tributo === 'IRPJ' || l.tributo === 'AMBOS')
+      .reduce((sum, l) => sum + l.valor, 0);
+
+    const lucroRealAntesCompensacao = Math.max(0, lucroLiquidoAntesTributos + totalAdicoesIRPJ - totalExclusoesIRPJ);
+
+    // 3. Compensação de Prejuízo Fiscal (Trava Legal de 30% - Art. 42 da Lei 8.981/95)
+    const limiteCompensacaoPrejuizo = Math.round((lucroRealAntesCompensacao * 0.30) * 100) / 100;
+    const contaPF = this.contasParteBLalur.find(c => c.empresaId === empId && c.tipoConta === 'PREJUIZO_FISCAL');
+    const saldoPFDisponivel = contaPF ? contaPF.saldoAtual : 0;
+    const prejuizoFiscalCompensado = Math.min(limiteCompensacaoPrejuizo, saldoPFDisponivel);
+
+    const lucroRealApurado = Math.max(0, lucroRealAntesCompensacao - prejuizoFiscalCompensado);
+
+    // 4. IRPJ: 15% Normal + 10% Adicional s/ parcela > R$ 60.000,00 trimestral
+    const aliquotaIRPJNormal = 15.0;
+    const valorIRPJNormal = Math.round((lucroRealApurado * (aliquotaIRPJNormal / 100)) * 100) / 100;
+    const limiteTrimestralAdicional = 60000.00;
+    const baseExcedenteAdicional = Math.max(0, lucroRealApurado - limiteTrimestralAdicional);
+    const aliquotaAdicionalIRPJ = 10.0;
+    const valorAdicionalIRPJ = Math.round((baseExcedenteAdicional * (aliquotaAdicionalIRPJ / 100)) * 100) / 100;
+    const totalIRPJDevido = valorIRPJNormal + valorAdicionalIRPJ;
+
+    const irrfRetidoDedutivel = 3850.00;
+    const incentivosFiscaisDedutiveis = 1500.00; // PAT / Lei Rouanet
+    const estimativasPagasIRPJ = 0.00;
+    const valorLiquidoIRPJARecolher = Math.max(0, totalIRPJDevido - irrfRetidoDedutivel - incentivosFiscaisDedutiveis - estimativasPagasIRPJ);
+
+    // 5. LACS - CSLL
+    const totalAdicoesCSLL = adicoes
+      .filter(l => l.tributo === 'CSLL' || l.tributo === 'AMBOS')
+      .reduce((sum, l) => sum + l.valor, 0);
+    const totalExclusoesCSLL = exclusoes
+      .filter(l => l.tributo === 'CSLL' || l.tributo === 'AMBOS')
+      .reduce((sum, l) => sum + l.valor, 0);
+
+    const baseCalculoCSLLAntesCompensacao = Math.max(0, lucroLiquidoAntesTributos + totalAdicoesCSLL - totalExclusoesCSLL);
+    const limiteCompensacaoBaseNegativa = Math.round((baseCalculoCSLLAntesCompensacao * 0.30) * 100) / 100;
+    const contaBN = this.contasParteBLalur.find(c => c.empresaId === empId && c.tipoConta === 'BASE_NEGATIVA');
+    const saldoBNDisponivel = contaBN ? contaBN.saldoAtual : 0;
+    const baseNegativaCSLLCompensada = Math.min(limiteCompensacaoBaseNegativa, saldoBNDisponivel);
+    const baseCalculoFinalCSLL = Math.max(0, baseCalculoCSLLAntesCompensacao - baseNegativaCSLLCompensada);
+
+    const aliquotaCSLL = 9.0;
+    const totalCSLLDevido = Math.round((baseCalculoFinalCSLL * (aliquotaCSLL / 100)) * 100) / 100;
+    const csrfRetidoDedutivel = 2450.00;
+    const estimativasPagasCSLL = 0.00;
+    const valorLiquidoCSLLARecolher = Math.max(0, totalCSLLDevido - csrfRetidoDedutivel - estimativasPagasCSLL);
+
+    const jaIntegrado = this.lancamentos.some(l =>
+      l.empresaId === empId &&
+      l.complementoHistorico.toLowerCase().includes(`irpj lucro real ${per.toLowerCase()}`)
+    );
+
+    return {
+      id: 1,
+      empresaId: empId,
+      ano: anoRef,
+      periodo: per,
+      dataApuracao: `${anoRef}-03-31`,
+      lucroLiquidoAntesTributos,
+      totalAdicoesIRPJ,
+      totalExclusoesIRPJ,
+      lucroRealAntesCompensacao,
+      limiteCompensacaoPrejuizo,
+      prejuizoFiscalCompensado,
+      lucroRealApurado,
+      aliquotaIRPJNormal,
+      valorIRPJNormal,
+      limiteTrimestralAdicional,
+      baseExcedenteAdicional,
+      aliquotaAdicionalIRPJ,
+      valorAdicionalIRPJ,
+      totalIRPJDevido,
+      irrfRetidoDedutivel,
+      incentivosFiscaisDedutiveis,
+      estimativasPagasIRPJ,
+      valorLiquidoIRPJARecolher,
+      codigoReceitaDARFIRPJ: '2432',
+      totalAdicoesCSLL,
+      totalExclusoesCSLL,
+      baseCalculoCSLLAntesCompensacao,
+      limiteCompensacaoBaseNegativa,
+      baseNegativaCSLLCompensada,
+      baseCalculoFinalCSLL,
+      aliquotaCSLL,
+      totalCSLLDevido,
+      csrfRetidoDedutivel,
+      estimativasPagasCSLL,
+      valorLiquidoCSLLARecolher,
+      codigoReceitaDARFCSLL: '6012',
+      adicoesDetalhes: adicoes,
+      exclusoesDetalhes: exclusoes,
+      integradoContabil: jaIntegrado,
+      dataIntegracao: jaIntegrado ? `${anoRef}-03-31` : undefined
+    };
+  }
+
+  public integrarApuracaoLucroRealContabil(empresaId: number, apuracaoPeriodo: string): { success: boolean; loteId: number } {
+    const apuracao = this.getApuracaoLucroRealLalur(empresaId, 2026, apuracaoPeriodo);
+    if (!apuracao) return { success: false, loteId: 0 };
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const totalGeral = apuracao.valorLiquidoIRPJARecolher + apuracao.valorLiquidoCSLLARecolher;
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Provisão de IRPJ e CSLL - Lucro Real Lalur/Lacs ${apuracao.periodo}`,
+      dataLote: apuracao.dataApuracao,
+      status: 'FECHADO',
+      totalDebito: totalGeral,
+      totalCredito: totalGeral
+    };
+
+    // 1. Partida de IRPJ (D: Despesas Tributárias Resultado conta 58, C: IRPJ a Recolher Passivo conta 27)
+    this.addLancamento({
+      empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: apuracao.dataApuracao,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 58,
+      contaCreditoId: 27,
+      valor: apuracao.valorLiquidoIRPJARecolher,
+      historicoId: 2,
+      complementoHistorico: `Provisão IRPJ Lucro Real ${apuracao.periodo} DARF 2432`,
+      usuarioNome: 'Lalur/Lacs Engine'
+    });
+
+    // 2. Partida de CSLL (D: Despesas Tributárias Resultado conta 58, C: CSLL a Recolher Passivo conta 27)
+    this.addLancamento({
+      empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: apuracao.dataApuracao,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 58,
+      contaCreditoId: 27,
+      valor: apuracao.valorLiquidoCSLLARecolher,
+      historicoId: 2,
+      complementoHistorico: `Provisão CSLL Lucro Real ${apuracao.periodo} DARF 6012`,
+      usuarioNome: 'Lalur/Lacs Engine'
+    });
+
+    // 3. Atualizar saldo de Prejuízo Fiscal e Base Negativa na Parte B caso compensado
+    if (apuracao.prejuizoFiscalCompensado > 0) {
+      const contaPF = this.contasParteBLalur.find(c => c.empresaId === empresaId && c.tipoConta === 'PREJUIZO_FISCAL');
+      if (contaPF) {
+        contaPF.saldoAtual = Math.max(0, contaPF.saldoAtual - apuracao.prejuizoFiscalCompensado);
+      }
+    }
+    if (apuracao.baseNegativaCSLLCompensada > 0) {
+      const contaBN = this.contasParteBLalur.find(c => c.empresaId === empresaId && c.tipoConta === 'BASE_NEGATIVA');
+      if (contaBN) {
+        contaBN.saldoAtual = Math.max(0, contaBN.saldoAtual - apuracao.baseNegativaCSLLCompensada);
+      }
+    }
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_LALUR_LUCRO_REAL', 'PROCESSAMENTO', `Apuração Lalur/Lacs ${apuracao.periodo} integrada: IRPJ R$ ${apuracao.valorLiquidoIRPJARecolher.toFixed(2)}, CSLL R$ ${apuracao.valorLiquidoCSLLARecolher.toFixed(2)}.`);
+
+    return { success: true, loteId };
+  }
+
+  // --------------------------------------------------------------------------
+  // EFD-REINF (ESCRITURAÇÃO FISCAL DIGITAL DE RETENÇÕES E OUTRAS INFORMAÇÕES FISCAIS)
+  // --------------------------------------------------------------------------
+  public getResumoReinfCompetencia(empresaId?: number, competencia?: string): ResumoReinfCompetencia {
+    const empId = empresaId || this.activeEmpresaId;
+    const comp = competencia || '2026-10';
+
+    let eventos = this.eventosReinf.filter(e => e.empresaId === empId && e.competencia === comp);
+    if (eventos.length === 0) {
+      // Se ainda não existirem para a competência, gerar a partir dos seeds
+      eventos = SEED_EVENTOS_REINF.map(e => ({ ...e, empresaId: empId, competencia: comp }));
+      this.eventosReinf.push(...eventos);
+      this.persistSnapshot();
+    }
+
+    const r1000 = eventos.filter(e => e.tipoEvento === 'R-1000').length;
+    const r2010 = eventos.filter(e => e.tipoEvento === 'R-2010').length;
+    const r4020 = eventos.filter(e => e.tipoEvento === 'R-4020').length;
+
+    const totalINSS = eventos
+      .filter(e => e.tipoEvento === 'R-2010')
+      .reduce((sum, e) => sum + (e.detalhes.totalRetencao || 0), 0);
+    const totalIRRF = eventos
+      .filter(e => e.tipoEvento === 'R-4020')
+      .reduce((sum, e) => sum + (e.detalhes.totalRetencao ? e.detalhes.totalRetencao * 0.2439 : 0), 0); // ~1.5% de 6.15%
+    const totalCSRF = eventos
+      .filter(e => e.tipoEvento === 'R-4020')
+      .reduce((sum, e) => sum + (e.detalhes.totalRetencao ? e.detalhes.totalRetencao * 0.7561 : 0), 0); // ~4.65% de 6.15%
+
+    const todosTransmitidos = eventos.every(e => e.status === 'TRANSMITIDO');
+
+    return {
+      competencia: comp,
+      empresaId: empId,
+      totalEventos: eventos.length,
+      eventosR1000: r1000,
+      eventosR2010: r2010,
+      eventosR4020: r4020,
+      totalRetencaoINSS: Math.round(totalINSS * 100) / 100,
+      totalRetencaoIRRF: Math.round(totalIRRF * 100) / 100,
+      totalRetencaoCSRF: Math.round(totalCSRF * 100) / 100,
+      totalGeralRetencoes: Math.round((totalINSS + totalIRRF + totalCSRF) * 100) / 100,
+      statusGeral: todosTransmitidos ? 'TRANSMITIDO' : 'PRONTO',
+      eventos
+    };
+  }
+
+  public gerarXmlEventoReinf(empresaId: number, tipo: 'R-1000' | 'R-2010' | 'R-4020', competencia: string): EventoReinf {
+    const empresa = this.getEmpresa(empresaId) || this.empresas[0];
+    const cnpjNumeros = (empresa.cnpj || '12345678000195').replace(/\D/g, '');
+    const idUnico = Date.now();
+
+    let xml = '';
+    let detalhes: any = {};
+    let nomeEvento = '';
+
+    if (tipo === 'R-1000') {
+      nomeEvento = 'Informações do Contribuinte';
+      detalhes = { totalBaseCalculo: 0, totalRetencao: 0 };
+      xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Reinf xmlns="http://www.reinf.esocial.gov.br/schemas/evtInfoContribuinte/v2_01_02">
+  <evtInfoContri id="ID1${cnpjNumeros.padEnd(14, '0')}${idUnico.toString().slice(-5)}">
+    <ideEvento>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideContri>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${cnpjNumeros}</nrInsc>
+    </ideContri>
+    <infoContri>
+      <inclusao>
+        <idePeriodo>
+          <iniValid>${competencia}</iniValid>
+        </idePeriodo>
+        <infoCadastro>
+          <classTrib>${empresa.regimeTributario === 'SIMPLES_NACIONAL' ? '01' : '99'}</classTrib>
+          <indEscrituracao>1</indEscrituracao>
+          <indDesoneracao>0</indDesoneracao>
+          <indAcordoIsenMulta>0</indAcordoIsenMulta>
+          <contato>
+            <nmCtt>${empresa.responsavelLegal || 'Administrador Responsável'}</nmCtt>
+            <cpfCtt>${(empresa.cpfResponsavel || '12345678901').replace(/\D/g, '')}</cpfCtt>
+            <foneFixo>${(empresa.telefone || '1133334444').replace(/\D/g, '')}</foneFixo>
+            <email>${empresa.email || 'fiscal@empresa.com.br'}</email>
+          </contato>
+          <softwareHouse>
+            <cnpjSoftHouse>11222333000144</cnpjSoftHouse>
+            <nmRazao>AMILLABS TECNOLOGIA CONTABIL LTDA</nmRazao>
+            <nmCont>Suporte Técnico Especializado</nmCont>
+            <email>suporte@amillabs.com.br</email>
+          </softwareHouse>
+        </infoCadastro>
+      </inclusao>
+    </infoContri>
+  </evtInfoContri>
+</Reinf>`;
+    } else if (tipo === 'R-2010') {
+      nomeEvento = 'Retenção Contribuição Previdenciária - Serviços Tomados';
+      const base = 32000.00;
+      const inss = 3520.00;
+      detalhes = {
+        totalBaseCalculo: base,
+        totalRetencao: inss,
+        codigoReceita: '2631',
+        prestadorTomador: 'SEGURANÇA E VIGILÂNCIA PATRIMONIAL LTDA',
+        cnpjCpf: '22.333.444/0001-55'
+      };
+      xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Reinf xmlns="http://www.reinf.esocial.gov.br/schemas/evtTomadorServicos/v2_01_02">
+  <evtServTom id="ID2${cnpjNumeros.padEnd(14, '0')}${idUnico.toString().slice(-5)}">
+    <ideEvento>
+      <perApur>${competencia}</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideContri>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${cnpjNumeros}</nrInsc>
+    </ideContri>
+    <infoServTom>
+      <ideEstabObra>
+        <tpInscEstab>1</tpInscEstab>
+        <nrInscEstab>${cnpjNumeros}</nrInscEstab>
+        <idePrestServ>
+          <cnpjPrestador>22333444000155</cnpjPrestador>
+          <vlrTotalBruto>${base.toFixed(2)}</vlrTotalBruto>
+          <vlrTotalBaseRet>${base.toFixed(2)}</vlrTotalBaseRet>
+          <vlrTotalRetPrinc>${inss.toFixed(2)}</vlrTotalRetPrinc>
+          <nfs>
+            <serie>1</serie>
+            <numDocto>4520</numDocto>
+            <dtEmisNF>${competencia}-05</dtEmisNF>
+            <vlrBruto>${base.toFixed(2)}</vlrBruto>
+            <infoTpServ>
+              <tpServ>100000001</tpServ>
+              <vlrBaseRet>${base.toFixed(2)}</vlrBaseRet>
+              <vlrRetencao>${inss.toFixed(2)}</vlrRetencao>
+            </infoTpServ>
+          </nfs>
+        </idePrestServ>
+      </ideEstabObra>
+    </infoServTom>
+  </evtServTom>
+</Reinf>`;
+    } else {
+      nomeEvento = 'Retenções na Fonte - Pagamentos a PJ (IRRF / CSRF)';
+      const base = 12800.00;
+      const irrf = 192.00;
+      const csrf = 595.20;
+      detalhes = {
+        totalBaseCalculo: base,
+        totalRetencao: irrf + csrf,
+        codigoReceita: '1708 / 5952',
+        prestadorTomador: 'AMAZON WEB SERVICES BRASIL LTDA',
+        cnpjCpf: '15.419.093/0001-44',
+        naturezaRendimento: '13007 - Serviços de Assessoria Técnica Especializada'
+      };
+      xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Reinf xmlns="http://www.reinf.esocial.gov.br/schemas/evtRetencaoPJ/v2_01_02">
+  <evtRetPJ id="ID4${cnpjNumeros.padEnd(14, '0')}${idUnico.toString().slice(-5)}">
+    <ideEvento>
+      <perApur>${competencia}</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>ContabilStudioPro_2026.1</verProc>
+    </ideEvento>
+    <ideContri>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${cnpjNumeros}</nrInsc>
+    </ideContri>
+    <ideEstab>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${cnpjNumeros}</nrInsc>
+      <ideBenef>
+        <cnpjBenef>15419093000144</cnpjBenef>
+        <idePgto>
+          <natRend>13007</natRend>
+          <observacao>Serviços de Assessoria Técnica e Nuvem</observacao>
+          <infoPgto>
+            <dtFG>${competencia}-08</dtFG>
+            <vlrBruto>${base.toFixed(2)}</vlrBruto>
+            <retencoes>
+              <vlrIR>${irrf.toFixed(2)}</vlrIR>
+              <vlrCSLL>128.00</vlrCSLL>
+              <vlrCofins>384.00</vlrCofins>
+              <vlrPP>83.20</vlrPP>
+              <vlrAgreg>${csrf.toFixed(2)}</vlrAgreg>
+            </retencoes>
+          </infoPgto>
+        </idePgto>
+      </ideBenef>
+    </ideEstab>
+  </evtRetPJ>
+</Reinf>`;
+    }
+
+    const novoEvento: EventoReinf = {
+      id: idUnico,
+      empresaId,
+      tipoEvento: tipo,
+      nomeEvento,
+      competencia,
+      status: 'VALIDADO',
+      dataGeracao: new Date().toISOString().replace('T', ' ').slice(0, 19),
+      xmlContent: xml,
+      detalhes
+    };
+
+    this.eventosReinf.push(novoEvento);
+    this.persistSnapshot();
+    return novoEvento;
+  }
+
+  public transmitirEventosReinf(empresaId: number, competencia: string, eventoIds?: number[]): { success: boolean; recibos: { eventoId: number; recibo: string }[] } {
+    const eventos = this.eventosReinf.filter(e =>
+      e.empresaId === empresaId &&
+      e.competencia === competencia &&
+      (!eventoIds || eventoIds.includes(e.id))
+    );
+
+    const agora = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const recibos: { eventoId: number; recibo: string }[] = [];
+
+    eventos.forEach((evt, idx) => {
+      const protocoloRandom = Math.floor(100000 + Math.random() * 900000);
+      const recibo = `1.${competencia.replace('-', '')}.${protocoloRandom}-${(idx + 1).toString().padStart(2, '0')}`;
+      evt.status = 'TRANSMITIDO';
+      evt.numeroRecibo = recibo;
+      evt.dataTransmissao = agora;
+      recibos.push({ eventoId: evt.id, recibo });
+    });
+
+    this.persistSnapshot();
+    this.registrarAuditoria('TRANSMISSAO_EFD_REINF', 'COMUNICACAO', `Transmitidos ${eventos.length} eventos da EFD-Reinf ref. ${competencia} com sucesso.`);
+    return { success: true, recibos };
+  }
+
+  // --------------------------------------------------------------------------
+  // NFS-e NACIONAL / ABRASF & FATURAMENTO DE SERVIÇOS
+  // --------------------------------------------------------------------------
+  public getNfseEmitidas(empresaId?: number, competencia?: string): NfseEmissao[] {
+    const empId = empresaId || this.activeEmpresaId;
+    let list = this.nfseEmitidas.filter(n => n.empresaId === empId);
+    if (competencia) {
+      list = list.filter(n => n.competencia === competencia);
+    }
+    return list;
+  }
+
+  public emitirNfseDPS(empresaId: number, dados: Partial<NfseEmissao>): NfseEmissao {
+    const emp = this.getEmpresa(empresaId) || this.empresas[0];
+    const proximoDPS = this.nfseEmitidas.reduce((m, n) => Math.max(m, n.numeroDPS), 100) + 1;
+    const agora = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    const comp = dados.competencia || emp.competenciaAtiva || '2026-10';
+
+    const vlrServ = dados.valorServicos || 5000.00;
+    const aliqISS = dados.aliquotaISS || 5.0;
+    const vlrISS = Math.round((vlrServ * (aliqISS / 100)) * 100) / 100;
+    const retIRRF = dados.retencaoIRRF !== undefined ? dados.retencaoIRRF : Math.round((vlrServ * 0.015) * 100) / 100;
+    const retPIS = dados.retencaoPIS !== undefined ? dados.retencaoPIS : Math.round((vlrServ * 0.0065) * 100) / 100;
+    const retCOFINS = dados.retencaoCOFINS !== undefined ? dados.retencaoCOFINS : Math.round((vlrServ * 0.030) * 100) / 100;
+    const retCSLL = dados.retencaoCSLL !== undefined ? dados.retencaoCSLL : Math.round((vlrServ * 0.010) * 100) / 100;
+    const retINSS = dados.retencaoINSS || 0;
+    const totalRet = retIRRF + retPIS + retCOFINS + retCSLL + retINSS;
+    const vlrLiquido = vlrServ - totalRet;
+
+    const hashRandom = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const hashRandom2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const codigoVerificacao = `${hashRandom}-${hashRandom2}-2026`;
+    const numNfse = `2026${proximoDPS.toString().padStart(10, '0')}`;
+
+    const xmlDPS = `<?xml version="1.0" encoding="UTF-8"?>
+<DPS xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+  <infDPS Id="DPS${emp.cnpj.replace(/\D/g, '')}${proximoDPS}">
+    <tpAmb>1</tpAmb>
+    <dhEmi>${agora}</dhEmi>
+    <verAplic>ContabilStudioPro_2026.1</verAplic>
+    <dCompet>${comp}-01</dCompet>
+    <prest>
+      <CNPJ>${emp.cnpj.replace(/\D/g, '')}</CNPJ>
+      <xNome>${emp.razaoSocial}</xNome>
+    </prest>
+    <toma>
+      <CNPJ>${(dados.tomadorCnpjCpf || '11222333000181').replace(/\D/g, '')}</CNPJ>
+      <xNome>${dados.tomadorRazaoSocial || 'CLIENTE TOMADOR'}</xNome>
+      <end>
+        <xLgr>${dados.tomadorEndereco || 'Av. Paulista'}</xLgr>
+        <xMun>${dados.tomadorCidade || 'São Paulo'}</xMun>
+        <UF>${dados.tomadorUf || 'SP'}</UF>
+      </end>
+    </toma>
+    <serv>
+      <cTribNac>${dados.codigoTributacaoNacional || '17.19.01'}</cTribNac>
+      <cLocIncid>${dados.tomadorCodigoIbge || '3550308'}</cLocIncid>
+      <xDescServ>${dados.discriminacaoServico || 'Honorários Contábeis'}</xDescServ>
+    </serv>
+    <valores>
+      <vServPrest>${vlrServ.toFixed(2)}</vServPrest>
+      <vISS>${vlrISS.toFixed(2)}</vISS>
+      <vIR>${retIRRF.toFixed(2)}</vIR>
+      <vCSLL>${retCSLL.toFixed(2)}</vCSLL>
+      <vPIS>${retPIS.toFixed(2)}</vPIS>
+      <vCOFINS>${retCOFINS.toFixed(2)}</vCOFINS>
+      <vLiq>${vlrLiquido.toFixed(2)}</vLiq>
+    </valores>
+  </infDPS>
+</DPS>`;
+
+    const novaNfse: NfseEmissao = {
+      id: Date.now(),
+      empresaId,
+      numeroDPS: proximoDPS,
+      serieDPS: '1',
+      numeroNfse: numNfse,
+      codigoVerificacao,
+      dataEmissao: agora,
+      competencia: comp,
+      tomadorId: dados.tomadorId,
+      tomadorRazaoSocial: dados.tomadorRazaoSocial || 'CLIENTE TOMADOR S/A',
+      tomadorCnpjCpf: dados.tomadorCnpjCpf || '11.222.333/0001-81',
+      tomadorEmail: dados.tomadorEmail || 'financeiro@cliente.com.br',
+      tomadorEndereco: dados.tomadorEndereco || 'Av. Paulista, 1000',
+      tomadorCidade: dados.tomadorCidade || 'São Paulo',
+      tomadorUf: dados.tomadorUf || 'SP',
+      tomadorCodigoIbge: dados.tomadorCodigoIbge || '3550308',
+      itemLc116: dados.itemLc116 || '17.19 - Contabilidade, consultoria tributária e auditoria',
+      codigoTributacaoNacional: dados.codigoTributacaoNacional || '17.19.01',
+      discriminacaoServico: dados.discriminacaoServico || 'Honorários contábeis e assessoria fiscal.',
+      valorServicos: vlrServ,
+      valorDeducoes: 0,
+      baseCalculoISS: vlrServ,
+      aliquotaISS: aliqISS,
+      valorISS: vlrISS,
+      issRetido: dados.issRetido || false,
+      retencaoIRRF: retIRRF,
+      retencaoPIS: retPIS,
+      retencaoCOFINS: retCOFINS,
+      retencaoCSLL: retCSLL,
+      retencaoINSS: retINSS,
+      valorTotalRetencoes: totalRet,
+      valorLiquidoNfse: vlrLiquido,
+      status: 'EMITIDA',
+      faturaHonorarioId: dados.faturaHonorarioId,
+      xmlNfse: xmlDPS,
+      integradaFiscal: false,
+      integradaContabil: false
+    };
+
+    this.nfseEmitidas.unshift(novaNfse);
+    this.persistSnapshot();
+    this.registrarAuditoria('EMISSAO_NFSE_NACIONAL', 'INCLUSAO', `NFS-e Nº ${numNfse} emitida para ${novaNfse.tomadorRazaoSocial} no valor de R$ ${vlrServ.toFixed(2)}.`);
+
+    return novaNfse;
+  }
+
+  public cancelarNfse(id: number, motivo: string): boolean {
+    const nfse = this.nfseEmitidas.find(n => n.id === id);
+    if (!nfse) return false;
+    nfse.status = 'CANCELADA';
+    this.persistSnapshot();
+    this.registrarAuditoria('CANCELAMENTO_NFSE', 'EXCLUSAO', `NFS-e Nº ${nfse.numeroNfse} cancelada. Motivo: ${motivo}`);
+    return true;
+  }
+
+  public integrarNfseFiscalContabil(id: number): { success: boolean; notaId: number; loteId: number } {
+    const nfse = this.nfseEmitidas.find(n => n.id === id);
+    if (!nfse || nfse.status !== 'EMITIDA') return { success: false, notaId: 0, loteId: 0 };
+
+    // 1. Escriturar na Escrita Fiscal (EFNOTA)
+    const proximaNotaNum = this.notasFiscais.length + 1;
+    const notaFiscalId = Date.now();
+    const nota: NotaFiscal = {
+      id: notaFiscalId,
+      empresaId: nfse.empresaId,
+      numero: nfse.numeroDPS,
+      serie: nfse.serieDPS,
+      modelo: 'NFS-e',
+      chaveAcesso: `35${nfse.competencia.replace('-', '')}${nfse.tomadorCnpjCpf.replace(/\D/g, '')}00000000000000000000`,
+      dataEmissao: nfse.dataEmissao.split(' ')[0],
+      dataEntradaSaida: nfse.dataEmissao.split(' ')[0],
+      tipo: 'SAIDA',
+      acumuladorId: 3,
+      cfop: '5.933',
+      clienteFornecedorNome: nfse.tomadorRazaoSocial,
+      clienteFornecedorCnpj: nfse.tomadorCnpjCpf,
+      valorTotal: nfse.valorServicos,
+      baseCalculoICMS: 0,
+      valorICMS: 0,
+      baseCalculoPIS: nfse.valorServicos,
+      valorPIS: nfse.retencaoPIS,
+      baseCalculoCOFINS: nfse.valorServicos,
+      valorCOFINS: nfse.retencaoCOFINS,
+      baseCalculoISS: nfse.baseCalculoISS,
+      valorISS: nfse.valorISS,
+      retencaoIRRF: nfse.retencaoIRRF,
+      retencaoCSRF: nfse.retencaoPIS + nfse.retencaoCOFINS + nfse.retencaoCSLL,
+      integradaContabil: true,
+      itens: [
+        {
+          id: Date.now() + 1,
+          numeroItem: 1,
+          codigoProduto: 'SRV-CONTAB',
+          descricao: nfse.discriminacaoServico,
+          ncm: '00000000',
+          cfop: '5.933',
+          unidade: 'UN',
+          quantidade: 1,
+          valorUnitario: nfse.valorServicos,
+          valorTotal: nfse.valorServicos
+        }
+      ]
+    };
+    this.notasFiscais.push(nota);
+
+    // 2. Integrar na Contabilidade (Diário Geral)
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now() + 2;
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId: nfse.empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Faturamento e Emissão NFS-e Nº ${nfse.numeroDPS} - ${nfse.tomadorRazaoSocial}`,
+      dataLote: nfse.dataEmissao.split(' ')[0],
+      status: 'FECHADO',
+      totalDebito: nfse.valorServicos,
+      totalCredito: nfse.valorServicos
+    };
+
+    // Partida 1: D - Clientes a Receber (Ativo conta 6), C - Receita de Serviços (Resultado conta 41)
+    this.addLancamento({
+      empresaId: nfse.empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: nfse.dataEmissao.split(' ')[0],
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 6,
+      contaCreditoId: 41,
+      valor: nfse.valorServicos,
+      historicoId: 1,
+      complementoHistorico: `Vlr ref. emissão NFS-e Nº ${nfse.numeroDPS} s/ prestação de serviços a ${nfse.tomadorRazaoSocial}`,
+      usuarioNome: 'NFS-e Faturamento'
+    });
+
+    this.lotes.push(lote);
+    nfse.integradaFiscal = true;
+    nfse.integradaContabil = true;
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_NFSE_FISCAL_CONTABIL', 'PROCESSAMENTO', `NFS-e Nº ${nfse.numeroDPS} escriturada no fiscal e contabilizada com sucesso.`);
+
+    return { success: true, notaId: notaFiscalId, loteId };
+  }
+
+  // ----------------------------------------------------
+  // CIAP - CONTROLE DE CRÉDITO DE ICMS DO ATIVO PERMANENTE (SPED FISCAL BLOCO G / LC 87/96)
+  // ----------------------------------------------------
+  public getItensCiap(empresaId?: number): ItemCiap[] {
+    if (empresaId) {
+      return this.itensCiap.filter(i => i.empresaId === empresaId);
+    }
+    return this.itensCiap;
+  }
+
+  public saveItemCiap(item: Partial<ItemCiap> & { empresaId: number; codigoBem: string; descricaoBem: string }): ItemCiap {
+    const totalParcelas = item.totalParcelas || 48;
+    const valorICMS = Number(item.valorICMSOriginal || 0);
+    const parcelaMes = Number((valorICMS / totalParcelas).toFixed(2));
+    const parcelaAtual = item.parcelaAtual || 1;
+    const saldoRemanescente = item.saldoICMSRemanescente !== undefined
+      ? item.saldoICMSRemanescente
+      : Number((valorICMS - ((parcelaAtual - 1) * parcelaMes)).toFixed(2));
+
+    let itemSalvo: ItemCiap;
+    if (item.id && item.id > 0) {
+      const idx = this.itensCiap.findIndex(i => i.id === item.id);
+      if (idx >= 0) {
+        this.itensCiap[idx] = {
+          ...this.itensCiap[idx],
+          ...item,
+          totalParcelas,
+          parcelaMesICMS: parcelaMes,
+          saldoICMSRemanescente: saldoRemanescente,
+          status: item.status || (parcelaAtual > totalParcelas ? 'CONCLUIDO' : 'ATIVO')
+        };
+        itemSalvo = this.itensCiap[idx];
+      } else {
+        itemSalvo = {
+          id: item.id,
+          empresaId: item.empresaId,
+          codigoBem: item.codigoBem,
+          descricaoBem: item.descricaoBem,
+          dataEntrada: item.dataEntrada || new Date().toISOString().split('T')[0],
+          numeroNotaFiscal: item.numeroNotaFiscal || '1',
+          serieNotaFiscal: item.serieNotaFiscal || '1',
+          fornecedorNome: item.fornecedorNome || 'FORNECEDOR DIVERSOS',
+          fornecedorCnpj: item.fornecedorCnpj || '00.000.000/0001-00',
+          valorTotalBem: Number(item.valorTotalBem || 0),
+          valorICMSOriginal: valorICMS,
+          parcelaAtual,
+          totalParcelas,
+          parcelaMesICMS: parcelaMes,
+          saldoICMSRemanescente: saldoRemanescente,
+          status: item.status || 'ATIVO'
+        };
+        this.itensCiap.push(itemSalvo);
+      }
+    } else {
+      const novoId = this.itensCiap.length > 0 ? Math.max(...this.itensCiap.map(i => i.id)) + 1 : 1;
+      itemSalvo = {
+        id: novoId,
+        empresaId: item.empresaId,
+        codigoBem: item.codigoBem,
+        descricaoBem: item.descricaoBem,
+        dataEntrada: item.dataEntrada || new Date().toISOString().split('T')[0],
+        numeroNotaFiscal: item.numeroNotaFiscal || '1',
+        serieNotaFiscal: item.serieNotaFiscal || '1',
+        fornecedorNome: item.fornecedorNome || 'FORNECEDOR DIVERSOS',
+        fornecedorCnpj: item.fornecedorCnpj || '00.000.000/0001-00',
+        valorTotalBem: Number(item.valorTotalBem || 0),
+        valorICMSOriginal: valorICMS,
+        parcelaAtual,
+        totalParcelas,
+        parcelaMesICMS: parcelaMes,
+        saldoICMSRemanescente: saldoRemanescente,
+        status: 'ATIVO'
+      };
+      this.itensCiap.push(itemSalvo);
+    }
+
+    this.persistSnapshot();
+    this.registrarAuditoria('CADASTRO_CIAP', 'INCLUSAO', `Bem CIAP ${itemSalvo.codigoBem} - ${itemSalvo.descricaoBem} registrado/atualizado.`);
+    return itemSalvo;
+  }
+
+  public getApuracaoCiapCompetencia(empresaId: number, competencia: string): ApuracaoCiapCompetencia {
+    const saidas = this.notasFiscais.filter(n => n.empresaId === empresaId && n.tipo === 'SAIDA' && n.dataEmissao.startsWith(competencia));
+
+    let totalSaidasGerais = saidas.reduce((acc, n) => acc + (n.valorTotal || 0), 0);
+    let totalSaidasTributadas = saidas.reduce((acc, n) => acc + (n.baseCalculoICMS || 0), 0);
+
+    if (totalSaidasGerais === 0) {
+      totalSaidasGerais = 485200.00;
+      totalSaidasTributadas = 412420.00;
+    }
+
+    const fatorApropriacao = totalSaidasGerais > 0
+      ? Number((totalSaidasTributadas / totalSaidasGerais).toFixed(4))
+      : 0.8500;
+
+    const bensAtivos = this.itensCiap.filter(i => i.empresaId === empresaId && i.status === 'ATIVO');
+
+    const itensCalculados: ItemCiapCalculado[] = bensAtivos.map(item => {
+      const creditoMes = Number((item.parcelaMesICMS * fatorApropriacao).toFixed(2));
+      const saldoApos = Number(Math.max(0, item.saldoICMSRemanescente - creditoMes).toFixed(2));
+      return {
+        ...item,
+        fatorApropriacao,
+        creditoApropriadoMes: creditoMes,
+        saldoAposApropriacao: saldoApos
+      };
+    });
+
+    const totalCreditoApropriadoMes = Number(itensCalculados.reduce((acc, i) => acc + i.creditoApropriadoMes, 0).toFixed(2));
+    const totalSaldoRemanescente = Number(itensCalculados.reduce((acc, i) => acc + i.saldoAposApropriacao, 0).toFixed(2));
+
+    return {
+      id: Date.now(),
+      competencia,
+      empresaId,
+      totalSaidasTributadas,
+      totalSaidasGerais,
+      fatorApropriacao,
+      totalCreditoApropriadoMes,
+      totalSaldoRemanescente,
+      itens: itensCalculados,
+      integradoFiscal: false,
+      integradoContabil: false
+    };
+  }
+
+  public integrarCiapFiscalContabil(empresaId: number, competencia: string): { success: boolean; loteId: number; totalCredito: number } {
+    const apuracao = this.getApuracaoCiapCompetencia(empresaId, competencia);
+    if (apuracao.totalCreditoApropriadoMes <= 0) {
+      return { success: false, loteId: 0, totalCredito: 0 };
+    }
+
+    this.itensCiap.forEach(item => {
+      if (item.empresaId === empresaId && item.status === 'ATIVO') {
+        const calc = apuracao.itens.find(c => c.id === item.id);
+        if (calc) {
+          item.parcelaAtual += 1;
+          item.saldoICMSRemanescente = calc.saldoAposApropriacao;
+          if (item.parcelaAtual > item.totalParcelas || item.saldoICMSRemanescente <= 0) {
+            item.status = 'CONCLUIDO';
+          }
+        }
+      }
+    });
+
+    const apFiscal = this.apuracoesFiscais.find(a => a.empresaId === empresaId && a.competencia === competencia);
+    if (apFiscal) {
+      apFiscal.valorICMSApurado = Number(Math.max(0, (apFiscal.valorICMSApurado || 0) - apuracao.totalCreditoApropriadoMes).toFixed(2));
+    }
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Apropriação Mensal ICMS Ativo Permanente (CIAP 1/48 - Bloco G) - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: apuracao.totalCreditoApropriadoMes,
+      totalCredito: apuracao.totalCreditoApropriadoMes
+    };
+
+    this.addLancamento({
+      empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: `${competencia}-28`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 16,
+      contaCreditoId: 19,
+      valor: apuracao.totalCreditoApropriadoMes,
+      historicoId: 1,
+      complementoHistorico: `Apropriação parcela CIAP 1/48 avos conf. Art. 20 §5º LC 87/96 (Fator: ${(apuracao.fatorApropriacao * 100).toFixed(2)}%) - Comp. ${competencia}`,
+      usuarioNome: 'CIAP Bloco G'
+    });
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRACAO_CIAP', 'PROCESSAMENTO', `Apropriação CIAP Comp. ${competencia} integrada no valor de R$ ${apuracao.totalCreditoApropriadoMes.toFixed(2)}.`);
+
+    return { success: true, loteId, totalCredito: apuracao.totalCreditoApropriadoMes };
+  }
+
+  // ----------------------------------------------------
+  // eSocial - EVENTOS PERIÓDICOS EM XML (S-1200 / S-1210)
+  // ----------------------------------------------------
+  public getEventosESocial(empresaId?: number, competencia?: string): EventoESocial[] {
+    let list = this.eventosESocial;
+    if (empresaId) {
+      list = list.filter(e => e.empresaId === empresaId);
+    }
+    if (competencia) {
+      list = list.filter(e => e.competencia === competencia);
+    }
+    return list;
+  }
+
+  public getResumoESocialCompetencia(empresaId: number, competencia: string): ResumoESocialCompetencia {
+    const eventos = this.getEventosESocial(empresaId, competencia);
+    const colaboradores = this.colaboradores.filter(c => c.empresaId === empresaId && c.status === 'ATIVO');
+
+    const folha = this.folhasMensais.filter(f => f.empresaId === empresaId && f.competencia === competencia);
+    const folhaBrutaTotal = Number(folha.reduce((acc, f) => acc + (f.totalProventos || 0), 0).toFixed(2)) || 14850.00;
+    const inssTotalSegurados = Number(folha.reduce((acc, f) => acc + (f.inssSegurado || 0), 0).toFixed(2)) || 1324.50;
+    const inssTotalPatronal = Number((folhaBrutaTotal * 0.288).toFixed(2));
+    const fgtsTotal = Number(folha.reduce((acc, f) => acc + ((f.baseFGTS ? f.baseFGTS * 0.08 : 0) || 0), 0).toFixed(2)) || 1188.00;
+
+    const todosTransmitidos = eventos.length > 0 && eventos.every(e => e.status === 'TRANSMITIDO');
+
+    return {
+      competencia,
+      empresaId,
+      totalColaboradores: colaboradores.length,
+      totalEventosS1200: eventos.filter(e => e.tipoEvento === 'S-1200').length,
+      totalEventosS1210: eventos.filter(e => e.tipoEvento === 'S-1210').length,
+      folhaBrutaTotal,
+      inssTotalSegurados,
+      inssTotalPatronal,
+      fgtsTotal,
+      statusGeral: todosTransmitidos ? 'TRANSMITIDO' : (eventos.length > 0 ? 'PRONTO' : 'PENDENTE'),
+      eventos
+    };
+  }
+
+  public gerarXmlESocial(empresaId: number, tipo: 'S-1200' | 'S-1210', colaboradorId: number, competencia: string): EventoESocial {
+    const colab = this.colaboradores.find(c => c.id === colaboradorId) || this.colaboradores[0];
+    const empresa = this.empresas.find(e => e.id === empresaId) || this.empresas[0];
+    const folha = this.folhasMensais.find(f => f.colaboradorId === colaboradorId && f.competencia === competencia);
+
+    const baseBruta: number = (folha && folha.totalProventos) ? folha.totalProventos : (colab && colab.salarioBase ? colab.salarioBase : 4500.00);
+    const baseINSS: number = baseBruta;
+    const baseFGTS: number = baseBruta;
+    const inss: number = (folha && folha.inssSegurado) ? folha.inssSegurado : Number((baseBruta * 0.09).toFixed(2));
+    const baseIRRF: number = Number(Math.max(0, baseBruta - inss).toFixed(2));
+    const valorLiquido: number = (folha && folha.salarioLiquido) ? folha.salarioLiquido : Number((baseBruta - inss).toFixed(2));
+
+    const idEvento = `ID1${empresa.cnpj.replace(/\D/g, '')}${new Date().getFullYear()}${String(Date.now()).slice(-8)}`;
+
+    let xml = '';
+    if (tipo === 'S-1200') {
+      xml = `<?xml version="1.0" encoding="UTF-8"?>
+<eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtRemun/v_S_01_02_00">
+  <evtRemun Id="${idEvento}">
+    <ideEvento>
+      <indRetif>1</indRetif>
+      <perApur>${competencia}</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>AntigravityERP_v2.0</verProc>
+    </ideEvento>
+    <ideEmpregador>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${empresa.cnpj.replace(/\D/g, '')}</nrInsc>
+    </ideEmpregador>
+    <ideTrabalhador>
+      <cpfTrab>${colab.cpf.replace(/\D/g, '')}</cpfTrab>
+      <infoComplem>
+        <nmTrab>${colab.nome.toUpperCase()}</nmTrab>
+        <dtNascto>${colab.dataNascimento || '1990-01-01'}</dtNascto>
+      </infoComplem>
+    </ideTrabalhador>
+    <dmDev>
+      <ideDmDev>DMDEV_${colab.id}_${competencia.replace('-', '')}</ideDmDev>
+      <codCateg>${colab.categoriaeSocial || '101'}</codCateg>
+      <infoPerApur>
+        <ideEstabLot>
+          <tpInsc>1</tpInsc>
+          <nrInsc>${empresa.cnpj.replace(/\D/g, '')}</nrInsc>
+          <codLotacao>01</codLotacao>
+          <remunPerApur>
+            <matricula>${String(colab.matricula)}</matricula>
+            <itensRemun>
+              <codRubr>1000</codRubr>
+              <ideTabRubr>TAB01</ideTabRubr>
+              <qtdRubr>30.00</qtdRubr>
+              <vrRubr>${baseBruta.toFixed(2)}</vrRubr>
+              <indApurIR>0</indApurIR>
+            </itensRemun>
+            <itensRemun>
+              <codRubr>2000</codRubr>
+              <ideTabRubr>TAB01</ideTabRubr>
+              <vrRubr>${inss.toFixed(2)}</vrRubr>
+              <indApurIR>0</indApurIR>
+            </itensRemun>
+          </remunPerApur>
+        </ideEstabLot>
+      </infoPerApur>
+    </dmDev>
+  </evtRemun>
+</eSocial>`;
+    } else {
+      xml = `<?xml version="1.0" encoding="UTF-8"?>
+<eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtPgtos/v_S_01_02_00">
+  <evtPgtos Id="${idEvento}">
+    <ideEvento>
+      <indRetif>1</indRetif>
+      <perApur>${competencia}</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>AntigravityERP_v2.0</verProc>
+    </ideEvento>
+    <ideEmpregador>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${empresa.cnpj.replace(/\D/g, '')}</nrInsc>
+    </ideEmpregador>
+    <ideBenef>
+      <cpfBenef>${colab.cpf.replace(/\D/g, '')}</cpfBenef>
+      <infoPgto>
+        <dtPgto>${competencia}-05</dtPgto>
+        <tpPgto>1</tpPgto>
+        <perRef>${competencia}</perRef>
+        <ideDmDev>DMDEV_${colab.id}_${competencia.replace('-', '')}</ideDmDev>
+        <vrLiq>${valorLiquido.toFixed(2)}</vrLiq>
+      </infoPgto>
+    </ideBenef>
+  </evtPgtos>
+</eSocial>`;
+    }
+
+    const novoEvento: EventoESocial = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      empresaId,
+      tipoEvento: tipo,
+      nomeEvento: tipo === 'S-1200' ? `Remuneração do Trabalhador - ${colab.nome}` : `Pagamentos de Rendimentos - ${colab.nome}`,
+      colaboradorId: colab.id,
+      colaboradorNome: colab.nome,
+      colaboradorCpf: colab.cpf,
+      matricula: String(colab.matricula),
+      competencia,
+      dataGeracao: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      status: 'PRONTO',
+      xmlContent: xml,
+      bases: {
+        baseINSS,
+        baseFGTS,
+        baseIRRF,
+        valorLiquido
+      }
+    };
+
+    this.eventosESocial = this.eventosESocial.filter(e => !(e.empresaId === empresaId && e.tipoEvento === tipo && e.colaboradorId === colaboradorId && e.competencia === competencia));
+    this.eventosESocial.push(novoEvento);
+    this.persistSnapshot();
+    this.registrarAuditoria('GERACAO_XML_ESOCIAL', 'INCLUSAO', `Evento ${tipo} gerado para ${colab.nome} ref. ${competencia}.`);
+
+    return novoEvento;
+  }
+
+  public transmitirEventosESocial(empresaId: number, competencia: string): { success: boolean; recibos: { eventoId: number; recibo: string }[] } {
+    const eventos = this.eventosESocial.filter(e => e.empresaId === empresaId && e.competencia === competencia);
+    if (eventos.length === 0) {
+      return { success: false, recibos: [] };
+    }
+
+    const timestamp = Date.now();
+    const recibosGerados: { eventoId: number; recibo: string }[] = [];
+
+    eventos.forEach((ev, idx) => {
+      ev.status = 'TRANSMITIDO';
+      ev.dataTransmissao = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const nrRecibo = `1.2.${competencia.replace('-', '')}.${String(timestamp).slice(-10)}${String(idx + 1).padStart(4, '0')}-9`;
+      ev.numeroRecibo = nrRecibo;
+      recibosGerados.push({ eventoId: ev.id, recibo: nrRecibo });
+    });
+
+    this.persistSnapshot();
+    this.registrarAuditoria('TRANSMISSAO_ESOCIAL', 'PROCESSAMENTO', `${eventos.length} eventos do eSocial transmitidos com sucesso para a competência ${competencia}.`);
+    return { success: true, recibos: recibosGerados };
+  }
+
+  // ----------------------------------------------------
+  // RAZÃO AUXILIAR DE CLIENTES & FORNECEDORES (CONCILIAÇÃO FISCAL-FINANCEIRA-CONTÁBIL)
+  // ----------------------------------------------------
+  public getRazaoAuxiliar(empresaId: number, tipoParticipante?: 'CLIENTE' | 'FORNECEDOR', participanteId?: number): RazaoAuxiliarItem[] {
+    const itens: RazaoAuxiliarItem[] = [];
+
+    let idContador = 1;
+    let saldoAcumulado = 0;
+
+    this.notasFiscais.forEach(nf => {
+      if (nf.empresaId !== empresaId) return;
+
+      const part = this.participantes.find(p => p.cnpjCpf === nf.clienteFornecedorCnpj || p.nomeRazaoSocial === nf.clienteFornecedorNome);
+      if (participanteId && (!part || part.id !== participanteId)) return;
+
+      if (nf.tipo === 'SAIDA' && (!tipoParticipante || tipoParticipante === 'CLIENTE')) {
+        saldoAcumulado += nf.valorTotal;
+        itens.push({
+          id: idContador++,
+          empresaId,
+          participanteId: part ? part.id : 0,
+          participanteNome: nf.clienteFornecedorNome || (part ? part.nomeRazaoSocial : 'CLIENTE DIVERSO'),
+          participanteCnpjCpf: nf.clienteFornecedorCnpj || (part ? part.cnpjCpf : '00.000.000/0000-00'),
+          tipoParticipante: 'CLIENTE',
+          data: nf.dataEmissao,
+          documento: `NF-e ${nf.numero} S:${nf.serie}`,
+          historico: `Emissão NF-e Saída s/ venda mercadoria/serviço`,
+          debito: nf.valorTotal,
+          credito: 0,
+          saldoProgressivo: Number(saldoAcumulado.toFixed(2)),
+          statusConciliacao: nf.integradaContabil ? 'CONCILIADO' : 'PENDENTE_CONTABIL',
+          notaFiscalId: nf.id
+        });
+      } else if (nf.tipo === 'ENTRADA' && (!tipoParticipante || tipoParticipante === 'FORNECEDOR')) {
+        saldoAcumulado += nf.valorTotal;
+        itens.push({
+          id: idContador++,
+          empresaId,
+          participanteId: part ? part.id : 0,
+          participanteNome: nf.clienteFornecedorNome || (part ? part.nomeRazaoSocial : 'FORNECEDOR DIVERSO'),
+          participanteCnpjCpf: nf.clienteFornecedorCnpj || (part ? part.cnpjCpf : '00.000.000/0000-00'),
+          tipoParticipante: 'FORNECEDOR',
+          data: nf.dataEntradaSaida || nf.dataEmissao,
+          documento: `NF-e ${nf.numero} S:${nf.serie}`,
+          historico: `Aquisição / Entrada de produtos / serviços fornecedor`,
+          debito: 0,
+          credito: nf.valorTotal,
+          saldoProgressivo: Number(saldoAcumulado.toFixed(2)),
+          statusConciliacao: nf.integradaContabil ? 'CONCILIADO' : 'PENDENTE_CONTABIL',
+          notaFiscalId: nf.id
+        });
+      }
+    });
+
+    this.lancamentos.forEach(l => {
+      if (l.empresaId !== empresaId) return;
+
+      if (l.contaCreditoId === 11 && (!tipoParticipante || tipoParticipante === 'CLIENTE')) {
+        saldoAcumulado -= l.valor;
+        itens.push({
+          id: idContador++,
+          empresaId,
+          participanteId: participanteId || 0,
+          participanteNome: 'CLIENTES DIVERSOS / CARTEIRA',
+          participanteCnpjCpf: '00.000.000/0000-00',
+          tipoParticipante: 'CLIENTE',
+          data: l.dataLancamento,
+          documento: `LOTE #${l.loteId} P:${l.numeroPartida}`,
+          historico: l.complementoHistorico || 'Recebimento de duplicata via Banco / Caixa',
+          debito: 0,
+          credito: l.valor,
+          saldoProgressivo: Number(saldoAcumulado.toFixed(2)),
+          statusConciliacao: 'CONCILIADO',
+          lancamentoContabilId: l.id
+        });
+      }
+
+      if (l.contaDebitoId === 30 && (!tipoParticipante || tipoParticipante === 'FORNECEDOR')) {
+        saldoAcumulado -= l.valor;
+        itens.push({
+          id: idContador++,
+          empresaId,
+          participanteId: participanteId || 0,
+          participanteNome: 'FORNECEDORES DIVERSOS',
+          participanteCnpjCpf: '00.000.000/0000-00',
+          tipoParticipante: 'FORNECEDOR',
+          data: l.dataLancamento,
+          documento: `LOTE #${l.loteId} P:${l.numeroPartida}`,
+          historico: l.complementoHistorico || 'Pagamento efetuado a fornecedor',
+          debito: l.valor,
+          credito: 0,
+          saldoProgressivo: Number(saldoAcumulado.toFixed(2)),
+          statusConciliacao: 'CONCILIADO',
+          lancamentoContabilId: l.id
+        });
+      }
+    });
+
+    if (itens.length === 0) {
+      itens.push(
+        {
+          id: 1,
+          empresaId,
+          participanteId: 1,
+          participanteNome: 'DELL COMPUTADORES DO BRASIL LTDA',
+          participanteCnpjCpf: '72.381.189/0001-10',
+          tipoParticipante: 'FORNECEDOR',
+          data: '2026-02-05',
+          documento: 'NF-e 45892 S:1',
+          historico: 'Aquisição de Servidores e Estações Dell PowerEdge',
+          debito: 0,
+          credito: 48500.00,
+          saldoProgressivo: 48500.00,
+          statusConciliacao: 'CONCILIADO',
+          notaFiscalId: 101
+        },
+        {
+          id: 2,
+          empresaId,
+          participanteId: 1,
+          participanteNome: 'DELL COMPUTADORES DO BRASIL LTDA',
+          participanteCnpjCpf: '72.381.189/0001-10',
+          tipoParticipante: 'FORNECEDOR',
+          data: '2026-02-15',
+          documento: 'TED BANCO 341',
+          historico: 'Pagamento 1ª Parcela Dell s/ NF-e 45892',
+          debito: 24250.00,
+          credito: 0,
+          saldoProgressivo: 24250.00,
+          statusConciliacao: 'CONCILIADO',
+          lancamentoContabilId: 201
+        },
+        {
+          id: 3,
+          empresaId,
+          participanteId: 2,
+          participanteNome: 'BANCO ALPHA INVESTIMENTOS S/A',
+          participanteCnpjCpf: '01.234.567/0001-89',
+          tipoParticipante: 'CLIENTE',
+          data: '2026-02-10',
+          documento: 'NFS-e 1024 S:1',
+          historico: 'Prestação de Serviços de Auditoria e Consultoria Contábil',
+          debito: 18500.00,
+          credito: 0,
+          saldoProgressivo: 18500.00,
+          statusConciliacao: 'CONCILIADO',
+          notaFiscalId: 102
+        },
+        {
+          id: 4,
+          empresaId,
+          participanteId: 2,
+          participanteNome: 'BANCO ALPHA INVESTIMENTOS S/A',
+          participanteCnpjCpf: '01.234.567/0001-89',
+          tipoParticipante: 'CLIENTE',
+          data: '2026-02-28',
+          documento: 'PIX RECEBIDO',
+          historico: 'Liquidação de honorários ref. NFS-e 1024',
+          debito: 0,
+          credito: 18500.00,
+          saldoProgressivo: 0.00,
+          statusConciliacao: 'CONCILIADO',
+          lancamentoContabilId: 202
+        }
+      );
+    }
+
+    return itens.sort((a, b) => a.data.localeCompare(b.data));
+  }
+
+  public conciliarPartidaRazaoAuxiliar(empresaId: number, itemId: number): { success: boolean; loteId?: number } {
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Conciliação Manual Razão Auxiliar Item #${itemId}`,
+      dataLote: new Date().toISOString().split('T')[0],
+      status: 'FECHADO',
+      totalDebito: 1000.00,
+      totalCredito: 1000.00
+    };
+
+    this.lotes.push(lote);
+    this.persistSnapshot();
+    this.registrarAuditoria('CONCILIACAO_RAZAO_AUXILIAR', 'PROCESSAMENTO', `Item #${itemId} do Razão Auxiliar conciliado com sucesso.`);
+    return { success: true, loteId };
+  }
+
+  // ----------------------------------------------------
+  // DCTFWeb & FECHAMENTO eSocial S-1299
+  // ----------------------------------------------------
+  public getApuracaoDctfWeb(empresaId: number, competencia: string): ApuracaoDctfWeb {
+    const folha = this.folhasMensais.filter(f => f.empresaId === empresaId && f.competencia === competencia);
+    const folhaBruta = Number(folha.reduce((acc, f) => acc + (f.totalProventos || 0), 0).toFixed(2)) || 14850.00;
+    const inssSegurados = Number(folha.reduce((acc, f) => acc + (f.inssSegurado || 0), 0).toFixed(2)) || 1324.50;
+    const inssPatronal = Number((folhaBruta * 0.20).toFixed(2));
+    const inssRatFap = Number((folhaBruta * 0.03).toFixed(2));
+    const inssTerceiros = Number((folhaBruta * 0.058).toFixed(2));
+    const totalDebitosPrevidenciarios = Number((inssSegurados + inssPatronal + inssRatFap + inssTerceiros).toFixed(2));
+
+    const deducaoSalarioFamilia = 135.00;
+    const deducaoSalarioMaternidade = 0;
+    const retencaoLei9711Tomadores = 0;
+    const totalDeducoes = Number((deducaoSalarioFamilia + deducaoSalarioMaternidade + retencaoLei9711Tomadores).toFixed(2));
+    const saldoLiquidoDARF = Number(Math.max(0, totalDebitosPrevidenciarios - totalDeducoes).toFixed(2));
+
+    const [ano, mes] = competencia.split('-').map(Number);
+    const mesVenc = mes === 12 ? 1 : mes + 1;
+    const anoVenc = mes === 12 ? ano + 1 : ano;
+    const dataVencimento = `${anoVenc}-${String(mesVenc).padStart(2, '0')}-20`;
+
+    const codigoBarras = `858900000${Math.floor(saldoLiquidoDARF * 100)}1138${competencia.replace('-', '')}00000000123456789012345`;
+    const pixQrCode = `00020126580014br.gov.bcb.pix0136${Math.random().toString(36).substring(2, 15)}520400005303986540${saldoLiquidoDARF.toFixed(2)}5802BR5925RECEITA FEDERAL DO BRASIL6009SAO PAULO62070503***6304`;
+
+    const evS1299 = this.eventosESocial.find(e => e.empresaId === empresaId && e.nomeEvento.includes('S-1299') && e.competencia === competencia);
+
+    return {
+      id: Date.now(),
+      empresaId,
+      competencia,
+      status: evS1299 ? 'TRANSMITIDA' : 'ABERTA',
+      dataFechamento: evS1299 ? evS1299.dataTransmissao : undefined,
+      reciboFechamentoS1299: evS1299 ? evS1299.numeroRecibo : undefined,
+      folhaBruta,
+      inssSegurados,
+      inssPatronal,
+      inssRatFap,
+      inssTerceiros,
+      totalDebitosPrevidenciarios,
+      deducaoSalarioFamilia,
+      deducaoSalarioMaternidade,
+      retencaoLei9711Tomadores,
+      totalDeducoes,
+      saldoLiquidoDARF,
+      codigoReceitaDARF: '1138',
+      dataVencimento,
+      codigoBarras,
+      pixQrCode,
+      integradoContabil: false
+    };
+  }
+
+  public fecharESocialS1299(empresaId: number, competencia: string): { success: boolean; eventoId: number; recibo: string; dctfWeb: ApuracaoDctfWeb } {
+    const empresa = this.empresas.find(e => e.id === empresaId) || this.empresas[0];
+    const dctfWeb = this.getApuracaoDctfWeb(empresaId, competencia);
+    const timestamp = Date.now();
+    const nrRecibo = `1.2.${competencia.replace('-', '')}.S1299${String(timestamp).slice(-10)}-1`;
+    const idEvento = `ID1${empresa.cnpj.replace(/\D/g, '')}${new Date().getFullYear()}${String(timestamp).slice(-8)}`;
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<eSocial xmlns="http://www.esocial.gov.br/schema/evt/evtFechaEvPer/v_S_01_02_00">
+  <evtFechaEvPer Id="${idEvento}">
+    <ideEvento>
+      <indRetif>1</indRetif>
+      <perApur>${competencia}</perApur>
+      <tpAmb>1</tpAmb>
+      <procEmi>1</procEmi>
+      <verProc>AntigravityERP_v2.0</verProc>
+    </ideEvento>
+    <ideEmpregador>
+      <tpInsc>1</tpInsc>
+      <nrInsc>${empresa.cnpj.replace(/\D/g, '')}</nrInsc>
+    </ideEmpregador>
+    <infoFech>
+      <evtRemun>S</evtRemun>
+      <evtPgtos>S</evtPgtos>
+      <evtAqProd>N</evtAqProd>
+      <evtComProd>N</evtComProd>
+      <evtContrProc>N</evtContrProc>
+    </infoFech>
+  </evtFechaEvPer>
+</eSocial>`;
+
+    const novoEvento: EventoESocial = {
+      id: timestamp,
+      empresaId,
+      tipoEvento: 'S-1000',
+      nomeEvento: `Fechamento dos Eventos Periódicos S-1299 - Comp. ${competencia}`,
+      competencia,
+      dataGeracao: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      dataTransmissao: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      status: 'TRANSMITIDO',
+      numeroRecibo: nrRecibo,
+      xmlContent: xml,
+      bases: {
+        baseINSS: dctfWeb.folhaBruta,
+        baseFGTS: dctfWeb.folhaBruta,
+        baseIRRF: dctfWeb.folhaBruta - dctfWeb.inssSegurados,
+        valorLiquido: dctfWeb.saldoLiquidoDARF
+      }
+    };
+
+    this.eventosESocial = this.eventosESocial.filter(e => !(e.empresaId === empresaId && e.nomeEvento.includes('S-1299') && e.competencia === competencia));
+    this.eventosESocial.push(novoEvento);
+
+    dctfWeb.status = 'TRANSMITIDA';
+    dctfWeb.dataFechamento = novoEvento.dataTransmissao;
+    dctfWeb.reciboFechamentoS1299 = nrRecibo;
+    dctfWeb.xmlFechamentoS1299 = xml;
+
+    this.persistSnapshot();
+    this.registrarAuditoria('FECHAMENTO_ESOCIAL_S1299', 'PROCESSAMENTO', `Folha fechada (S-1299) e DCTFWeb gerada para comp. ${competencia}. DARF R$ ${dctfWeb.saldoLiquidoDARF.toFixed(2)}.`);
+
+    return { success: true, eventoId: novoEvento.id, recibo: nrRecibo, dctfWeb };
+  }
+
+  public integrarDctfWebContabil(empresaId: number, competencia: string): { success: boolean; loteId: number } {
+    const dctf = this.getApuracaoDctfWeb(empresaId, competencia);
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Provisão de Encargos Previdenciários DCTFWeb (INSS Patronal + Terceiros) - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: dctf.inssPatronal + dctf.inssRatFap + dctf.inssTerceiros,
+      totalCredito: dctf.inssPatronal + dctf.inssRatFap + dctf.inssTerceiros
+    };
+
+    const totalEncargosPatronais = Number((dctf.inssPatronal + dctf.inssRatFap + dctf.inssTerceiros).toFixed(2));
+
+    this.addLancamento({
+      empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: `${competencia}-28`,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 56,
+      contaCreditoId: 27,
+      valor: totalEncargosPatronais,
+      historicoId: 3,
+      complementoHistorico: `Vlr. ref. provisão encargos patronais previdenciários e terceiros DCTFWeb comp. ${competencia}`,
+      usuarioNome: 'DCTFWeb Oficial'
+    });
+
+    this.lotes.push(lote);
+    dctf.integradoContabil = true;
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRACAO_DCTFWEB', 'PROCESSAMENTO', `Encargos DCTFWeb Comp. ${competencia} contabilizados com sucesso no valor de R$ ${totalEncargosPatronais.toFixed(2)}.`);
+
+    return { success: true, loteId };
+  }
+
+  // ----------------------------------------------------
+  // GESTÃO PATRIMONIAL, BAIXAS & INVENTÁRIO (CPC 27)
+  // ----------------------------------------------------
+  public getBaixasAtivos(empresaId?: number): BaixaAtivoImobilizado[] {
+    if (empresaId) {
+      return this.baixasAtivos.filter(b => b.empresaId === empresaId);
+    }
+    return this.baixasAtivos;
+  }
+
+  public registrarBaixaAtivo(dados: {
+    empresaId: number;
+    ativoId: number;
+    dataBaixa: string;
+    motivoBaixa: 'VENDA' | 'DESCARTE_SUCATEAMENTO' | 'PERDA_SINISTRO' | 'DOACAO';
+    valorVendaAlienacao: number;
+    numeroNotaFiscalVenda?: string;
+    serieNotaFiscalVenda?: string;
+    compradorNome?: string;
+    compradorCnpjCpf?: string;
+  }): BaixaAtivoImobilizado {
+    const ativo = this.ativosImobilizados.find(a => a.id === dados.ativoId) || this.ativosImobilizados[0];
+    const valorAquisicaoOriginal = ativo ? ativo.valorOriginal : 50000.00;
+    const depreciacaoAcumulada = ativo ? (ativo.depreciacaoAcumulada || (valorAquisicaoOriginal * 0.40)) : 20000.00;
+    const valorContabilResidual = Number(Math.max(0, valorAquisicaoOriginal - depreciacaoAcumulada).toFixed(2));
+
+    const valorVenda = Number(dados.valorVendaAlienacao || 0);
+    const resultadoOperacao = Number((valorVenda - valorContabilResidual).toFixed(2));
+    const tipoResultado: 'GANHO_CAPITAL' | 'PERDA_CAPITAL' | 'NEUTRO' = 
+      resultadoOperacao > 0 ? 'GANHO_CAPITAL' : (resultadoOperacao < 0 ? 'PERDA_CAPITAL' : 'NEUTRO');
+
+    const impostoDevidoGanho = tipoResultado === 'GANHO_CAPITAL'
+      ? Number((resultadoOperacao * 0.24).toFixed(2))
+      : 0;
+
+    const novaBaixa: BaixaAtivoImobilizado = {
+      id: Date.now(),
+      empresaId: dados.empresaId,
+      ativoId: dados.ativoId,
+      codigoBem: ativo ? (ativo.codigo || 'BEM-001') : 'BEM-001',
+      descricaoBem: ativo ? (ativo.descricao || 'Ativo Imobilizado') : 'Ativo Imobilizado',
+      dataAquisicao: ativo ? ativo.dataAquisicao : '2023-01-10',
+      dataBaixa: dados.dataBaixa,
+      motivoBaixa: dados.motivoBaixa,
+      valorAquisicaoOriginal,
+      depreciacaoAcumuladaData: depreciacaoAcumulada,
+      valorContabilResidual,
+      valorVendaAlienacao: valorVenda,
+      resultadoOperacao,
+      tipoResultado,
+      aliquotaIRPJGanho: 15.0,
+      aliquotaCSLLGanho: 9.0,
+      impostoDevidoGanho,
+      numeroNotaFiscalVenda: dados.numeroNotaFiscalVenda,
+      serieNotaFiscalVenda: dados.serieNotaFiscalVenda || '1',
+      compradorNome: dados.compradorNome,
+      compradorCnpjCpf: dados.compradorCnpjCpf,
+      estornoCiapNecessario: false,
+      saldoCiapEstornado: 0,
+      integradoContabil: false
+    };
+
+    if (ativo) {
+      ativo.status = 'BAIXADO';
+    }
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now() + 1;
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId: dados.empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Baixa de Ativo Imobilizado (${novaBaixa.codigoBem}) - ${novaBaixa.motivoBaixa}`,
+      dataLote: dados.dataBaixa,
+      status: 'FECHADO',
+      totalDebito: valorAquisicaoOriginal,
+      totalCredito: valorAquisicaoOriginal
+    };
+
+    this.addLancamento({
+      empresaId: dados.empresaId,
+      numeroPartida: this.lancamentos.length + 1,
+      loteId,
+      dataLancamento: dados.dataBaixa,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: 19,
+      contaCreditoId: 18,
+      valor: depreciacaoAcumulada,
+      historicoId: 1,
+      complementoHistorico: `Estorno de depreciação acumulada ref. baixa ${novaBaixa.codigoBem}`,
+      usuarioNome: 'Gestão Patrimonial'
+    });
+
+    if (valorVenda > 0) {
+      this.addLancamento({
+        empresaId: dados.empresaId,
+        numeroPartida: this.lancamentos.length + 2,
+        loteId,
+        dataLancamento: dados.dataBaixa,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: 6,
+        contaCreditoId: 43,
+        valor: valorVenda,
+        historicoId: 1,
+        complementoHistorico: `Recebimento ref. alienação de ativo ${novaBaixa.codigoBem} a ${novaBaixa.compradorNome || 'DIVERSOS'}`,
+        usuarioNome: 'Gestão Patrimonial'
+      });
+    }
+
+    this.lotes.push(lote);
+    novaBaixa.integradoContabil = true;
+    novaBaixa.loteContabilId = loteId;
+
+    this.baixasAtivos.unshift(novaBaixa);
+    this.persistSnapshot();
+    this.registrarAuditoria('BAIXA_ATIVO_PATRIMONIO', 'PROCESSAMENTO', `Ativo ${novaBaixa.codigoBem} baixado com ${novaBaixa.tipoResultado}: R$ ${novaBaixa.resultadoOperacao.toFixed(2)}.`);
+
+    return novaBaixa;
+  }
+
+  public getItensInventarioPatrimonial(empresaId?: number): ItemInventarioPatrimonial[] {
+    if (empresaId) {
+      return this.itensInventario.filter(i => i.empresaId === empresaId);
+    }
+    return this.itensInventario;
+  }
+
+  public saveItemInventario(item: Partial<ItemInventarioPatrimonial> & { empresaId: number; ativoId: number; codigoPatrimonio: string; descricao: string }): ItemInventarioPatrimonial {
+    let itemSalvo: ItemInventarioPatrimonial;
+    if (item.id && item.id > 0) {
+      const idx = this.itensInventario.findIndex(i => i.id === item.id);
+      if (idx >= 0) {
+        this.itensInventario[idx] = { ...this.itensInventario[idx], ...item };
+        itemSalvo = this.itensInventario[idx];
+      } else {
+        itemSalvo = {
+          id: item.id,
+          empresaId: item.empresaId,
+          ativoId: item.ativoId,
+          codigoPatrimonio: item.codigoPatrimonio,
+          descricao: item.descricao,
+          centroCustoId: item.centroCustoId || 1,
+          centroCustoNome: item.centroCustoNome || 'Administração Geral',
+          departamento: item.departamento || 'Geral',
+          responsavelNome: item.responsavelNome || 'RESPONSÁVEL',
+          responsavelCpf: item.responsavelCpf || '000.000.000-00',
+          localizacaoFisica: item.localizacaoFisica || 'Sede da Empresa',
+          dataTombamento: item.dataTombamento || new Date().toISOString().split('T')[0],
+          estadoConservacao: item.estadoConservacao || 'BOM',
+          situacaoInventario: item.situacaoInventario || 'LOCALIZADO',
+          qrCodeIdentificador: `${item.codigoPatrimonio}-${item.empresaId}`
+        };
+        this.itensInventario.push(itemSalvo);
+      }
+    } else {
+      const novoId = this.itensInventario.length > 0 ? Math.max(...this.itensInventario.map(i => i.id)) + 1 : 1;
+      itemSalvo = {
+        id: novoId,
+        empresaId: item.empresaId,
+        ativoId: item.ativoId,
+        codigoPatrimonio: item.codigoPatrimonio,
+        descricao: item.descricao,
+        centroCustoId: item.centroCustoId || 1,
+        centroCustoNome: item.centroCustoNome || 'Administração Geral',
+        departamento: item.departamento || 'Geral',
+        responsavelNome: item.responsavelNome || 'RESPONSÁVEL',
+        responsavelCpf: item.responsavelCpf || '000.000.000-00',
+        localizacaoFisica: item.localizacaoFisica || 'Sede da Empresa',
+        dataTombamento: item.dataTombamento || new Date().toISOString().split('T')[0],
+        estadoConservacao: item.estadoConservacao || 'BOM',
+        situacaoInventario: 'LOCALIZADO',
+        qrCodeIdentificador: `${item.codigoPatrimonio}-${item.empresaId}`
+      };
+      this.itensInventario.push(itemSalvo);
+    }
+
+    this.persistSnapshot();
+    this.registrarAuditoria('INVENTARIO_PATRIMONIAL', 'INCLUSAO', `Plaqueta ${itemSalvo.codigoPatrimonio} cadastrada/atualizada.`);
+    return itemSalvo;
+  }
+
+  // ----------------------------------------------------
+  // LIVRO CAIXA DIGITAL DO PRODUTOR RURAL - LCDPR
+  // ----------------------------------------------------
+  public getImoveisRurais(empresaId?: number): ImovelRuralLCDPR[] {
+    if (empresaId) {
+      return this.imoveisRurais.filter(i => i.empresaId === empresaId);
+    }
+    return this.imoveisRurais;
+  }
+
+  public getLancamentosLCDPR(empresaId: number, ano: number): LancamentoLCDPR[] {
+    return this.lancamentosLcdpr.filter(l => l.empresaId === empresaId && l.ano === ano).sort((a, b) => a.data.localeCompare(b.data));
+  }
+
+  public saveLancamentoLCDPR(lanc: Partial<LancamentoLCDPR> & { empresaId: number; ano: number; data: string; descricao: string; tipoLancamento: 'RECEITA' | 'DESPESA' }): LancamentoLCDPR {
+    const listaAno = this.getLancamentosLCDPR(lanc.empresaId, lanc.ano);
+    let saldoAnterior = listaAno.length > 0 ? listaAno[listaAno.length - 1].saldoProgressivo : 0;
+
+    const valorEntrada = lanc.tipoLancamento === 'RECEITA' ? Number(lanc.valorEntrada || 0) : 0;
+    const valorSaida = lanc.tipoLancamento === 'DESPESA' ? Number(lanc.valorSaida || 0) : 0;
+    const saldoAtual = Number((saldoAnterior + valorEntrada - valorSaida).toFixed(2));
+
+    const novoId = this.lancamentosLcdpr.length > 0 ? Math.max(...this.lancamentosLcdpr.map(l => l.id)) + 1 : 1;
+    const imovel = this.imoveisRurais.find(i => i.id === lanc.imovelRuralId) || this.imoveisRurais[0];
+
+    const novoLanc: LancamentoLCDPR = {
+      id: novoId,
+      empresaId: lanc.empresaId,
+      ano: lanc.ano,
+      data: lanc.data,
+      imovelRuralId: imovel ? imovel.id : 1,
+      imovelNome: imovel ? imovel.nomeImovel : 'Fazenda Rural',
+      contaBancaria: lanc.contaBancaria || 'Banco do Brasil C/C 45900-1',
+      tipoDocumento: lanc.tipoDocumento || '1',
+      numeroDocumento: lanc.numeroDocumento || 'NF-e 001',
+      participanteNome: lanc.participanteNome || 'DIVERSOS',
+      participanteCnpjCpf: lanc.participanteCnpjCpf || '00.000.000/0001-00',
+      tipoLancamento: lanc.tipoLancamento,
+      descricao: lanc.descricao,
+      valorEntrada,
+      valorSaida,
+      saldoProgressivo: saldoAtual
+    };
+
+    this.lancamentosLcdpr.push(novoLanc);
+    this.persistSnapshot();
+    this.registrarAuditoria('LANCAMENTO_LCDPR', 'INCLUSAO', `Lançamento LCDPR de R$ ${(valorEntrada || valorSaida).toFixed(2)} registrado com sucesso.`);
+    return novoLanc;
+  }
+
+  public gerarArquivoTxtLCDPR(empresaId: number, ano: number): string {
+    const empresa = this.empresas.find(e => e.id === empresaId) || this.empresas[0];
+    const imoveis = this.getImoveisRurais(empresaId);
+    const lancamentos = this.getLancamentosLCDPR(empresaId, ano);
+
+    const lines: string[] = [];
+    let contadorLinha = 1;
+
+    lines.push(`0000|LCDPR|0013|${empresa.cnpj.replace(/\D/g, '')}|${empresa.razaoSocial.toUpperCase()}|0|0||0101${ano}|3112${ano}`);
+    contadorLinha++;
+
+    lines.push(`0010|1`);
+    contadorLinha++;
+
+    imoveis.forEach(im => {
+      lines.push(`0030|${im.codigoImovel}|BRA|${im.codigoIncra}|${im.nirf}|${im.nomeImovel.toUpperCase()}|${im.endereco.toUpperCase()}|${im.municipio.toUpperCase()}|${im.uf}|${im.codigoIbge}|${im.tipoExploracao}|${im.percentualParticipacao.toFixed(2).replace('.', ',')}`);
+      contadorLinha++;
+    });
+
+    lines.push(`0040|001|001|BANCO DO BRASIL S/A|0048|459001`);
+    contadorLinha++;
+
+    lancamentos.forEach(l => {
+      const vlrEntradaStr = l.valorEntrada > 0 ? l.valorEntrada.toFixed(2).replace('.', ',') : '0,00';
+      const vlrSaidaStr = l.valorSaida > 0 ? l.valorSaida.toFixed(2).replace('.', ',') : '0,00';
+      const saldoStr = l.saldoProgressivo.toFixed(2).replace('.', ',');
+      const dataFormatada = l.data.split('-').reverse().join('');
+      lines.push(`Q100|${dataFormatada}|001|001|${l.numeroDocumento}|${l.tipoDocumento}|${l.descricao.toUpperCase()}|${l.participanteCnpjCpf.replace(/\D/g, '')}|${l.tipoLancamento === 'RECEITA' ? '1' : '2'}|${vlrEntradaStr}|${vlrSaidaStr}|${saldoStr}|P`);
+      contadorLinha++;
+    });
+
+    for (let m = 1; m <= 12; m++) {
+      const mesStr = `${ano}-${String(m).padStart(2, '0')}`;
+      const lancsMes = lancamentos.filter(l => l.data.startsWith(mesStr));
+      const totEntradas = lancsMes.reduce((acc, l) => acc + l.valorEntrada, 0);
+      const totSaidas = lancsMes.reduce((acc, l) => acc + l.valorSaida, 0);
+      const saldoMes = totEntradas - totSaidas;
+      lines.push(`Q200|${String(m).padStart(2, '0')}${ano}|${totEntradas.toFixed(2).replace('.', ',')}|${totSaidas.toFixed(2).replace('.', ',')}|${saldoMes.toFixed(2).replace('.', ',')}|P`);
+      contadorLinha++;
+    }
+
+    contadorLinha++;
+    lines.push(`9999|${contadorLinha}`);
+
+    return lines.join('\r\n');
   }
 }
 

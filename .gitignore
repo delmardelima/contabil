@@ -4,6 +4,10 @@
 /extracted_chm_escrita
 /extracted_chm_folha
 /extracted_chm_honorarios
+/extracted_chm_lalur
+/extracted_chm_lalur2
+/extracted_chm_patrimonio
+/extracted_chm_patrimonio2
 /node_modules
 *.env*
 *.log*

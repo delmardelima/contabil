@@ -25,7 +25,7 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
   const margemBruta = receitaLiquida > 0 ? (lucroBruto / receitaLiquida) * 100 : 0;
   const margemLiquida = receitaLiquida > 0 ? (lucroLiquido / receitaLiquida) * 100 : 0;
 
-  // DRE Comparativa 12 Meses (Domínio Sistemas)
+  // DRE Comparativa 12 Meses ( Sistemas)
   const multiPeriodDRE = AccountingEngine.generateMultiPeriodDRE(contas, lancamentos, anoReferencia);
   const mesesHeaders = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
@@ -66,25 +66,23 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
           <div className="flex items-center bg-[#101010] p-0.5 rounded-lg border border-white/10">
             <button
               onClick={() => setModoVisualizacao('MENSAL')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
-                modoVisualizacao === 'MENSAL'
+              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${modoVisualizacao === 'MENSAL'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-neutral-400 hover:text-white'
-              }`}
+                }`}
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>DRE Mensal Dedutiva</span>
             </button>
             <button
               onClick={() => setModoVisualizacao('EVOLUCAO_12_MESES')}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
-                modoVisualizacao === 'EVOLUCAO_12_MESES'
+              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${modoVisualizacao === 'EVOLUCAO_12_MESES'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-neutral-400 hover:text-white'
-              }`}
+                }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>Evolução 12 Meses (Domínio)</span>
+              <span>Evolução 12 Meses ()</span>
             </button>
           </div>
 
@@ -250,13 +248,12 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
                 return (
                   <tr
                     key={item.id ?? item.ordem}
-                    className={`transition-colors ${
-                      isTotalGeral
+                    className={`transition-colors ${isTotalGeral
                         ? 'bg-emerald-950/20 font-bold text-neutral-100 text-sm border-t-2 border-emerald-500/40'
                         : isSubtotal
-                        ? 'bg-neutral-900/50 font-semibold text-neutral-100'
-                        : 'hover:bg-white/[0.02] text-neutral-300'
-                    }`}
+                          ? 'bg-neutral-900/50 font-semibold text-neutral-100'
+                          : 'hover:bg-white/[0.02] text-neutral-300'
+                      }`}
                   >
                     <td className="py-2.5 px-4 text-center font-mono text-neutral-500">{item.ordem}</td>
                     <td className="py-2.5 px-4">
@@ -264,15 +261,13 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
                         {item.descricao}
                       </span>
                     </td>
-                    <td className={`py-2.5 px-4 text-right font-mono font-semibold ${
-                      isSubtrai ? 'text-rose-400' : isTotalGeral ? 'text-emerald-400' : 'text-neutral-200'
-                    }`}>
+                    <td className={`py-2.5 px-4 text-right font-mono font-semibold ${isSubtrai ? 'text-rose-400' : isTotalGeral ? 'text-emerald-400' : 'text-neutral-200'
+                      }`}>
                       {isSubtrai ? `(${item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})` : item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-2.5 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded font-mono font-medium text-[11px] ${
-                        isTotalGeral ? 'bg-emerald-500/20 text-emerald-400' : 'bg-neutral-800 text-neutral-400'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded font-mono font-medium text-[11px] ${isTotalGeral ? 'bg-emerald-500/20 text-emerald-400' : 'bg-neutral-800 text-neutral-400'
+                        }`}>
                         {(item.analiseVerticalPerc ?? 0).toFixed(2)}%
                       </span>
                     </td>
@@ -309,13 +304,12 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
                   return (
                     <tr
                       key={item.ordem}
-                      className={`hover:bg-white/[0.02] transition-colors ${
-                        isTotalGeral
+                      className={`hover:bg-white/[0.02] transition-colors ${isTotalGeral
                           ? 'bg-emerald-950/25 font-bold text-neutral-100 text-xs border-t-2 border-emerald-500/40'
                           : isSubtotal
-                          ? 'bg-neutral-900/40 font-semibold text-white'
-                          : 'text-neutral-300'
-                      }`}
+                            ? 'bg-neutral-900/40 font-semibold text-white'
+                            : 'text-neutral-300'
+                        }`}
                     >
                       <td className="py-2.5 px-3 text-center text-neutral-500 sticky left-0 bg-[#181818] z-10">{item.ordem}</td>
                       <td className="py-2.5 px-3 sticky left-12 bg-[#181818] z-10 border-r border-white/10 font-sans">
@@ -324,20 +318,17 @@ export const DREModule: React.FC<DREModuleProps> = ({ contas, lancamentos }) => 
                         </span>
                       </td>
                       {item.meses.map((val, idx) => (
-                        <td key={idx} className={`py-2 px-2 text-right ${
-                          isSubtrai && val > 0 ? 'text-rose-400' : (isTotalGeral ? 'text-emerald-400' : (val > 0 ? 'text-neutral-200' : 'text-neutral-600'))
-                        }`}>
+                        <td key={idx} className={`py-2 px-2 text-right ${isSubtrai && val > 0 ? 'text-rose-400' : (isTotalGeral ? 'text-emerald-400' : (val > 0 ? 'text-neutral-200' : 'text-neutral-600'))
+                          }`}>
                           {val !== 0 ? (isSubtrai ? `(${val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})` : val.toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : '-'}
                         </td>
                       ))}
-                      <td className={`py-2 px-3 text-right font-bold border-l border-white/10 bg-blue-950/10 ${
-                        isSubtrai ? 'text-rose-400' : (isTotalGeral ? 'text-emerald-400' : 'text-blue-300')
-                      }`}>
+                      <td className={`py-2 px-3 text-right font-bold border-l border-white/10 bg-blue-950/10 ${isSubtrai ? 'text-rose-400' : (isTotalGeral ? 'text-emerald-400' : 'text-blue-300')
+                        }`}>
                         {item.totalAno !== 0 ? (isSubtrai ? `(${item.totalAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})` : item.totalAno.toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : '-'}
                       </td>
-                      <td className={`py-2 px-3 text-right font-bold border-l border-white/10 bg-emerald-950/10 ${
-                        isSubtrai ? 'text-rose-400' : (isTotalGeral ? 'text-emerald-400' : 'text-emerald-300')
-                      }`}>
+                      <td className={`py-2 px-3 text-right font-bold border-l border-white/10 bg-emerald-950/10 ${isSubtrai ? 'text-rose-400' : (isTotalGeral ? 'text-emerald-400' : 'text-emerald-300')
+                        }`}>
                         {item.mediaMensal !== 0 ? (isSubtrai ? `(${item.mediaMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})` : item.mediaMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })) : '-'}
                       </td>
                     </tr>

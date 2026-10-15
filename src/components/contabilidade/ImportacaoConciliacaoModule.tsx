@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { dbService } from '../../db/sqliteService';
 import { 
   RegraConciliacao, 
@@ -19,7 +19,12 @@ import {
   RefreshCw,
   Search,
   Filter,
-  Check
+  Check,
+  Sparkles,
+  Building2,
+  Landmark,
+  ShieldCheck,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface ImportacaoConciliacaoModuleProps {
@@ -29,6 +34,13 @@ interface ImportacaoConciliacaoModuleProps {
   onLoteGerado?: () => void;
 }
 
+interface BancoDetectado {
+  codigo: string;
+  nome: string;
+  sigla: string;
+  badgeClass: string;
+}
+
 export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModuleProps> = ({
   empresaId,
   contas,
@@ -36,13 +48,14 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
   onLoteGerado
 }) => {
   const [extrato, setExtrato] = useState<ExtratoTransacao[]>([]);
-  const [regras, setRegras] = useState<RegraConciliacao[]>(dbService.getRegrasConciliacao(empresaId));
-  const [contaBancariaId, setContaBancariaId] = useState<number>(() => {
-    // Busca conta do Banco do Brasil ou Caixa como padrão
+  const [regras, setRegras] = useState<RegraConciliacao[]>(() => dbService.getRegrasConciliacao(empresaId));
+  const [contaBancariaPadraoId, setContaBancariaPadraoId] = useState<number>(() => {
     const b = contas.find(c => c.nome.toLowerCase().includes('banco') && c.tipo === 'A');
     return b ? b.id : contas[0]?.id || 1;
   });
-  const [nomeArquivo, setNomeArquivo] = useState<string>('');
+  
+  const [arquivosProcessados, setArquivosProcessados] = useState<string[]>([]);
+  const [bancoSelecionadoFiltro, setBancoSelecionadoFiltro] = useState<string>('TODOS');
   const [mensagemSucesso, setMensagemSucesso] = useState<string>('');
   const [filtroTexto, setFiltroTexto] = useState<string>('');
   const [showNovaRegraModal, setShowNovaRegraModal] = useState<boolean>(false);
@@ -54,142 +67,225 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
   const [novoHistoricoId, setNovoHistoricoId] = useState<number>(0);
   const [novoComplemento, setNovoComplemento] = useState<string>('');
 
-  const contasAnaliticas = contas.filter(c => c.tipo === 'A');
+  const contasAnaliticas = useMemo(() => contas.filter(c => c.tipo === 'A'), [contas]);
 
-  // Parser Universal OFX / CSV
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Detector Inteligente de Instituição Financeira Emissora
+  const detectarBanco = (nomeArquivo: string, conteudo: string): BancoDetectado => {
+    const nomeLower = nomeArquivo.toLowerCase();
+    const contLower = conteudo.toLowerCase();
 
-    setNomeArquivo(file.name);
-    setMensagemSucesso('');
-    const reader = new FileReader();
+    // 1. Extração por tags OFX oficiais (<BANKID>, <FID>, <ORG>)
+    const orgMatch = /<ORG>([^<\r\n]+)/i.exec(conteudo)?.[1]?.trim() || '';
+    const fidMatch = /<FID>([^<\r\n]+)/i.exec(conteudo)?.[1]?.trim() || '';
+    const bankIdMatch = /<BANKID>([^<\r\n]+)/i.exec(conteudo)?.[1]?.trim() || '';
 
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (!content) return;
+    const tagRef = `${orgMatch} ${fidMatch} ${bankIdMatch} ${nomeLower} ${contLower.substring(0, 500)}`;
 
-      const transacoes: ExtratoTransacao[] = [];
+    if (tagRef.includes('341') || tagRef.includes('itau') || tagRef.includes('itaú')) {
+      return { codigo: '341', nome: 'Banco Itaú S.A.', sigla: 'ITAÚ', badgeClass: 'bg-orange-500/20 text-orange-400 border-orange-500/40' };
+    }
+    if (tagRef.includes('001') || tagRef.includes('banco do brasil') || tagRef.includes('bb ')) {
+      return { codigo: '001', nome: 'Banco do Brasil S.A.', sigla: 'BB', badgeClass: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/40' };
+    }
+    if (tagRef.includes('237') || tagRef.includes('bradesco')) {
+      return { codigo: '237', nome: 'Banco Bradesco S.A.', sigla: 'BRADESCO', badgeClass: 'bg-rose-500/20 text-rose-400 border-rose-500/40' };
+    }
+    if (tagRef.includes('033') || tagRef.includes('santander')) {
+      return { codigo: '033', nome: 'Banco Santander Brasil', sigla: 'SANTANDER', badgeClass: 'bg-red-500/20 text-red-400 border-red-500/40' };
+    }
+    if (tagRef.includes('104') || tagRef.includes('caixa') || tagRef.includes('cef')) {
+      return { codigo: '104', nome: 'Caixa Econômica Federal', sigla: 'CAIXA', badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/40' };
+    }
+    if (tagRef.includes('077') || tagRef.includes('inter')) {
+      return { codigo: '077', nome: 'Banco Inter S.A.', sigla: 'INTER', badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/40' };
+    }
+    if (tagRef.includes('260') || tagRef.includes('nubank') || tagRef.includes('nu ')) {
+      return { codigo: '260', nome: 'Nu Pagamentos (Nubank)', sigla: 'NUBANK', badgeClass: 'bg-purple-500/20 text-purple-400 border-purple-500/40' };
+    }
+    if (tagRef.includes('403') || tagRef.includes('cora')) {
+      return { codigo: '403', nome: 'Cora SCD S.A.', sigla: 'CORA', badgeClass: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' };
+    }
+    if (tagRef.includes('336') || tagRef.includes('c6')) {
+      return { codigo: '336', nome: 'C6 Bank S.A.', sigla: 'C6 BANK', badgeClass: 'bg-neutral-500/20 text-neutral-300 border-neutral-500/40' };
+    }
 
-      if (file.name.toLowerCase().endsWith('.ofx')) {
-        // Parser de arquivo bancário OFX (Open Financial Exchange)
-        // Expressão regular para blocos <STMTTRN>
-        const trnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
-        let match;
-        let index = 1;
-
-        while ((match = trnRegex.exec(content)) !== null) {
-          const block = match[1];
-          const trntype = /<TRNTYPE>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || 'OTHER';
-          const dtposted = /<DTPOSTED>([0-9]{8})/i.exec(block)?.[1]?.trim() || '';
-          const trnamt = /<TRNAMT>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || '0';
-          const memo = /<MEMO>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || 
-                       /<NAME>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || 'Transação Bancária';
-          const fitid = /<FITID>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || `TRN-${index}`;
-
-          // Formatar data YYYY-MM-DD
-          let dataFormatada = new Date().toISOString().split('T')[0];
-          if (dtposted.length >= 8) {
-            dataFormatada = `${dtposted.substring(0, 4)}-${dtposted.substring(4, 6)}-${dtposted.substring(6, 8)}`;
-          }
-
-          const valorNum = parseFloat(trnamt.replace(',', '.'));
-          const isDebito = valorNum < 0 || trntype.toUpperCase() === 'DEBIT';
-
-          transacoes.push({
-            id: `ofx-${Date.now()}-${index++}`,
-            data: dataFormatada,
-            tipo: isDebito ? 'D' : 'C',
-            valor: Math.abs(valorNum),
-            documento: fitid,
-            historicoOriginal: memo,
-            classificado: false
-          });
-        }
-      } else {
-        // Parser CSV / TXT com delimitador ';' ou ','
-        const lines = content.split(/\r?\n/).filter(l => l.trim().length > 0);
-        let index = 1;
-
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          // Pular cabeçalho provável
-          if (i === 0 && (line.toLowerCase().includes('data') || line.toLowerCase().includes('historico') || line.toLowerCase().includes('valor'))) {
-            continue;
-          }
-
-          const cols = line.split(/[;,]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
-          if (cols.length >= 3) {
-            // Assume Col 0: Data, Col 1: Histórico, Col 2: Valor ou Col 0: Data, Col 1: Doc, Col 2: Histórico, Col 3: Valor
-            let dataStr = cols[0];
-            let histStr = cols[1];
-            let valStr = cols[2];
-
-            if (cols.length >= 4 && isNaN(parseFloat(cols[2].replace(',', '.')))) {
-              histStr = cols[2];
-              valStr = cols[3];
-            }
-
-            // Normaliza data DD/MM/AAAA para AAAA-MM-DD
-            if (dataStr.includes('/')) {
-              const parts = dataStr.split('/');
-              if (parts.length === 3) {
-                dataStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-              }
-            }
-
-            const cleanVal = valStr.replace(/\./g, '').replace(',', '.');
-            const valorNum = parseFloat(cleanVal);
-            if (!isNaN(valorNum)) {
-              transacoes.push({
-                id: `csv-${Date.now()}-${index++}`,
-                data: dataStr,
-                tipo: valorNum < 0 ? 'D' : 'C',
-                valor: Math.abs(valorNum),
-                documento: `DOC-${index}`,
-                historicoOriginal: histStr || 'Lançamento de Extrato',
-                classificado: false
-              });
-            }
-          }
-        }
-      }
-
-      // Se nenhum lançamento for encontrado no arquivo, fornece seeds ilustrativos realistas de extrato para teste imediato
-      if (transacoes.length === 0) {
-        transacoes.push(
-          { id: '1', data: '2026-10-02', tipo: 'C', valor: 15400.00, documento: 'PIX-9481', historicoOriginal: 'PIX RECEBIDO CLIENTE TECH SOLUTIONS', classificado: false },
-          { id: '2', data: '2026-10-05', tipo: 'D', valor: 450.00, documento: 'DEB-001', historicoOriginal: 'TARIFA BANCARIA CESTA EMPRESARIAL', classificado: false },
-          { id: '3', data: '2026-10-08', tipo: 'D', valor: 3200.00, documento: 'TED-883', historicoOriginal: 'PAGTO FORNECEDOR PAPELARIA CENTRAL', classificado: false },
-          { id: '4', data: '2026-10-12', tipo: 'D', valor: 850.00, documento: 'AWS-441', historicoOriginal: 'AWS CLOUD SERVICES HOSPEDAGEM', classificado: false },
-          { id: '5', data: '2026-10-15', tipo: 'D', valor: 2150.00, documento: 'ENERG-92', historicoOriginal: 'ENEL ENERGIA ELETRICA SEDE', classificado: false }
-        );
-      }
-
-      // Executa o Auto-Mapping De-Para usando as regras cadastradas
-      const transacoesClassificadas = dbService.autoClassificarExtrato(transacoes, empresaId, contaBancariaId);
-      setExtrato(transacoesClassificadas);
-      setMensagemSucesso(`Importados com sucesso ${transacoesClassificadas.length} lançamentos do arquivo "${file.name}".`);
-    };
-
-    reader.readAsText(file, 'ISO-8859-1');
+    return { codigo: '000', nome: 'Banco Comercial (Extrato)', sigla: 'BANCO', badgeClass: 'bg-blue-500/20 text-blue-400 border-blue-500/40' };
   };
 
-  // Carregar Extrato de Amostra para Demonstração Imediata
-  const handleCarregarExemplo = () => {
-    setNomeArquivo('extrato_bancario_amostra_outubro_2026.ofx');
-    const exemplos: ExtratoTransacao[] = [
-      { id: 'ex-1', data: '2026-10-02', tipo: 'C', valor: 28500.00, documento: 'PIX-1029', historicoOriginal: 'PIX RECEBIDO PAGAMENTO FATURA HONORARIOS', classificado: false },
-      { id: 'ex-2', data: '2026-10-04', tipo: 'D', valor: 189.90, documento: 'TAR-554', historicoOriginal: 'TARIFA BANCARIA PACOTE MENSAL', classificado: false },
-      { id: 'ex-3', data: '2026-10-07', tipo: 'D', valor: 4500.00, documento: 'TED-912', historicoOriginal: 'PAGTO FORNECEDOR SERVICOS DE NUVEM AWS', classificado: false },
-      { id: 'ex-4', data: '2026-10-10', tipo: 'D', valor: 1250.00, documento: 'BOL-773', historicoOriginal: 'ENEL ENERGIA CONSUMO FILIAL 01', classificado: false },
-      { id: 'ex-5', data: '2026-10-14', tipo: 'C', valor: 14200.00, documento: 'TED-301', historicoOriginal: 'PIX RECEBIDO CLIENTE ALPHA COMERCIO', classificado: false },
-      { id: 'ex-6', data: '2026-10-20', tipo: 'D', valor: 8500.00, documento: 'FOL-001', historicoOriginal: 'PAGAMENTO FOLHA LIQUIDA SALARIOS', classificado: false }
+  // Encontra a Conta Contábil de Ativo ideal para o Banco
+  const vincularContaContabilBanco = (banco: BancoDetectado): number => {
+    const nomeNorm = banco.nome.toLowerCase();
+    const siglaNorm = banco.sigla.toLowerCase();
+
+    const matchConta = contasAnaliticas.find(c => {
+      const cNome = c.nome.toLowerCase();
+      return (cNome.includes(siglaNorm) || cNome.includes(nomeNorm) || cNome.includes(banco.codigo)) && c.classificacao.startsWith('1.01.01.02');
+    });
+
+    if (matchConta) return matchConta.id;
+    return contaBancariaPadraoId;
+  };
+
+  // Parser OFX
+  const parseOFX = (content: string, fileName: string, banco: BancoDetectado, startIndex: number): ExtratoTransacao[] => {
+    const trnRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
+    let match;
+    let index = startIndex;
+    const transacoes: ExtratoTransacao[] = [];
+    const contaBancoId = vincularContaContabilBanco(banco);
+
+    while ((match = trnRegex.exec(content)) !== null) {
+      const block = match[1];
+      const trntype = /<TRNTYPE>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || 'OTHER';
+      const dtposted = /<DTPOSTED>([0-9]{8})/i.exec(block)?.[1]?.trim() || '';
+      const trnamt = /<TRNAMT>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || '0';
+      const memo = /<MEMO>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || 
+                   /<NAME>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || 'Transação Bancária';
+      const fitid = /<FITID>([^<\r\n]+)/i.exec(block)?.[1]?.trim() || `TRN-${index}`;
+
+      let dataFormatada = new Date().toISOString().split('T')[0];
+      if (dtposted.length >= 8) {
+        dataFormatada = `${dtposted.substring(0, 4)}-${dtposted.substring(4, 6)}-${dtposted.substring(6, 8)}`;
+      }
+
+      const valorNum = parseFloat(trnamt.replace(',', '.'));
+      const isDebito = valorNum < 0 || trntype.toUpperCase() === 'DEBIT';
+
+      transacoes.push({
+        id: `ofx-${Date.now()}-${index++}`,
+        data: dataFormatada,
+        tipo: isDebito ? 'D' : 'C',
+        valor: Math.abs(valorNum),
+        documento: fitid,
+        historicoOriginal: memo,
+        classificado: false,
+        bancoNome: banco.nome,
+        bancoCodigo: banco.codigo,
+        contaBancariaId: contaBancoId,
+        nomeArquivoOrigem: fileName
+      });
+    }
+
+    return transacoes;
+  };
+
+  // Parser CSV / TXT
+  const parseCSV = (content: string, fileName: string, banco: BancoDetectado, startIndex: number): ExtratoTransacao[] => {
+    const lines = content.split(/\r?\n/).filter(l => l.trim().length > 0);
+    let index = startIndex;
+    const transacoes: ExtratoTransacao[] = [];
+    const contaBancoId = vincularContaContabilBanco(banco);
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (i === 0 && (line.toLowerCase().includes('data') || line.toLowerCase().includes('historico') || line.toLowerCase().includes('valor'))) {
+        continue;
+      }
+
+      const cols = line.split(/[;,]/).map(c => c.trim().replace(/^["']|["']$/g, ''));
+      if (cols.length >= 3) {
+        let dataStr = cols[0];
+        let histStr = cols[1];
+        let valStr = cols[2];
+
+        if (cols.length >= 4 && isNaN(parseFloat(cols[2].replace(',', '.')))) {
+          histStr = cols[2];
+          valStr = cols[3];
+        }
+
+        if (dataStr.includes('/')) {
+          const parts = dataStr.split('/');
+          if (parts.length === 3) {
+            dataStr = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+          }
+        }
+
+        const cleanVal = valStr.replace(/\./g, '').replace(',', '.');
+        const valorNum = parseFloat(cleanVal);
+        if (!isNaN(valorNum)) {
+          transacoes.push({
+            id: `csv-${Date.now()}-${index++}`,
+            data: dataStr,
+            tipo: valorNum < 0 ? 'D' : 'C',
+            valor: Math.abs(valorNum),
+            documento: `DOC-${index}`,
+            historicoOriginal: histStr || 'Lançamento de Extrato',
+            classificado: false,
+            bancoNome: banco.nome,
+            bancoCodigo: banco.codigo,
+            contaBancariaId: contaBancoId,
+            nomeArquivoOrigem: fileName
+          });
+        }
+      }
+    }
+
+    return transacoes;
+  };
+
+  // Upload em Lote Multi-Arquivos
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setMensagemSucesso('');
+    let todasTransacoes: ExtratoTransacao[] = [];
+    let arquivosNomes: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      arquivosNomes.push(file.name);
+
+      const content = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (evt) => resolve(evt.target?.result as string || '');
+        reader.readAsText(file, 'ISO-8859-1');
+      });
+
+      if (!content) continue;
+
+      const bancoDetectado = detectarBanco(file.name, content);
+      let itensArquivo: ExtratoTransacao[] = [];
+
+      if (file.name.toLowerCase().endsWith('.ofx')) {
+        itensArquivo = parseOFX(content, file.name, bancoDetectado, todasTransacoes.length + 1);
+      } else {
+        itensArquivo = parseCSV(content, file.name, bancoDetectado, todasTransacoes.length + 1);
+      }
+
+      todasTransacoes = [...todasTransacoes, ...itensArquivo];
+    }
+
+    // Auto-classifica usando o motor de regras
+    const classificados = dbService.autoClassificarExtrato(todasTransacoes, empresaId, contaBancariaPadraoId);
+    setExtrato(classificados);
+    setArquivosProcessados(arquivosNomes);
+    setMensagemSucesso(`✅ Importação concluída com sucesso! ${files.length} arquivo(s) processado(s), totalizando ${classificados.length} transações.`);
+  };
+
+  // Carregar Exemplo Multi-Bancos (Itaú, Banco do Brasil e Inter)
+  const handleCarregarExemploMultiBancos = () => {
+    const amostras: ExtratoTransacao[] = [
+      // Itaú (Conta Movimento Principal)
+      { id: 'itau-1', data: '2026-10-02', tipo: 'C', valor: 28500.00, documento: 'PIX-9941', historicoOriginal: 'PIX RECEBIDO CLIENTE TECH SOLUTIONS', classificado: false, bancoNome: 'Banco Itaú S.A.', bancoCodigo: '341', nomeArquivoOrigem: 'itau_outubro_2026.ofx', contaBancariaId: 3 },
+      { id: 'itau-2', data: '2026-10-05', tipo: 'D', valor: 245.00, documento: 'TAR-001', historicoOriginal: 'TARIFA BANCARIA PACOTE EMPRESARIAL', classificado: false, bancoNome: 'Banco Itaú S.A.', bancoCodigo: '341', nomeArquivoOrigem: 'itau_outubro_2026.ofx', contaBancariaId: 3 },
+      { id: 'itau-3', data: '2026-10-10', tipo: 'D', valor: 3400.00, documento: 'TED-881', historicoOriginal: 'PAGTO FORNECEDOR PAPELARIA CENTRAL', classificado: false, bancoNome: 'Banco Itaú S.A.', bancoCodigo: '341', nomeArquivoOrigem: 'itau_outubro_2026.ofx', contaBancariaId: 3 },
+      
+      // Banco do Brasil (Conta Cobrança / Folha)
+      { id: 'bb-1', data: '2026-10-06', tipo: 'C', valor: 19400.00, documento: 'LIQ-041', historicoOriginal: 'LIQUIDACAO DE BOLETOS DE COBRANCA', classificado: false, bancoNome: 'Banco do Brasil S.A.', bancoCodigo: '001', nomeArquivoOrigem: 'bb_cobranca_out2026.ofx', contaBancariaId: 3 },
+      { id: 'bb-2', data: '2026-10-15', tipo: 'D', valor: 14200.00, documento: 'FOL-920', historicoOriginal: 'PAGAMENTO FOLHA LIQUIDA SALARIOS', classificado: false, bancoNome: 'Banco do Brasil S.A.', bancoCodigo: '001', nomeArquivoOrigem: 'bb_cobranca_out2026.ofx', contaBancariaId: 3 },
+      { id: 'bb-3', data: '2026-10-16', tipo: 'D', valor: 185.00, documento: 'DEB-02', historicoOriginal: 'TARIFA EMISSAO DE BOLETO BANCARIO', classificado: false, bancoNome: 'Banco do Brasil S.A.', bancoCodigo: '001', nomeArquivoOrigem: 'bb_cobranca_out2026.ofx', contaBancariaId: 3 },
+
+      // Banco Inter (Conta PJ Digital / Serviços Cloud)
+      { id: 'inter-1', data: '2026-10-08', tipo: 'D', valor: 850.00, documento: 'INT-331', historicoOriginal: 'AWS CLOUD SERVICES HOSPEDAGEM', classificado: false, bancoNome: 'Banco Inter S.A.', bancoCodigo: '077', nomeArquivoOrigem: 'inter_pj_out2026.csv', contaBancariaId: 3 },
+      { id: 'inter-2', data: '2026-10-12', tipo: 'D', valor: 1250.00, documento: 'INT-442', historicoOriginal: 'ENEL ENERGIA ELETRICA SEDE', classificado: false, bancoNome: 'Banco Inter S.A.', bancoCodigo: '077', nomeArquivoOrigem: 'inter_pj_out2026.csv', contaBancariaId: 3 },
+      { id: 'inter-3', data: '2026-10-22', tipo: 'C', valor: 12300.00, documento: 'PIX-8812', historicoOriginal: 'PIX RECEBIDO CLIENTE ALPHA COMERCIO', classificado: false, bancoNome: 'Banco Inter S.A.', bancoCodigo: '077', nomeArquivoOrigem: 'inter_pj_out2026.csv', contaBancariaId: 3 }
     ];
 
-    const classificados = dbService.autoClassificarExtrato(exemplos, empresaId, contaBancariaId);
+    const classificados = dbService.autoClassificarExtrato(amostras, empresaId, contaBancariaPadraoId);
     setExtrato(classificados);
-    setMensagemSucesso('Extrato OFX de demonstração carregado com 6 movimentações reais.');
+    setArquivosProcessados(['itau_outubro_2026.ofx', 'bb_cobranca_out2026.ofx', 'inter_pj_out2026.csv']);
+    setMensagemSucesso('Carregado pacote demonstrativo de 3 bancos simultâneos (Itaú, Banco do Brasil e Inter) com 9 transações.');
   };
 
   // Salvar Nova Regra De-Para
@@ -213,9 +309,8 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
     const atualizadas = dbService.getRegrasConciliacao(empresaId);
     setRegras(atualizadas);
 
-    // Reclassifica o extrato ativo
     if (extrato.length > 0) {
-      setExtrato(dbService.autoClassificarExtrato(extrato, empresaId, contaBancariaId));
+      setExtrato(dbService.autoClassificarExtrato(extrato, empresaId, contaBancariaPadraoId));
     }
 
     setShowNovaRegraModal(false);
@@ -229,53 +324,107 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
     setRegras(dbService.getRegrasConciliacao(empresaId));
   };
 
-  // Gerar Lote Contábil dos Lançamentos Classificados com 1 Clique
-  const handleGerarLote = () => {
-    const itensClassificados = extrato.filter(t => t.classificado && t.contaDebitoId && t.contaCreditoId);
-    if (itensClassificados.length === 0) {
-      alert('Nenhuma transação classificada para geração de lote contábil.');
+  // Memorizar Regra com 1 Clique (Auto-Learning)
+  const handleMemorizarRegraDaLinha = (item: ExtratoTransacao) => {
+    if (!item.contaDebitoId || !item.contaCreditoId) {
+      alert('Selecione as contas de Débito e Crédito antes de memorizar a regra.');
       return;
     }
+
+    const tokens = item.historicoOriginal.trim().split(/\s+/).filter(w => w.length > 2 && !w.match(/^[0-9]+$/));
+    const keyword = tokens.slice(0, 2).join(' ') || item.historicoOriginal.trim();
+
+    dbService.memorizarRegraConciliacao(
+      empresaId,
+      keyword,
+      item.contaDebitoId,
+      item.contaCreditoId,
+      item.historicoId || 1,
+      item.historicoOriginal
+    );
+
+    const atualizadas = dbService.getRegrasConciliacao(empresaId);
+    setRegras(atualizadas);
+
+    const reclassificados = dbService.autoClassificarExtrato(extrato, empresaId, contaBancariaPadraoId);
+    setExtrato(reclassificados);
+
+    setMensagemSucesso(`✨ Regra memorizada com sucesso para "${keyword}"! Transações semelhantes foram classificadas.`);
+    setTimeout(() => setMensagemSucesso(''), 6000);
+  };
+
+  // Gerar Lote Contábil do Extrato Classificado
+  const handleGerarLote = () => {
+    const itensClassificados = extratoFiltrado.filter(t => t.classificado && t.contaDebitoId && t.contaCreditoId);
+    if (itensClassificados.length === 0) {
+      alert('Nenhuma transação classificada para geração de lote contábil no filtro atual.');
+      return;
+    }
+
+    const labelLote = bancoSelecionadoFiltro === 'TODOS' 
+      ? `Conciliação Multi-Bancos (${itensClassificados.length} itens)` 
+      : `Conciliação ${bancoSelecionadoFiltro} (${itensClassificados.length} itens)`;
 
     const { lote, count, totalValor } = dbService.gerarLoteDoExtrato(
       itensClassificados,
       empresaId,
-      `Conciliação Automática: ${nomeArquivo || 'Extrato Bancário'}`
+      labelLote
     );
 
     setMensagemSucesso(`✅ Lote Contábil #${lote.numeroLote} gerado com sucesso! ${count} partidas dobradas criadas (Total: R$ ${totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`);
     
-    // Limpa transações já integradas
-    setExtrato([]);
+    // Remove os integrados do estado
+    const idsIntegrados = new Set(itensClassificados.map(t => t.id));
+    setExtrato(prev => prev.filter(t => !idsIntegrados.has(t.id)));
+
     if (onLoteGerado) onLoteGerado();
   };
 
-  const totalClassificado = extrato.filter(t => t.classificado).length;
-  const taxaClassificacao = extrato.length > 0 ? Math.round((totalClassificado / extrato.length) * 100) : 0;
+  // Métricas e Totalizadores
+  const bancosPresentes = useMemo(() => {
+    const map = new Map<string, { nome: string; count: number }>();
+    for (const t of extrato) {
+      const bNome = t.bancoNome || 'Banco Comercial';
+      const existing = map.get(bNome) || { nome: bNome, count: 0 };
+      existing.count++;
+      map.set(bNome, existing);
+    }
+    return Array.from(map.values());
+  }, [extrato]);
 
-  const extratoFiltrado = extrato.filter(t => {
-    if (!filtroTexto) return true;
-    const txt = filtroTexto.toLowerCase();
-    return t.historicoOriginal.toLowerCase().includes(txt) ||
-           t.documento.toLowerCase().includes(txt) ||
-           t.valor.toString().includes(txt);
-  });
+  const extratoFiltrado = useMemo(() => {
+    return extrato.filter(t => {
+      if (bancoSelecionadoFiltro !== 'TODOS' && t.bancoNome !== bancoSelecionadoFiltro) {
+        return false;
+      }
+      if (!filtroTexto) return true;
+      const txt = filtroTexto.toLowerCase();
+      return t.historicoOriginal.toLowerCase().includes(txt) ||
+             t.documento.toLowerCase().includes(txt) ||
+             t.valor.toString().includes(txt);
+    });
+  }, [extrato, bancoSelecionadoFiltro, filtroTexto]);
+
+  const totalClassificado = extratoFiltrado.filter(t => t.classificado).length;
+  const taxaClassificacao = extratoFiltrado.length > 0 ? Math.round((totalClassificado / extratoFiltrado.length) * 100) : 0;
+  const totalCreditos = extratoFiltrado.filter(t => t.tipo === 'C').reduce((acc, t) => acc + t.valor, 0);
+  const totalDebitos = extratoFiltrado.filter(t => t.tipo === 'D').reduce((acc, t) => acc + t.valor, 0);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#141414] text-neutral-200 overflow-hidden select-none">
-      {/* Top Banner de Status & Ferramentas */}
-      <div className="px-5 py-3.5 bg-[#181818] border-b border-white/10 flex items-center justify-between">
+      {/* Top Banner de Status & Ferramentas Multi-Banco */}
+      <div className="px-5 py-3 bg-[#181818] border-b border-white/10 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
             <Zap className="w-4 h-4" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-neutral-100 flex items-center space-x-2">
-              <span>Central de Importação Universal & Conciliação Bancária</span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono font-medium">Auto-Mapping AI</span>
+              <span>Central de Importação Multi-Bancos & Conciliação Inteligente</span>
+              <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono font-medium">Auto-Detection Multi-OFX</span>
             </h2>
             <p className="text-[11px] text-neutral-400">
-              Importação inteligente de extratos (.OFX, .CSV, .TXT) com classificação contábil automática por regras De-Para.
+              Importe múltiplos extratos simultaneamente de bancos diferentes (Itaú, Bradesco, Santander, BB, Caixa, Inter, Nubank) com auto-reconhecimento.
             </p>
           </div>
         </div>
@@ -283,18 +432,19 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
         {/* Botões de Ação Rápida */}
         <div className="flex items-center space-x-2">
           <button
-            onClick={handleCarregarExemplo}
+            onClick={handleCarregarExemploMultiBancos}
             className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-white/10 text-xs font-medium flex items-center space-x-1.5 transition"
           >
             <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
-            <span>Carregar Exemplo OFX</span>
+            <span>Amostra Multi-Bancos (3 Extratos)</span>
           </button>
 
           <label className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded shadow-sm text-xs font-medium flex items-center space-x-1.5 cursor-pointer transition">
             <Upload className="w-3.5 h-3.5" />
-            <span>Importar Extrato (.OFX / .CSV)</span>
+            <span>Importar Extratos em Lote (.OFX / .CSV)</span>
             <input 
               type="file" 
+              multiple 
               accept=".ofx,.csv,.txt" 
               onChange={handleFileUpload} 
               className="hidden" 
@@ -305,7 +455,7 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
 
       {/* Banner Informativo / Mensagem de Sucesso */}
       {mensagemSucesso && (
-        <div className="px-5 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20 text-emerald-400 text-xs flex items-center justify-between">
+        <div className="px-5 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20 text-emerald-300 text-xs flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-2">
             <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
             <span>{mensagemSucesso}</span>
@@ -314,49 +464,101 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
         </div>
       )}
 
+      {/* KPI Cards de Movimentação do Extrato */}
+      <div className="px-5 py-2.5 bg-[#161616] border-b border-white/5 grid grid-cols-4 gap-3 flex-shrink-0 text-xs">
+        <div className="bg-[#1c1c1c] border border-white/5 rounded-lg p-2.5 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-neutral-400 block">Total de Transações</span>
+            <span className="text-sm font-bold text-neutral-100 font-mono">{extratoFiltrado.length} Movimentações</span>
+          </div>
+          <Landmark className="w-4 h-4 text-neutral-500" />
+        </div>
+
+        <div className="bg-[#1c1c1c] border border-white/5 rounded-lg p-2.5 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-neutral-400 block">Auto-Classificação De-Para</span>
+            <div className="flex items-center space-x-1.5">
+              <span className={`text-sm font-bold font-mono ${
+                taxaClassificacao >= 70 ? 'text-emerald-400' : 'text-amber-400'
+              }`}>{taxaClassificacao}%</span>
+              <span className="text-[10px] text-neutral-500 font-mono">({totalClassificado}/{extratoFiltrado.length})</span>
+            </div>
+          </div>
+          <Sparkles className="w-4 h-4 text-blue-400" />
+        </div>
+
+        <div className="bg-[#1c1c1c] border border-white/5 rounded-lg p-2.5 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-neutral-400 block">Total Entradas (Créditos)</span>
+            <span className="text-sm font-bold text-emerald-400 font-mono">
+              + R$ {totalCreditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+        </div>
+
+        <div className="bg-[#1c1c1c] border border-white/5 rounded-lg p-2.5 flex items-center justify-between">
+          <div>
+            <span className="text-[10px] text-neutral-400 block">Total Saídas (Débitos)</span>
+            <span className="text-sm font-bold text-rose-400 font-mono">
+              - R$ {totalDebitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+          <div className="w-2 h-2 rounded-full bg-rose-500" />
+        </div>
+      </div>
+
       {/* Grid Principal: Extrato Bancário à Esquerda + Painel De-Para à Direita */}
       <div className="flex-1 flex overflow-hidden">
         {/* Painel Esquerdo: Grade de Lançamentos do Extrato */}
         <div className="flex-1 flex flex-col border-r border-white/10 overflow-hidden">
-          {/* Barra de Filtros e Conta Bancária */}
-          <div className="px-4 py-2.5 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between text-xs">
-            <div className="flex items-center space-x-3">
-              <span className="text-neutral-400 font-medium">Conta Bancária de Contrapartida:</span>
-              <select
-                value={contaBancariaId}
-                onChange={(e) => {
-                  const id = Number(e.target.value);
-                  setContaBancariaId(id);
-                  if (extrato.length > 0) {
-                    setExtrato(dbService.autoClassificarExtrato(extrato, empresaId, id));
-                  }
-                }}
-                className="bg-[#121212] border border-white/10 rounded px-2.5 py-1 text-neutral-200 outline-none max-w-[280px] font-mono text-xs"
+          {/* Barra de Filtro por Banco e Busca */}
+          <div className="px-4 py-2 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between text-xs flex-shrink-0">
+            {/* Seletor de Bancos Importados (Pills) */}
+            <div className="flex items-center space-x-1.5 overflow-x-auto custom-scrollbar max-w-[65%]">
+              <button
+                onClick={() => setBancoSelecionadoFiltro('TODOS')}
+                className={`px-2.5 py-1 rounded text-[11px] font-medium transition whitespace-nowrap ${
+                  bancoSelecionadoFiltro === 'TODOS'
+                    ? 'bg-blue-600 text-white font-semibold shadow-sm'
+                    : 'bg-neutral-800 text-neutral-400 hover:text-neutral-200'
+                }`}
               >
-                {contasAnaliticas.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.codigoReduzido} - {c.nome}
-                  </option>
-                ))}
-              </select>
+                Todos os Bancos ({extrato.length})
+              </button>
+
+              {bancosPresentes.map(b => (
+                <button
+                  key={b.nome}
+                  onClick={() => setBancoSelecionadoFiltro(b.nome)}
+                  className={`px-2.5 py-1 rounded text-[11px] font-medium transition whitespace-nowrap border ${
+                    bancoSelecionadoFiltro === b.nome
+                      ? 'bg-neutral-800 text-neutral-100 border-blue-500 font-semibold'
+                      : 'bg-neutral-900/60 text-neutral-400 border-white/5 hover:text-neutral-200'
+                  }`}
+                >
+                  <span>{b.nome}</span>
+                  <span className="ml-1 text-[10px] opacity-75 font-mono font-bold">({b.count})</span>
+                </button>
+              ))}
             </div>
 
-            {/* Score de Auto-Mapping */}
-            {extrato.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <span className="text-neutral-400">Classificação Automática:</span>
-                <span className={`px-2 py-0.5 rounded font-mono font-bold ${
-                  taxaClassificacao >= 80 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
-                }`}>
-                  {taxaClassificacao}% ({totalClassificado}/{extrato.length})
-                </span>
-              </div>
-            )}
+            {/* Input de Busca Rápida */}
+            <div className="relative w-56">
+              <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-2.5 top-2" />
+              <input
+                type="text"
+                placeholder="Filtrar por histórico..."
+                value={filtroTexto}
+                onChange={(e) => setFiltroTexto(e.target.value)}
+                className="w-full bg-[#121212] border border-white/10 rounded pl-8 pr-2.5 py-1 text-xs text-neutral-200 outline-none focus:border-blue-500"
+              />
+            </div>
           </div>
 
           {/* Listagem do Extrato */}
           <div className="flex-1 overflow-auto custom-scrollbar">
-            {extrato.length === 0 ? (
+            {extratoFiltrado.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-neutral-500 space-y-3 p-6 text-center">
                 <div className="w-12 h-12 rounded-xl bg-neutral-800/80 flex items-center justify-center text-neutral-400">
                   <FileText className="w-6 h-6" />
@@ -364,7 +566,7 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
                 <div>
                   <p className="text-neutral-300 font-medium text-sm">Nenhum extrato importado no momento</p>
                   <p className="text-xs text-neutral-500 max-w-md mt-1">
-                    Faça o upload do arquivo .OFX fornecido pelo banco (Itaú, Bradesco, Santander, BB, Caixa, Nubank, Inter) ou utilize o botão "Carregar Exemplo OFX" para testar o auto-mapping contábil.
+                    Faça o upload de um ou mais arquivos .OFX/.CSV bancários ou utilize o botão "Amostra Multi-Bancos" para testar o auto-mapping contábil.
                   </p>
                 </div>
               </div>
@@ -372,20 +574,19 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 bg-[#1e1e1e] border-b border-white/10 text-neutral-400 font-medium uppercase tracking-wider text-[11px] z-10">
                   <tr>
-                    <th className="py-2.5 px-3 w-10 text-center">St</th>
+                    <th className="py-2.5 px-3 w-8 text-center">St</th>
+                    <th className="py-2.5 px-3 w-32">Instituição / Banco</th>
                     <th className="py-2.5 px-3 w-24">Data</th>
                     <th className="py-2.5 px-3 w-28">Doc/FITID</th>
-                    <th className="py-2.5 px-3">Histórico do Extrato</th>
+                    <th className="py-2.5 px-3">Histórico Original do Extrato</th>
                     <th className="py-2.5 px-3 w-28 text-right">Valor (R$)</th>
                     <th className="py-2.5 px-3 w-40">Conta Débito</th>
                     <th className="py-2.5 px-3 w-40">Conta Crédito</th>
+                    <th className="py-2.5 px-3 w-28 text-center">Auto-Aprender</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 font-mono text-[12px]">
-                  {extratoFiltrado.map((item, idx) => {
-                    const debitoObj = contas.find(c => c.id === item.contaDebitoId);
-                    const creditoObj = contas.find(c => c.id === item.contaCreditoId);
-
+                  {extratoFiltrado.map((item) => {
                     return (
                       <tr 
                         key={item.id} 
@@ -399,6 +600,11 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
                           ) : (
                             <span title="Pendente de Regra De-Para" className="text-amber-400 font-bold">○</span>
                           )}
+                        </td>
+                        <td className="py-2 px-3 font-sans">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-neutral-800 text-neutral-300 border border-white/5 block truncate max-w-[120px]">
+                            {item.bancoNome || 'Banco Comercial'}
+                          </span>
                         </td>
                         <td className="py-2 px-3 text-neutral-300">{item.data}</td>
                         <td className="py-2 px-3 text-neutral-400 truncate max-w-[100px]">{item.documento}</td>
@@ -427,7 +633,7 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
                               } : t);
                               setExtrato(updated);
                             }}
-                            className="bg-[#101010] border border-white/10 rounded px-1.5 py-0.5 text-xs text-neutral-300 w-full truncate outline-none"
+                            className="bg-[#101010] border border-white/10 rounded px-1.5 py-0.5 text-xs text-neutral-300 w-full truncate outline-none font-mono"
                           >
                             <option value="">Selecione Débito...</option>
                             {contasAnaliticas.map(c => (
@@ -447,13 +653,27 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
                               } : t);
                               setExtrato(updated);
                             }}
-                            className="bg-[#101010] border border-white/10 rounded px-1.5 py-0.5 text-xs text-neutral-300 w-full truncate outline-none"
+                            className="bg-[#101010] border border-white/10 rounded px-1.5 py-0.5 text-xs text-neutral-300 w-full truncate outline-none font-mono"
                           >
                             <option value="">Selecione Crédito...</option>
                             {contasAnaliticas.map(c => (
                               <option key={c.id} value={c.id}>{c.codigoReduzido} - {c.nome}</option>
                             ))}
                           </select>
+                        </td>
+                        <td className="py-2 px-3 text-center font-sans">
+                          {item.contaDebitoId && item.contaCreditoId ? (
+                            <button
+                              onClick={() => handleMemorizarRegraDaLinha(item)}
+                              title="Memorizar regra De-Para com 1 clique para transações semelhantes"
+                              className="px-2 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 rounded text-[11px] font-medium flex items-center space-x-1 mx-auto transition"
+                            >
+                              <Sparkles className="w-3 h-3 text-blue-400" />
+                              <span>Memorizar</span>
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-neutral-500">-</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -464,10 +684,10 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
           </div>
 
           {/* Footer de Ação: Gerar Lote */}
-          {extrato.length > 0 && (
-            <div className="p-3 bg-[#181818] border-t border-white/10 flex items-center justify-between">
+          {extratoFiltrado.length > 0 && (
+            <div className="p-3 bg-[#181818] border-t border-white/10 flex items-center justify-between flex-shrink-0">
               <div className="text-xs text-neutral-400">
-                Lançamentos prontos para integração contábil: <strong className="text-emerald-400 font-mono">{totalClassificado}</strong> de {extrato.length}
+                Lançamentos aptos para integração: <strong className="text-emerald-400 font-mono">{totalClassificado}</strong> de {extratoFiltrado.length}
               </div>
 
               <button
@@ -476,14 +696,14 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded font-medium text-xs flex items-center space-x-2 transition shadow-lg shadow-emerald-900/30"
               >
                 <Layers className="w-4 h-4" />
-                <span>Gerar Lote Contábil Imediato ({totalClassificado} Partidas)</span>
+                <span>Gerar Lote Contábil ({totalClassificado} Partidas)</span>
               </button>
             </div>
           )}
         </div>
 
         {/* Painel Direito: Motor de Regras De-Para (Auto-Mapping) */}
-        <div className="w-80 bg-[#181818] flex flex-col overflow-hidden">
+        <div className="w-80 bg-[#181818] flex flex-col overflow-hidden flex-shrink-0">
           <div className="p-3.5 border-b border-white/10 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-semibold text-neutral-200">Regras De-Para Inteligentes</h3>
@@ -569,7 +789,7 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
                 <select
                   value={novaContaDebito}
                   onChange={(e) => setNovaContaDebito(Number(e.target.value))}
-                  className="w-full bg-[#121212] border border-white/10 rounded px-3 py-2 text-neutral-200 outline-none focus:border-blue-500"
+                  className="w-full bg-[#121212] border border-white/10 rounded px-3 py-2 text-neutral-200 outline-none focus:border-blue-500 font-mono"
                 >
                   <option value={0}>Selecione Conta Débito...</option>
                   {contasAnaliticas.map(c => (
@@ -583,7 +803,7 @@ export const ImportacaoConciliacaoModule: React.FC<ImportacaoConciliacaoModulePr
                 <select
                   value={novaContaCredito}
                   onChange={(e) => setNovaContaCredito(Number(e.target.value))}
-                  className="w-full bg-[#121212] border border-white/10 rounded px-3 py-2 text-neutral-200 outline-none focus:border-blue-500"
+                  className="w-full bg-[#121212] border border-white/10 rounded px-3 py-2 text-neutral-200 outline-none focus:border-blue-500 font-mono"
                 >
                   <option value={0}>Selecione Conta Crédito...</option>
                   {contasAnaliticas.map(c => (
