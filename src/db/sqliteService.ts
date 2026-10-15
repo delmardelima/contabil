@@ -27,7 +27,8 @@ import {
   ParticipanteFiscal,
   ProdutoServico,
   AtivoImobilizado,
-  VariaveisColaborador
+  VariaveisColaborador,
+  ProvisaoColaborador
 } from '../types/contabil';
 
 const STORAGE_KEYS = {
@@ -2024,6 +2025,156 @@ export class DatabaseService {
       loteId: lote.id,
       lote,
       totalBruto
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // PROVISÕES MENSAIS DE FÉRIAS E 13º SALÁRIO (CLT / CFC)
+  // --------------------------------------------------------------------------
+  public calcularProvisoesMensais(empresaId?: number, competencia?: string): ProvisaoColaborador[] {
+    const empId = empresaId || this.activeEmpresaId;
+    const comp = competencia || this.getActiveEmpresa().competenciaAtiva;
+    const colabs = this.getColaboradores(empId).filter(c => c.status === 'ATIVO');
+
+    return colabs.map(colab => {
+      const sal = colab.salarioBase || 0;
+      const isCLT = colab.tipoVinculo === 'CLT';
+
+      // 1/12 avos de férias e 1/3 constitucional
+      const provFerias = isCLT ? Math.round((sal / 12) * 100) / 100 : 0;
+      const provTerco = isCLT ? Math.round((provFerias / 3) * 100) / 100 : 0;
+      
+      // 1/12 avos de 13º salário
+      const prov13 = isCLT ? Math.round((sal / 12) * 100) / 100 : 0;
+
+      // Encargos Sociais s/ Provisões: CPP 20% + FGTS 8%
+      const baseEncargos = provFerias + provTerco + prov13;
+      const inssPatronal = isCLT ? Math.round((baseEncargos * 0.20) * 100) / 100 : 0;
+      const fgts = isCLT ? Math.round((baseEncargos * 0.08) * 100) / 100 : 0;
+
+      const totalMes = provFerias + provTerco + prov13 + inssPatronal + fgts;
+
+      return {
+        id: colab.id,
+        empresaId: empId,
+        colaboradorId: colab.id,
+        colaboradorNome: colab.nome,
+        matricula: colab.matricula,
+        competencia: comp,
+        salarioBase: sal,
+        provisaoFerias: provFerias,
+        provisaoTercoConstitucional: provTerco,
+        provisaoDecimoTerceiro: prov13,
+        encargosINSSPatronal: inssPatronal,
+        encargosFGTS: fgts,
+        totalProvisaoMes: totalMes
+      };
+    });
+  }
+
+  public integrarProvisoesContabil(empresaId: number, competencia: string): {
+    success: boolean;
+    partidasGeradas: number;
+    loteId: number;
+    totalProvisao: number;
+  } {
+    const provisoes = this.calcularProvisoesMensais(empresaId, competencia);
+    const elegiveis = provisoes.filter(p => p.totalProvisaoMes > 0);
+
+    if (elegiveis.length === 0) {
+      return { success: false, partidasGeradas: 0, loteId: 0, totalProvisao: 0 };
+    }
+
+    const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
+    const loteId = Date.now();
+    const lote: LoteContabil = {
+      id: loteId,
+      empresaId,
+      numero: proximoNumLote,
+      numeroLote: proximoNumLote,
+      descricao: `Lote de Provisão Mensal de Férias e 13º Salário - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
+      status: 'FECHADO',
+      totalDebito: 0,
+      totalCredito: 0
+    };
+
+    let totalGeral = 0;
+    let partidas = 0;
+
+    for (const p of elegiveis) {
+      // 1. Provisão de Férias (+ 1/3): D: 56 (Despesas com Provisão Férias), C: 26 (Provisão Férias a Pagar)
+      const totalFeriasTerco = p.provisaoFerias + p.provisaoTercoConstitucional;
+      if (totalFeriasTerco > 0) {
+        this.addLancamento({
+          empresaId,
+          numeroPartida: this.lancamentos.length + 1,
+          loteId,
+          dataLancamento: `${competencia}-28`,
+          tipoPartida: 'SIMPLES',
+          contaDebitoId: 56,
+          contaCreditoId: 26,
+          valor: totalFeriasTerco,
+          historicoId: 3,
+          complementoHistorico: `Provisão de 1/12 avos de Férias (+1/3) ref. ${competencia} - ${p.colaboradorNome}`,
+          usuarioNome: 'Módulo Folha'
+        });
+        totalGeral += totalFeriasTerco;
+        partidas++;
+      }
+
+      // 2. Provisão de 13º Salário: D: 56 (Despesas com Provisão 13º), C: 26 (Provisão 13º a Pagar)
+      if (p.provisaoDecimoTerceiro > 0) {
+        this.addLancamento({
+          empresaId,
+          numeroPartida: this.lancamentos.length + 1,
+          loteId,
+          dataLancamento: `${competencia}-28`,
+          tipoPartida: 'SIMPLES',
+          contaDebitoId: 56,
+          contaCreditoId: 26,
+          valor: p.provisaoDecimoTerceiro,
+          historicoId: 3,
+          complementoHistorico: `Provisão de 1/12 avos de 13º Salário ref. ${competencia} - ${p.colaboradorNome}`,
+          usuarioNome: 'Módulo Folha'
+        });
+        totalGeral += p.provisaoDecimoTerceiro;
+        partidas++;
+      }
+
+      // 3. Encargos Sociais s/ Provisões: D: 56 (Despesa Encargos), C: 27 (Encargos Sociais s/ Provisões)
+      const totalEncargos = p.encargosINSSPatronal + p.encargosFGTS;
+      if (totalEncargos > 0) {
+        this.addLancamento({
+          empresaId,
+          numeroPartida: this.lancamentos.length + 1,
+          loteId,
+          dataLancamento: `${competencia}-28`,
+          tipoPartida: 'SIMPLES',
+          contaDebitoId: 56,
+          contaCreditoId: 27,
+          valor: totalEncargos,
+          historicoId: 3,
+          complementoHistorico: `Encargos Sociais Patronais s/ Provisões ref. ${competencia} - ${p.colaboradorNome}`,
+          usuarioNome: 'Módulo Folha'
+        });
+        totalGeral += totalEncargos;
+        partidas++;
+      }
+    }
+
+    lote.totalDebito = Math.round(totalGeral * 100) / 100;
+    lote.totalCredito = Math.round(totalGeral * 100) / 100;
+    this.lotes.push(lote);
+
+    this.persistSnapshot();
+    this.registrarAuditoria('INTEGRAÇÃO_PROVISÕES', 'PROCESSAMENTO', `Provisões mensais de ${competencia} integradas à contabilidade: ${partidas} lançamentos no lote nº ${lote.numero}, total R$ ${totalGeral.toFixed(2)}.`);
+
+    return {
+      success: true,
+      partidasGeradas: partidas,
+      loteId,
+      totalProvisao: totalGeral
     };
   }
 

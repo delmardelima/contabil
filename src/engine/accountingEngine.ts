@@ -1,4 +1,13 @@
-import { ContaContabil, LancamentoContabil, BalanceteItem, BalancoItem, DREItemCalculado, NaturezaConta } from '../types/contabil';
+import { 
+  ContaContabil, 
+  LancamentoContabil, 
+  BalanceteItem, 
+  BalancoItem, 
+  DREItemCalculado, 
+  NaturezaConta,
+  BalanceteMultiPeriodoItem,
+  DREMultiPeriodoItem 
+} from '../types/contabil';
 
 export class AccountingEngine {
   /**
@@ -396,5 +405,122 @@ export class AccountingEngine {
     }
 
     return novosLancamentos;
+  }
+
+  /**
+   * Gera o Balancete Comparativo Multi-Período (Evolução 12 Meses - Jan a Dez)
+   */
+  public static generateMultiPeriodBalancete(
+    contas: ContaContabil[],
+    lancamentos: LancamentoContabil[],
+    ano: number = 2026,
+    grauMaximo: number = 3
+  ): BalanceteMultiPeriodoItem[] {
+    const contasFiltradas = contas
+      .filter(c => c.grau <= grauMaximo)
+      .sort((a, b) => a.classificacao.localeCompare(b.classificacao, undefined, { numeric: true }));
+
+    // Pre-calcular balancetes de cada mês (acumulado até o mês)
+    const monthlyBalances: Map<number, { debitos: number; creditos: number; saldoAtual: number; saldoAnterior: number }>[] = [];
+    
+    for (let m = 1; m <= 12; m++) {
+      const mesStr = m.toString().padStart(2, '0');
+      const maxDate = `${ano}-${mesStr}-31`;
+      // Lançamentos acumulados até o fim deste mês, desconsiderando zeramento para manter visibilidade
+      const lancsAteMes = lancamentos.filter(l => l.dataLancamento <= maxDate && !l.isZeramento);
+      monthlyBalances.push(this.calculateBalances(contas, lancsAteMes, true));
+    }
+
+    const items: BalanceteMultiPeriodoItem[] = [];
+
+    for (const c of contasFiltradas) {
+      const mesesValores: number[] = [];
+      for (let m = 0; m < 12; m++) {
+        const b = monthlyBalances[m].get(c.id);
+        mesesValores.push(b ? b.saldoAtual : 0);
+      }
+      
+      const totalAno = mesesValores[11] || 0; // Saldo em 31/12
+
+      items.push({
+        id: c.id,
+        classificacao: c.classificacao,
+        codigoReduzido: c.codigoReduzido || 0,
+        nome: c.nome,
+        grau: c.grau,
+        tipo: c.tipo,
+        natureza: c.natureza,
+        meses: mesesValores,
+        totalAno
+      });
+    }
+
+    return items;
+  }
+
+  /**
+   * Gera a DRE Comparativa Multi-Período (Evolução 12 Meses - Jan a Dez)
+   */
+  public static generateMultiPeriodDRE(
+    contas: ContaContabil[],
+    lancamentos: LancamentoContabil[],
+    ano: number = 2026
+  ): DREMultiPeriodoItem[] {
+    const dreMeses: {
+      receitaBruta: number;
+      deducoes: number;
+      receitaLiquida: number;
+      custos: number;
+      lucroBruto: number;
+      despesas: number;
+      lucroLiquido: number;
+    }[] = [];
+
+    for (let m = 1; m <= 12; m++) {
+      const mesStr = m.toString().padStart(2, '0');
+      const prefixoMes = `${ano}-${mesStr}`;
+      const lancsMes = lancamentos.filter(l => l.dataLancamento.startsWith(prefixoMes) && !l.isZeramento);
+      const res = this.generateIncomeStatement(contas, lancsMes);
+      
+      const ded = res.items.find(i => i.descricao.includes('Deduções'))?.valor || 0;
+      const cust = res.items.find(i => i.descricao.includes('Custos'))?.valor || 0;
+      const desp = res.items.find(i => i.descricao.includes('Despesas'))?.valor || 0;
+
+      dreMeses.push({
+        receitaBruta: res.receitaBruta,
+        deducoes: ded,
+        receitaLiquida: res.receitaLiquida,
+        custos: cust,
+        lucroBruto: res.lucroBruto,
+        despesas: desp,
+        lucroLiquido: res.lucroLiquido
+      });
+    }
+
+    const templateLinhas = [
+      { ordem: 1, descricao: '1. RECEITA OPERACIONAL BRUTA', key: 'receitaBruta' as const, tipoLinha: 'CONTA' as const, operacao: 'SOMA' as const },
+      { ordem: 2, descricao: '2. (-) Deduções da Receita Bruta e Tributos', key: 'deducoes' as const, tipoLinha: 'CONTA' as const, operacao: 'SUBTRAI' as const },
+      { ordem: 3, descricao: '3. (=) RECEITA OPERACIONAL LÍQUIDA', key: 'receitaLiquida' as const, tipoLinha: 'SUBTOTAL' as const, operacao: 'SOMA' as const },
+      { ordem: 4, descricao: '4. (-) Custos dos Serviços Prestados / Mercadorias', key: 'custos' as const, tipoLinha: 'CONTA' as const, operacao: 'SUBTRAI' as const },
+      { ordem: 5, descricao: '5. (=) LUCRO BRUTO OPERACIONAL', key: 'lucroBruto' as const, tipoLinha: 'SUBTOTAL' as const, operacao: 'SOMA' as const },
+      { ordem: 6, descricao: '6. (-) Despesas Operacionais e Administrativas', key: 'despesas' as const, tipoLinha: 'CONTA' as const, operacao: 'SUBTRAI' as const },
+      { ordem: 7, descricao: '7. (=) RESULTADO LÍQUIDO DO EXERCÍCIO', key: 'lucroLiquido' as const, tipoLinha: 'TOTAL_GERAL' as const, operacao: 'SOMA' as const }
+    ];
+
+    return templateLinhas.map(t => {
+      const meses = dreMeses.map(d => d[t.key]);
+      const totalAno = meses.reduce((a, b) => a + b, 0);
+      const mediaMensal = totalAno / 12;
+
+      return {
+        ordem: t.ordem,
+        descricao: t.descricao,
+        tipoLinha: t.tipoLinha,
+        operacao: t.operacao,
+        meses,
+        totalAno,
+        mediaMensal
+      };
+    });
   }
 }

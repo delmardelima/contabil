@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { dbService } from '../../db/sqliteService';
-import { Empresa, Colaborador, FolhaMensal, VariaveisColaborador } from '../../types/contabil';
+import { Empresa, Colaborador, FolhaMensal, VariaveisColaborador, ProvisaoColaborador } from '../../types/contabil';
 import { 
   Calculator, 
   Printer, 
@@ -14,7 +14,12 @@ import {
   Clock,
   AlertTriangle,
   X,
-  Plus
+  Plus,
+  Layers,
+  Sparkles,
+  Calendar,
+  ShieldCheck,
+  TrendingUp
 } from 'lucide-react';
 
 interface CalculoFolhaModuleProps {
@@ -33,10 +38,14 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
   onOpenReportPreview,
   onIntegracaoSucesso
 }) => {
+  const [abaAtiva, setAbaAtiva] = useState<'FOLHA_MENSAL' | 'PROVISOES'>('FOLHA_MENSAL');
   const [folhas, setFolhas] = useState<FolhaMensal[]>(() => {
     return dbService.getFolhasCalculadas(empresa.id, empresa.competenciaAtiva);
   });
   const [colaboradores, setColaboradores] = useState<Colaborador[]>(() => dbService.getColaboradores(empresa.id));
+  const [provisoes, setProvisoes] = useState<ProvisaoColaborador[]>(() => {
+    return dbService.calcularProvisoesMensais(empresa.id, empresa.competenciaAtiva);
+  });
   const [processando, setProcessando] = useState<boolean>(false);
   const [mensagem, setMensagem] = useState<string>('');
   
@@ -200,20 +209,20 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
             const valInsalub = Math.round((SALARIO_MINIMO_2026 * perc) * 100) / 100;
             proventos.push({
               rubricaId: 3,
-              codigo: '025',
-              nome: `Adicional de Insalubridade (${(perc * 100).toFixed(0)}%)`,
+              codigo: '030',
+              nome: `Adicional Insalubridade (${(perc * 100).toFixed(0)}% SM)`,
               tipo: 'PROVENTO',
               referencia: perc * 100,
               valor: valInsalub
             });
           }
 
-          // Periculosidade (30% s/ Salário Base)
+          // Periculosidade (30% sobre Salário Base)
           if (vars.periculosidade) {
             const valPeric = Math.round((salBase * 0.30) * 100) / 100;
             proventos.push({
               rubricaId: 3,
-              codigo: '026',
+              codigo: '035',
               nome: 'Adicional de Periculosidade (30%)',
               tipo: 'PROVENTO',
               referencia: 30,
@@ -222,31 +231,38 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
           }
         }
 
-        const totalBruto = proventos.reduce((acc, p) => acc + p.valor, 0);
-
         // 2. Descontos
         const descontos: any[] = [];
 
-        // Faltas em Dias e Horas
-        let valorFaltas = 0;
-        if (vars && (vars.faltasDias || vars.faltasHoras)) {
-          const valDias = vars.faltasDias ? (salBase / 30) * vars.faltasDias : 0;
-          const valHrs = vars.faltasHoras ? valorHora * vars.faltasHoras : 0;
-          valorFaltas = Math.round((valDias + valHrs) * 100) / 100;
-          if (valorFaltas > 0) {
+        // Faltas Dias e Horas
+        if (isCLT && vars) {
+          if (vars.faltasDias && vars.faltasDias > 0) {
+            const valFalta = Math.round((vars.faltasDias * (salBase / 30)) * 100) / 100;
             descontos.push({
               rubricaId: 6,
-              codigo: '105',
-              nome: 'Faltas e Atrasos Injustificados',
+              codigo: '101',
+              nome: 'Faltas Injustificadas (Dias)',
               tipo: 'DESCONTO',
-              referencia: vars.faltasDias || vars.faltasHoras,
-              valor: valorFaltas
+              referencia: vars.faltasDias,
+              valor: valFalta
+            });
+          }
+          if (vars.faltasHoras && vars.faltasHoras > 0) {
+            const valFaltaH = Math.round((vars.faltasHoras * valorHora) * 100) / 100;
+            descontos.push({
+              rubricaId: 6,
+              codigo: '102',
+              nome: 'Faltas / Atrasos (Horas)',
+              tipo: 'DESCONTO',
+              referencia: vars.faltasHoras,
+              valor: valFaltaH
             });
           }
         }
 
-        // Base de cálculo para tributos
-        const baseCalculoINSS = Math.max(0, totalBruto - valorFaltas);
+        const totalBruto = proventos.reduce((acc, p) => acc + p.valor, 0);
+        const totalFaltas = descontos.reduce((acc, d) => acc + d.valor, 0);
+        const baseCalculoINSS = Math.max(0, totalBruto - totalFaltas);
 
         // INSS Progressivo 2026 Oficial
         let inssSeg = 0;
@@ -254,47 +270,55 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
           if (baseCalculoINSS <= 1518.00) {
             inssSeg = baseCalculoINSS * 0.075;
           } else if (baseCalculoINSS <= 2793.88) {
-            inssSeg = (baseCalculoINSS * 0.09) - 22.77;
+            inssSeg = (1518.00 * 0.075) + ((baseCalculoINSS - 1518.00) * 0.09);
           } else if (baseCalculoINSS <= 4190.83) {
-            inssSeg = (baseCalculoINSS * 0.12) - 106.59;
+            inssSeg = (1518.00 * 0.075) + ((2793.88 - 1518.00) * 0.09) + ((baseCalculoINSS - 2793.88) * 0.12);
+          } else if (baseCalculoINSS <= 8157.41) {
+            inssSeg = (1518.00 * 0.075) + ((2793.88 - 1518.00) * 0.09) + ((4190.83 - 2793.88) * 0.12) + ((baseCalculoINSS - 4190.83) * 0.14);
           } else {
-            inssSeg = Math.min(951.63, (baseCalculoINSS * 0.14) - 190.40);
+            inssSeg = 951.63; // Teto INSS 2026
           }
         } else {
-          // Pró-Labore: 11% retido s/ teto de R$ 8.157,41 (máximo 897,31)
-          inssSeg = Math.min(897.31, baseCalculoINSS * 0.11);
+          // Pró-Labore: 11% retido (limitado ao teto)
+          inssSeg = Math.min(baseCalculoINSS * 0.11, 897.31);
         }
         inssSeg = Math.round(inssSeg * 100) / 100;
 
         descontos.push({
           rubricaId: 4,
-          codigo: '101',
-          nome: isCLT ? 'INSS Previdência Social' : 'INSS Retido Pró-Labore (11%)',
+          codigo: '100',
+          nome: isCLT ? 'INSS Retido Segurado' : 'INSS Retido Pró-Labore (11%)',
           tipo: 'DESCONTO',
-          referencia: Math.round((inssSeg / baseCalculoINSS) * 1000) / 10,
+          referencia: isCLT ? ((inssSeg / (baseCalculoINSS || 1)) * 100) : 11.0,
           valor: inssSeg
         });
 
-        // IRRF 2026: Comparativo Automático (Deduções Legais vs Desconto Simplificado R$ 564,80)
-        const deducaoLegal = inssSeg + ((colab.dependentesIRRF || 0) * 189.59);
-        const deducaoSimplificada = 564.80;
-        const deducaoEfetiva = Math.max(deducaoLegal, deducaoSimplificada);
+        // IRRF 2026: Comparação Automática Dedução Simplificada (R$ 564,80) vs Legal
+        const DEDUCAO_SIMPLIFICADA_2026 = 564.80;
+        const DEDUCAO_DEPENDENTE_2026 = 189.59;
+        const deducaoLegal = inssSeg + ((colab.dependentesIRRF || 0) * DEDUCAO_DEPENDENTE_2026);
+        const maiorDeducao = Math.max(deducaoLegal, DEDUCAO_SIMPLIFICADA_2026);
+        const baseIR = Math.max(0, baseCalculoINSS - maiorDeducao);
 
-        const baseIR = Math.max(0, baseCalculoINSS - deducaoEfetiva);
         let irrf = 0;
-        if (baseIR > 4664.68) irrf = (baseIR * 0.275) - 896.00;
-        else if (baseIR > 3751.05) irrf = (baseIR * 0.225) - 662.77;
-        else if (baseIR > 2826.65) irrf = (baseIR * 0.15) - 381.44;
-        else if (baseIR > 2259.20) irrf = (baseIR * 0.075) - 169.44;
+        if (baseIR > 4664.68) {
+          irrf = (baseIR * 0.275) - 896.00;
+        } else if (baseIR > 3751.05) {
+          irrf = (baseIR * 0.225) - 662.77;
+        } else if (baseIR > 2826.65) {
+          irrf = (baseIR * 0.15) - 381.44;
+        } else if (baseIR > 2259.20) {
+          irrf = (baseIR * 0.075) - 169.44;
+        }
         irrf = Math.max(0, Math.round(irrf * 100) / 100);
 
         if (irrf > 0) {
           descontos.push({
             rubricaId: 5,
-            codigo: '102',
-            nome: `IRRF Fonte (${deducaoEfetiva === deducaoSimplificada ? 'Desc. Simplificado' : 'Dedução Legal'})`,
+            codigo: '105',
+            nome: `IRRF Retido na Fonte (${maiorDeducao === DEDUCAO_SIMPLIFICADA_2026 ? 'Dedução Simplificada R$564' : 'Deduções Legais'})`,
             tipo: 'DESCONTO',
-            referencia: Math.round((irrf / baseCalculoINSS) * 1000) / 10,
+            referencia: baseIR,
             valor: irrf
           });
         }
@@ -380,6 +404,26 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
     setTimeout(() => setMensagem(''), 6000);
   };
 
+  // Recalcular Provisões Mensais de Férias e 13º
+  const handleRecalcularProvisoes = () => {
+    const p = dbService.calcularProvisoesMensais(empresa.id, empresa.competenciaAtiva);
+    setProvisoes(p);
+    setMensagem(`Provisões recalculadas para ${p.length} colaboradores (Comp. ${empresa.competenciaAtiva}).`);
+    setTimeout(() => setMensagem(''), 4000);
+  };
+
+  // Integração de Provisões à Contabilidade com 1 Clique
+  const handleIntegrarProvisoes = () => {
+    const res = dbService.integrarProvisoesContabil(empresa.id, empresa.competenciaAtiva);
+    if (!res.success) {
+      setMensagem('Não há provisões elegíveis para integração nesta competência.');
+      return;
+    }
+    setMensagem(`Integração de Provisões concluída! Lote gerado com ${res.partidasGeradas} partidas contábeis (Total: R$ ${res.totalProvisao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`);
+    if (onIntegracaoSucesso) onIntegracaoSucesso();
+    setTimeout(() => setMensagem(''), 6000);
+  };
+
   // Imprimir Holerite Oficial A4 de um Colaborador
   const handleImprimirHolerite = (colab: Colaborador) => {
     const folha = folhas.find(f => f.colaboradorId === colab.id);
@@ -387,7 +431,6 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
 
     const linhas: { descricao: string; valor: number; isTotal?: boolean; isHeader?: boolean }[] = [];
 
-    // Cabeçalho de Proventos
     linhas.push({ descricao: '--- PROVENTOS E VENCIMENTOS ---', valor: 0, isHeader: true });
     (folha.proventos || []).forEach((p: any) => {
       linhas.push({
@@ -396,7 +439,6 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
       });
     });
 
-    // Cabeçalho de Descontos
     linhas.push({ descricao: '--- DESCONTOS LEGAIS E RETENÇÕES ---', valor: 0, isHeader: true });
     (folha.descontos || []).forEach((d: any) => {
       linhas.push({
@@ -405,14 +447,12 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
       });
     });
 
-    // Totais e Líquido
     linhas.push({
       descricao: '(=) VALOR LÍQUIDO A RECEBER',
       valor: folha.salarioLiquido || 0,
       isTotal: true
     });
 
-    // Bases de Cálculo e Encargos
     linhas.push({ descricao: '--- DEMONSTRATIVO DE BASES E FGTS ---', valor: 0, isHeader: true });
     linhas.push({ descricao: `Salário Base: R$ ${(colab.salarioBase || 0).toFixed(2)} | Base INSS: R$ ${(folha.baseINSS || 0).toFixed(2)}`, valor: folha.baseINSS || 0 });
     linhas.push({ descricao: `Base FGTS: R$ ${(folha.baseFGTS || 0).toFixed(2)} | Depósito FGTS do Mês (8%): R$ ${(folha.fgts || 0).toFixed(2)}`, valor: folha.fgts || 0 });
@@ -454,10 +494,50 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
     });
   };
 
+  // Imprimir Relatório Oficial de Provisões A4
+  const handleImprimirProvisoesA4 = () => {
+    if (!onOpenReportPreview) return;
+    const totFerias = provisoes.reduce((acc, p) => acc + p.provisaoFerias, 0);
+    const totTerco = provisoes.reduce((acc, p) => acc + p.provisaoTercoConstitucional, 0);
+    const tot13 = provisoes.reduce((acc, p) => acc + p.provisaoDecimoTerceiro, 0);
+    const totINSS = provisoes.reduce((acc, p) => acc + p.encargosINSSPatronal, 0);
+    const totFGTS = provisoes.reduce((acc, p) => acc + p.encargosFGTS, 0);
+    const totGeral = provisoes.reduce((acc, p) => acc + p.totalProvisaoMes, 0);
+
+    const linhas = [
+      { descricao: '--- DEMONSTRATIVO DE PROVISÕES MENSAIS (CPC 27 / NBC TG) ---', valor: 0, isHeader: true },
+      { descricao: '1. Provisão de Férias (1/12 avos)', valor: totFerias },
+      { descricao: '2. Provisão de 1/3 Constitucional de Férias', valor: totTerco },
+      { descricao: '3. Provisão de 13º Salário (1/12 avos)', valor: tot13 },
+      { descricao: '4. Encargos Previdenciários Patronais sobre Provisões (CPP 20%)', valor: totINSS },
+      { descricao: '5. Encargos do Fundo de Garantia sobre Provisões (FGTS 8%)', valor: totFGTS },
+      { descricao: '(=) TOTAL CONSOLIDADO DE PROVISÕES MENSAIS', valor: totGeral, isTotal: true },
+      { descricao: '--- PARTIDAS CONTÁBEIS GERADAS NA INTEGRAÇÃO ---', valor: 0, isHeader: true },
+      { descricao: 'D: 56 - Despesas com Provisão de Férias e 13º Salário (Resultado)', valor: totGeral },
+      { descricao: 'C: 26 - Provisão de Férias a Pagar (Passivo Circulante)', valor: -(totFerias + totTerco) },
+      { descricao: 'C: 27 - Provisão de 13º Salário a Pagar (Passivo Circulante)', valor: -tot13 },
+      { descricao: 'C: 24 - Obrigações Sociais Patronais a Recolher (Passivo Circulante)', valor: -(totINSS + totFGTS) }
+    ];
+
+    onOpenReportPreview({
+      tipo: 'RESUMO_FOLHA',
+      titulo: 'RELATÓRIO MENSAL DE PROVISÕES TRABALHISTAS (FÉRIAS & 13º SALÁRIO)',
+      subtitulo: `Competência Ativa: ${empresa.competenciaAtiva} • Empregador: ${empresa.razaoSocial} • CNPJ: ${empresa.cnpj}`,
+      linhas
+    });
+  };
+
   const totalBrutoGeral = folhas.reduce((acc, f) => acc + (f.totalProventos || 0), 0);
   const totalLiquidoGeral = folhas.reduce((acc, f) => acc + (f.salarioLiquido || 0), 0);
   const totalINSSGeral = folhas.reduce((acc, f) => acc + (f.inssSegurado || 0), 0);
   const totalFGTSGeral = folhas.reduce((acc, f) => acc + (f.fgts || 0), 0);
+
+  // Totais de Provisões
+  const provSalariosCLT = provisoes.reduce((acc, p) => acc + p.salarioBase, 0);
+  const provFeriasTotal = provisoes.reduce((acc, p) => acc + p.provisaoFerias + p.provisaoTercoConstitucional, 0);
+  const prov13Total = provisoes.reduce((acc, p) => acc + p.provisaoDecimoTerceiro, 0);
+  const provEncargosTotal = provisoes.reduce((acc, p) => acc + p.encargosINSSPatronal + p.encargosFGTS, 0);
+  const provGeralTotal = provisoes.reduce((acc, p) => acc + p.totalProvisaoMes, 0);
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#141414] text-neutral-200 overflow-hidden select-none font-sans">
@@ -469,43 +549,102 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
           </div>
           <div>
             <h2 className="text-sm font-semibold text-neutral-100 flex items-center space-x-2">
-              <span>Cálculo da Folha Mensal, Pró-Labore & Holerites</span>
+              <span>Módulo de Folha de Pagamento & Encargos Sociais</span>
               <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-medium border border-emerald-500/30">
                 Competência: {empresa.competenciaAtiva}
               </span>
             </h2>
             <p className="text-[11px] text-neutral-400">
-              Motor CLT 2026: INSS progressivo, dedução simplificada vs legal e integração contábil em lote
+              Motor CLT 2026 oficial, apuração de provisões mensais (CPC 27) e integração contábil automática
             </p>
           </div>
         </div>
 
-        {/* Botões de Ação */}
-        <div className="flex items-center space-x-2">
+        {/* Toggle de Sub-Aba: Folha Mensal vs Provisões */}
+        <div className="flex items-center bg-[#101010] p-0.5 rounded-lg border border-white/10">
           <button
-            onClick={handleProcessarFolha}
-            disabled={processando}
-            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-xs font-medium flex items-center space-x-1.5 transition shadow-sm"
+            onClick={() => setAbaAtiva('FOLHA_MENSAL')}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
+              abaAtiva === 'FOLHA_MENSAL'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-neutral-400 hover:text-white'
+            }`}
           >
             <Calculator className="w-3.5 h-3.5" />
-            <span>{processando ? 'Calculando...' : 'Calcular Folha Completa'}</span>
+            <span>Folha Mensal & Pró-Labore</span>
           </button>
-
           <button
-            onClick={handleIntegrarContabilidade}
-            className="px-3.5 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-medium flex items-center space-x-1.5 transition shadow-sm"
+            onClick={() => {
+              setAbaAtiva('PROVISOES');
+              setProvisoes(dbService.calcularProvisoesMensais(empresa.id, empresa.competenciaAtiva));
+            }}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
+              abaAtiva === 'PROVISOES'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-neutral-400 hover:text-white'
+            }`}
           >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Integrar Contabilidade</span>
+            <Layers className="w-3.5 h-3.5" />
+            <span>Provisões de Férias e 13º (CPC 27)</span>
           </button>
+        </div>
 
-          <button
-            onClick={handleImprimirResumoA4}
-            className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-white/10 text-xs font-medium flex items-center space-x-1.5 transition"
-          >
-            <Printer className="w-3.5 h-3.5 text-sky-400" />
-            <span>Resumo Geral A4</span>
-          </button>
+        {/* Botões de Ação de acordo com a aba ativa */}
+        <div className="flex items-center space-x-2">
+          {abaAtiva === 'FOLHA_MENSAL' ? (
+            <>
+              <button
+                onClick={handleProcessarFolha}
+                disabled={processando}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded text-xs font-medium flex items-center space-x-1.5 transition shadow-sm"
+              >
+                <Calculator className="w-3.5 h-3.5" />
+                <span>{processando ? 'Calculando...' : 'Calcular Folha Completa'}</span>
+              </button>
+
+              <button
+                onClick={handleIntegrarContabilidade}
+                className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-medium flex items-center space-x-1.5 transition shadow-sm"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Integrar Contabilidade</span>
+              </button>
+
+              <button
+                onClick={handleImprimirResumoA4}
+                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-white/10 text-xs font-medium flex items-center space-x-1.5 transition"
+              >
+                <Printer className="w-3.5 h-3.5 text-sky-400" />
+                <span>Resumo Geral A4</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleRecalcularProvisoes}
+                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-white/10 text-xs font-medium flex items-center space-x-1.5 transition"
+              >
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+                <span>Recalcular Provisões</span>
+              </button>
+
+              <button
+                onClick={handleIntegrarProvisoes}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-medium flex items-center space-x-1.5 transition shadow-sm"
+              >
+                <Zap className="w-3.5 h-3.5" />
+                <span>Integrar Provisões à Contabilidade</span>
+              </button>
+
+              <button
+                onClick={handleImprimirProvisoesA4}
+                className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded border border-white/10 text-xs font-medium flex items-center space-x-1.5 transition"
+              >
+                <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Imprimir Relatório A4</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -520,109 +659,227 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
         </div>
       )}
 
-      {/* Grade de Holerites Calculados */}
-      <div className="flex-1 overflow-auto custom-scrollbar">
-        <table className="w-full text-left text-xs border-collapse">
-          <thead className="sticky top-0 bg-[#1e1e1e] border-b border-white/10 text-neutral-400 font-semibold uppercase tracking-wider text-[11px] z-10">
-            <tr>
-              <th className="py-2.5 px-3 w-16 text-center">Matr.</th>
-              <th className="py-2.5 px-3">Colaborador / Beneficiário</th>
-              <th className="py-2.5 px-3 w-28">CPF</th>
-              <th className="py-2.5 px-3 w-24 text-center">Vínculo</th>
-              <th className="py-2.5 px-3 w-28 text-right">Salário Bruto</th>
-              <th className="py-2.5 px-3 w-28 text-right">Desc. INSS</th>
-              <th className="py-2.5 px-3 w-24 text-right">Desc. IRRF</th>
-              <th className="py-2.5 px-3 w-28 text-right">Salário Líquido</th>
-              <th className="py-2.5 px-3 w-24 text-right">FGTS 8%</th>
-              <th className="py-2.5 px-3 w-40 text-center">Ações</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5 font-mono text-[12px]">
-            {colaboradores.filter(c => c.status === 'ATIVO').map((colab) => {
-              const folha = folhas.find(f => f.colaboradorId === colab.id);
-              const vars = dbService.getVariavelColaborador(colab.id, empresa.competenciaAtiva);
-              const temVariaveis = !!vars && ((vars.horasExtras50 || 0) > 0 || (vars.horasExtras100 || 0) > 0 || (vars.faltasDias || 0) > 0 || vars.periculosidade || vars.grauInsalubridade !== 'NENHUM');
+      {/* Conteúdo Principal */}
+      {abaAtiva === 'FOLHA_MENSAL' ? (
+        /* Grade de Holerites Calculados */
+        <div className="flex-1 overflow-auto custom-scrollbar">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="sticky top-0 bg-[#1e1e1e] border-b border-white/10 text-neutral-400 font-semibold uppercase tracking-wider text-[11px] z-10">
+              <tr>
+                <th className="py-2.5 px-3 w-16 text-center">Matr.</th>
+                <th className="py-2.5 px-3">Colaborador / Beneficiário</th>
+                <th className="py-2.5 px-3 w-28">CPF</th>
+                <th className="py-2.5 px-3 w-24 text-center">Vínculo</th>
+                <th className="py-2.5 px-3 w-28 text-right">Salário Bruto</th>
+                <th className="py-2.5 px-3 w-28 text-right">Desc. INSS</th>
+                <th className="py-2.5 px-3 w-24 text-right">Desc. IRRF</th>
+                <th className="py-2.5 px-3 w-28 text-right">Salário Líquido</th>
+                <th className="py-2.5 px-3 w-24 text-right">FGTS 8%</th>
+                <th className="py-2.5 px-3 w-40 text-center">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5 font-mono text-[12px]">
+              {colaboradores.filter(c => c.status === 'ATIVO').map((colab) => {
+                const folha = folhas.find(f => f.colaboradorId === colab.id);
+                const vars = dbService.getVariavelColaborador(colab.id, empresa.competenciaAtiva);
+                const temVariaveis = !!vars && ((vars.horasExtras50 || 0) > 0 || (vars.horasExtras100 || 0) > 0 || (vars.faltasDias || 0) > 0 || vars.periculosidade || vars.grauInsalubridade !== 'NENHUM');
 
-              return (
-                <tr key={colab.id} className="hover:bg-white/[0.03] transition-colors">
-                  <td className="py-2.5 px-3 text-center text-neutral-400">{colab.matricula}</td>
-                  <td className="py-2.5 px-3 text-neutral-100 font-bold font-sans">
-                    <div className="flex items-center space-x-2">
-                      <span>{colab.nome}</span>
-                      {temVariaveis && (
-                        <span className="text-[10px] bg-sky-500/20 text-sky-400 px-1.5 py-0.2 rounded font-mono font-normal border border-sky-500/30">
-                          Variáveis
-                        </span>
-                      )}
-                    </div>
-                    <span className="block text-[10px] text-neutral-400 font-normal">{colab.cargo}</span>
-                  </td>
-                  <td className="py-2.5 px-3 text-neutral-300">{colab.cpf}</td>
-                  <td className="py-2.5 px-3 text-center">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                      colab.tipoVinculo === 'PRO_LABORE' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
-                    }`}>
-                      {colab.tipoVinculo}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-right text-neutral-200">
-                    R$ {(folha ? (folha.totalProventos ?? 0) : colab.salarioBase).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-2.5 px-3 text-right text-rose-400">
-                    {folha ? `- R$ ${(folha.inssSegurado ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
-                  </td>
-                  <td className="py-2.5 px-3 text-right text-rose-400">
-                    {folha && (folha.irrf ?? 0) > 0 ? `- R$ ${(folha.irrf ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Isento'}
-                  </td>
-                  <td className="py-2.5 px-3 text-right font-bold text-emerald-400 text-sm">
-                    {folha ? `R$ ${(folha.salarioLiquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Pendente'}
-                  </td>
-                  <td className="py-2.5 px-3 text-right text-purple-400">
-                    {folha ? `R$ ${(folha.fgts ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
-                  </td>
-                  <td className="py-2.5 px-3 text-center">
-                    <div className="flex items-center justify-center space-x-1.5">
-                      <button
-                        onClick={() => handleAbrirVariaveis(colab)}
-                        className="px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-white/10 text-xs flex items-center space-x-1 transition"
-                        title="Lançar Horas Extras, Faltas, Insalubridade"
-                      >
-                        <Clock className="w-3 h-3 text-sky-400" />
-                        <span>Variáveis</span>
-                      </button>
+                return (
+                  <tr key={colab.id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="py-2.5 px-3 text-center text-neutral-400">{colab.matricula}</td>
+                    <td className="py-2.5 px-3 text-neutral-100 font-bold font-sans">
+                      <div className="flex items-center space-x-2">
+                        <span>{colab.nome}</span>
+                        {temVariaveis && (
+                          <span className="text-[10px] bg-sky-500/20 text-sky-400 px-1.5 py-0.2 rounded font-mono font-normal border border-sky-500/30">
+                            Variáveis
+                          </span>
+                        )}
+                      </div>
+                      <span className="block text-[10px] text-neutral-400 font-normal">{colab.cargo}</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-neutral-300">{colab.cpf}</td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                        colab.tipoVinculo === 'PRO_LABORE' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+                      }`}>
+                        {colab.tipoVinculo}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-neutral-200">
+                      R$ {(folha ? (folha.totalProventos ?? 0) : colab.salarioBase).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-rose-400">
+                      {folha ? `- R$ ${(folha.inssSegurado ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-rose-400">
+                      {folha && (folha.irrf ?? 0) > 0 ? `- R$ ${(folha.irrf ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Isento'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-bold text-emerald-400 text-sm">
+                      {folha ? `R$ ${(folha.salarioLiquido ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Pendente'}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-purple-400">
+                      {folha ? `R$ ${(folha.fgts ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <div className="flex items-center justify-center space-x-1.5">
+                        <button
+                          onClick={() => handleAbrirVariaveis(colab)}
+                          className="px-2 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-white/10 text-xs flex items-center space-x-1 transition"
+                          title="Lançar Horas Extras, Faltas, Insalubridade"
+                        >
+                          <Clock className="w-3 h-3 text-sky-400" />
+                          <span>Variáveis</span>
+                        </button>
 
-                      <button
-                        onClick={() => handleImprimirHolerite(colab)}
-                        disabled={!folha}
-                        className="px-2 py-1 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 text-neutral-200 rounded border border-white/10 text-xs flex items-center space-x-1 transition"
-                        title="Visualizar e Imprimir Holerite A4"
-                      >
-                        <Printer className="w-3 h-3 text-emerald-400" />
-                        <span>Holerite</span>
-                      </button>
-                    </div>
-                  </td>
+                        <button
+                          onClick={() => handleImprimirHolerite(colab)}
+                          disabled={!folha}
+                          className="px-2 py-1 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-30 text-neutral-200 rounded border border-white/10 text-xs flex items-center space-x-1 transition"
+                          title="Visualizar e Imprimir Holerite A4"
+                        >
+                          <Printer className="w-3 h-3 text-emerald-400" />
+                          <span>Holerite</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Grade de Provisões de Férias e 13º Salário */
+        <div className="flex-1 flex flex-col overflow-hidden p-4">
+          {/* KPI Cards de Provisões */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-3 shadow">
+              <span className="text-[11px] text-neutral-400 block mb-1">Base Salarial CLT</span>
+              <div className="text-base font-bold font-mono text-neutral-100">
+                R$ {provSalariosCLT.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <span className="text-[10px] text-neutral-500 mt-1 block">Colaboradores Elegíveis</span>
+            </div>
+
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-3 shadow">
+              <span className="text-[11px] text-neutral-400 block mb-1">Provisão Férias + 1/3</span>
+              <div className="text-base font-bold font-mono text-amber-400">
+                R$ {provFeriasTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <span className="text-[10px] text-amber-400/70 mt-1 block">1/12 avos + 1/3 CF/88</span>
+            </div>
+
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-3 shadow">
+              <span className="text-[11px] text-neutral-400 block mb-1">Provisão 13º Salário</span>
+              <div className="text-base font-bold font-mono text-blue-400">
+                R$ {prov13Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <span className="text-[10px] text-blue-400/70 mt-1 block">1/12 avos da remuneração</span>
+            </div>
+
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-3 shadow">
+              <span className="text-[11px] text-neutral-400 block mb-1">Encargos Patronais</span>
+              <div className="text-base font-bold font-mono text-purple-400">
+                R$ {provEncargosTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <span className="text-[10px] text-purple-400/70 mt-1 block">CPP 20% + FGTS 8%</span>
+            </div>
+
+            <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-xl p-3 shadow">
+              <span className="text-[11px] text-emerald-400 font-semibold block mb-1">Total Geral Provisões</span>
+              <div className="text-base font-bold font-mono text-emerald-400">
+                R$ {provGeralTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </div>
+              <span className="text-[10px] text-emerald-400/80 mt-1 block">Custo Mensal Adicional</span>
+            </div>
+          </div>
+
+          {/* Tabela Detalhada de Provisões */}
+          <div className="flex-1 bg-[#181818] border border-white/10 rounded-xl overflow-auto custom-scrollbar shadow-lg">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="sticky top-0 bg-[#1e1e1e] border-b border-white/10 text-neutral-400 font-semibold uppercase tracking-wider text-[11px] z-10">
+                <tr>
+                  <th className="py-2.5 px-3 w-16 text-center">Matr.</th>
+                  <th className="py-2.5 px-3">Colaborador CLT</th>
+                  <th className="py-2.5 px-3 w-28 text-right">Salário Base</th>
+                  <th className="py-2.5 px-3 w-28 text-right text-amber-400">Férias (1/12)</th>
+                  <th className="py-2.5 px-3 w-24 text-right text-amber-400">1/3 Constit.</th>
+                  <th className="py-2.5 px-3 w-28 text-right text-blue-400">13º Sal. (1/12)</th>
+                  <th className="py-2.5 px-3 w-24 text-right text-purple-400">CPP 20%</th>
+                  <th className="py-2.5 px-3 w-24 text-right text-purple-400">FGTS 8%</th>
+                  <th className="py-2.5 px-3 w-32 text-right text-emerald-400">Total Provisão</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-mono text-[12px]">
+                {provisoes.filter(p => p.salarioBase > 0).map((prov) => (
+                  <tr key={prov.id} className="hover:bg-white/[0.03] transition-colors">
+                    <td className="py-2.5 px-3 text-center text-neutral-400">{prov.matricula}</td>
+                    <td className="py-2.5 px-3 font-sans font-medium text-neutral-200">
+                      {prov.colaboradorNome}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-neutral-300">
+                      R$ {prov.salarioBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-amber-300">
+                      R$ {prov.provisaoFerias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-amber-400">
+                      R$ {prov.provisaoTercoConstitucional.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-blue-300">
+                      R$ {prov.provisaoDecimoTerceiro.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-purple-300">
+                      R$ {prov.encargosINSSPatronal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-purple-400">
+                      R$ {prov.encargosFGTS.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-bold text-emerald-400">
+                      R$ {prov.totalProvisaoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-      {/* Footer com Totais da Folha */}
+      {/* Footer com Totais */}
       <div className="p-3 bg-[#181818] border-t border-white/10 flex flex-wrap items-center justify-between text-xs font-mono gap-3">
-        <div className="text-neutral-400">
-          Vínculos Calculados: <strong className="text-neutral-200 font-bold">{folhas.length}</strong> de <strong className="text-neutral-200">{colaboradores.filter(c => c.status === 'ATIVO').length}</strong> ativos
-        </div>
-        <div className="flex items-center space-x-5">
-          <span>Bruto: <strong className="text-neutral-100">R$ {totalBrutoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
-          <span>•</span>
-          <span>INSS Segurados: <strong className="text-rose-400">- R$ {totalINSSGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
-          <span>•</span>
-          <span>Líquido: <strong className="text-emerald-400">R$ {totalLiquidoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
-          <span>•</span>
-          <span>FGTS 8%: <strong className="text-purple-400">R$ {totalFGTSGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
-        </div>
+        {abaAtiva === 'FOLHA_MENSAL' ? (
+          <>
+            <div className="text-neutral-400">
+              Vínculos Calculados: <strong className="text-neutral-200 font-bold">{folhas.length}</strong> de <strong className="text-neutral-200">{colaboradores.filter(c => c.status === 'ATIVO').length}</strong> ativos
+            </div>
+            <div className="flex items-center space-x-5">
+              <span>Bruto: <strong className="text-neutral-100">R$ {totalBrutoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+              <span>•</span>
+              <span>INSS Segurados: <strong className="text-rose-400">- R$ {totalINSSGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+              <span>•</span>
+              <span>Líquido: <strong className="text-emerald-400">R$ {totalLiquidoGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+              <span>•</span>
+              <span>FGTS 8%: <strong className="text-purple-400">R$ {totalFGTSGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="text-neutral-400">
+              Colaboradores CLT com Provisões Ativas: <strong className="text-neutral-200 font-bold">{provisoes.filter(p => p.salarioBase > 0).length}</strong>
+            </div>
+            <div className="flex items-center space-x-5">
+              <span>Férias + 1/3: <strong className="text-amber-400">R$ {provFeriasTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+              <span>•</span>
+              <span>13º Salário: <strong className="text-blue-400">R$ {prov13Total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+              <span>•</span>
+              <span>Encargos Sociais: <strong className="text-purple-400">R$ {provEncargosTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+              <span>•</span>
+              <span>Total Provisões: <strong className="text-emerald-400">R$ {provGeralTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Modal de Lançamento de Variáveis do Colaborador */}
@@ -650,17 +907,17 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
               </button>
             </div>
 
-            {/* Modal Form */}
-            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+            {/* Modal Body */}
+            <div className="p-5 max-h-[75vh] overflow-y-auto space-y-4 custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-medium text-neutral-400 mb-1">
-                    Horas Extras 50% (Horas)
+                    Horas Extras 50% (Qtd)
                   </label>
                   <input
                     type="number"
-                    step="0.5"
                     min="0"
+                    step="0.5"
                     value={horasExtras50}
                     onChange={e => setHorasExtras50(Number(e.target.value))}
                     className="w-full bg-[#202020] border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
@@ -669,12 +926,12 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-medium text-neutral-400 mb-1">
-                    Horas Extras 100% (Domingos/Feriados)
+                    Horas Extras 100% (Qtd)
                   </label>
                   <input
                     type="number"
-                    step="0.5"
                     min="0"
+                    step="0.5"
                     value={horasExtras100}
                     onChange={e => setHorasExtras100(Number(e.target.value))}
                     className="w-full bg-[#202020] border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
@@ -687,8 +944,8 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
                   </label>
                   <input
                     type="number"
-                    step="0.5"
                     min="0"
+                    step="0.5"
                     value={adicionalNoturnoHoras}
                     onChange={e => setAdicionalNoturnoHoras(Number(e.target.value))}
                     className="w-full bg-[#202020] border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"
@@ -697,17 +954,17 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-medium text-neutral-400 mb-1">
-                    Grau de Insalubridade
+                    Adicional Insalubridade
                   </label>
                   <select
                     value={grauInsalubridade}
                     onChange={e => setGrauInsalubridade(e.target.value as any)}
                     className="w-full bg-[#202020] border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500"
                   >
-                    <option value="NENHUM">Nenhum (0%)</option>
-                    <option value="MINIMO">Mínimo (10% s/ Mínimo = R$ 151,80)</option>
-                    <option value="MEDIO">Médio (20% s/ Mínimo = R$ 303,60)</option>
-                    <option value="MAXIMO">Máximo (40% s/ Mínimo = R$ 607,20)</option>
+                    <option value="NENHUM">Não Possui</option>
+                    <option value="MINIMO">Mínimo (10% s/ SM)</option>
+                    <option value="MEDIO">Médio (20% s/ SM)</option>
+                    <option value="MAXIMO">Máximo (40% s/ SM)</option>
                   </select>
                 </div>
 
@@ -726,12 +983,12 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
 
                 <div>
                   <label className="block text-[11px] font-medium text-neutral-400 mb-1">
-                    Atrasos / Faltas (Horas)
+                    Faltas / Atrasos (Horas)
                   </label>
                   <input
                     type="number"
-                    step="0.5"
                     min="0"
+                    step="0.5"
                     value={faltasHoras}
                     onChange={e => setFaltasHoras(Number(e.target.value))}
                     className="w-full bg-[#202020] border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-sky-500 font-mono"

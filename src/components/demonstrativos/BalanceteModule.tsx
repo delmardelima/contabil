@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ContaContabil, LancamentoContabil } from '../../types/contabil';
 import { AccountingEngine } from '../../engine/accountingEngine';
 import { exportToCSV } from '../../utils/exportUtils';
-import { CheckCircle2, AlertCircle, Filter, ArrowUpRight, Download } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Filter, ArrowUpRight, Download, Calendar, BarChart3 } from 'lucide-react';
 
 interface BalanceteModuleProps {
   contas: ContaContabil[];
@@ -15,10 +15,13 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
   lancamentos,
   onOpenRazaoConta
 }) => {
+  const [modoVisualizacao, setModoVisualizacao] = useState<'MENSAL' | 'EVOLUCAO_12_MESES'>('MENSAL');
   const [grauMax, setGrauMax] = useState<number>(5);
   const [apenasComMovimento, setApenasComMovimento] = useState<boolean>(false);
   const [desconsiderarZeramento, setDesconsiderarZeramento] = useState<boolean>(false);
+  const [anoReferencia, setAnoReferencia] = useState<number>(2026);
 
+  // Balancete Padrão Mensal
   const { items, totalDebitos, totalCreditos, diferencaDxC } = AccountingEngine.generateTrialBalance(
     contas,
     lancamentos,
@@ -27,182 +30,308 @@ export const BalanceteModule: React.FC<BalanceteModuleProps> = ({
     desconsiderarZeramento
   );
 
+  // Balancete Evolução 12 Meses (Multi-Período Domínio Sistemas)
+  const multiPeriodItems = AccountingEngine.generateMultiPeriodBalancete(
+    contas,
+    lancamentos,
+    anoReferencia,
+    Math.min(grauMax, 3)
+  );
+
+  const mesesHeaders = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
   const handleExportCSV = () => {
-    const headers = ['Classificação', 'Código Reduzido', 'Nome da Conta', 'Tipo', 'Grau', 'Saldo Anterior', 'Débitos', 'Créditos', 'Saldo Atual', 'Natureza'];
-    const rows = items.map(i => [
-      i.classificacao,
-      i.codigoReduzido,
-      i.nome,
-      i.tipo === 'S' ? 'Sintética' : 'Analítica',
-      i.grau,
-      i.saldoAnterior,
-      i.debitos,
-      i.creditos,
-      i.saldoAtual,
-      i.saldoAtualNatureza
-    ]);
-    exportToCSV(`Balancete_Verificacao_${new Date().toISOString().split('T')[0]}`, rows, headers);
+    if (modoVisualizacao === 'MENSAL') {
+      const headers = ['Classificação', 'Código Reduzido', 'Nome da Conta', 'Tipo', 'Grau', 'Saldo Anterior', 'Débitos', 'Créditos', 'Saldo Atual', 'Natureza'];
+      const rows = items.map(i => [
+        i.classificacao,
+        i.codigoReduzido,
+        i.nome,
+        i.tipo === 'S' ? 'Sintética' : 'Analítica',
+        i.grau,
+        i.saldoAnterior,
+        i.debitos,
+        i.creditos,
+        i.saldoAtual,
+        i.saldoAtualNatureza
+      ]);
+      exportToCSV(`Balancete_Verificacao_${new Date().toISOString().split('T')[0]}`, rows, headers);
+    } else {
+      const headers = ['Classificação', 'Código Reduzido', 'Nome da Conta', 'Grau', 'Tipo', ...mesesHeaders, 'Acumulado 2026'];
+      const rows = multiPeriodItems.map(i => [
+        i.classificacao,
+        i.codigoReduzido || '',
+        i.nome,
+        i.grau,
+        i.tipo === 'S' ? 'Sintética' : 'Analítica',
+        ...i.meses.map(v => v !== 0 ? v : 0),
+        i.totalAno
+      ]);
+      exportToCSV(`Balancete_Evolucao_12Meses_${anoReferencia}`, rows, headers);
+    }
   };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#141414] text-neutral-200 overflow-hidden select-none">
-      {/* Barra de Filtros e Opções do Balancete */}
-      <div className="px-4 py-3 bg-[#1c1c1c] border-b border-white/10 flex items-center justify-between text-xs">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Filter className="w-3.5 h-3.5 text-blue-400" />
-            <span className="font-semibold text-neutral-300">Filtros do Balancete:</span>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <span className="text-neutral-400">Grau Máximo:</span>
-            <select
-              value={grauMax}
-              onChange={(e) => setGrauMax(Number(e.target.value))}
-              className="bg-neutral-900 border border-white/10 rounded px-2 py-1 text-neutral-200 outline-none"
+      {/* Sub-header de visualização e filtros */}
+      <div className="px-4 py-2.5 bg-[#181818] border-b border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+        {/* Toggle de Modo: Mensal vs 12 Meses */}
+        <div className="flex items-center space-x-2">
+          <div className="flex items-center bg-[#101010] p-0.5 rounded-lg border border-white/10">
+            <button
+              onClick={() => setModoVisualizacao('MENSAL')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
+                modoVisualizacao === 'MENSAL'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
             >
-              <option value={1}>Grau 1 (Grupos Principais)</option>
-              <option value={2}>Grau 2 (Subgrupos)</option>
-              <option value={3}>Grau 3 (Sintéticas Nível 3)</option>
-              <option value={4}>Grau 4 (Subcontas)</option>
-              <option value={5}>Grau 5 (Analítico Completo)</option>
-            </select>
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Balancete Mensal</span>
+            </button>
+            <button
+              onClick={() => setModoVisualizacao('EVOLUCAO_12_MESES')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center space-x-1.5 ${
+                modoVisualizacao === 'EVOLUCAO_12_MESES'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <BarChart3 className="w-3.5 h-3.5" />
+              <span>Evolução 12 Meses (Domínio)</span>
+            </button>
           </div>
 
-          <label className="flex items-center space-x-1.5 cursor-pointer text-neutral-300">
-            <input
-              type="checkbox"
-              checked={apenasComMovimento}
-              onChange={(e) => setApenasComMovimento(e.target.checked)}
-              className="rounded bg-neutral-900 border-white/20 text-blue-600 focus:ring-0"
-            />
-            <span>Apenas contas com movimento</span>
-          </label>
+          <div className="h-4 w-[1px] bg-white/10 mx-1 hidden sm:block" />
 
-          <label className="flex items-center space-x-1.5 cursor-pointer text-neutral-300">
-            <input
-              type="checkbox"
-              checked={desconsiderarZeramento}
-              onChange={(e) => setDesconsiderarZeramento(e.target.checked)}
-              className="rounded bg-neutral-900 border-white/20 text-blue-600 focus:ring-0"
-            />
-            <span>Desconsiderar zeramento (Auditoria pré-fechamento)</span>
-          </label>
+          {/* Filtros */}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-1.5">
+              <span className="text-neutral-400 text-[11px]">Grau:</span>
+              <select
+                value={grauMax}
+                onChange={(e) => setGrauMax(Number(e.target.value))}
+                className="bg-[#121212] border border-white/10 rounded px-2 py-0.5 text-neutral-200 outline-none text-[11px]"
+              >
+                <option value={1}>Grau 1</option>
+                <option value={2}>Grau 2</option>
+                <option value={3}>Grau 3</option>
+                {modoVisualizacao === 'MENSAL' && (
+                  <>
+                    <option value={4}>Grau 4</option>
+                    <option value={5}>Grau 5 (Analítico)</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {modoVisualizacao === 'MENSAL' ? (
+              <>
+                <label className="flex items-center space-x-1.5 cursor-pointer text-neutral-300 text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={apenasComMovimento}
+                    onChange={(e) => setApenasComMovimento(e.target.checked)}
+                    className="rounded bg-neutral-900 border-white/20 text-blue-600 focus:ring-0"
+                  />
+                  <span>Com movimento</span>
+                </label>
+
+                <label className="flex items-center space-x-1.5 cursor-pointer text-neutral-300 text-[11px]">
+                  <input
+                    type="checkbox"
+                    checked={desconsiderarZeramento}
+                    onChange={(e) => setDesconsiderarZeramento(e.target.checked)}
+                    className="rounded bg-neutral-900 border-white/20 text-blue-600 focus:ring-0"
+                  />
+                  <span>Sem zeramento</span>
+                </label>
+              </>
+            ) : (
+              <div className="flex items-center space-x-1.5">
+                <span className="text-neutral-400 text-[11px]">Exercício:</span>
+                <select
+                  value={anoReferencia}
+                  onChange={(e) => setAnoReferencia(Number(e.target.value))}
+                  className="bg-[#121212] border border-white/10 rounded px-2 py-0.5 text-neutral-200 outline-none text-[11px]"
+                >
+                  <option value={2026}>2026</option>
+                  <option value={2025}>2025</option>
+                </select>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Resumo de Equilíbrio DxC + Botão Exportar Excel */}
         <div className="flex items-center space-x-3">
           <button
             onClick={handleExportCSV}
-            className="flex items-center space-x-1.5 px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-white/10 transition-colors"
+            className="flex items-center space-x-1.5 px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded border border-white/10 transition-colors text-xs"
             title="Exportar Balancete para Excel / CSV"
           >
             <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Exportar Excel (CSV)</span>
+            <span>Exportar Excel</span>
           </button>
 
-          <div className={`flex items-center space-x-2 px-3 py-1 rounded font-mono font-medium ${
-            diferencaDxC === 0 
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-              : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-          }`}>
-            {diferencaDxC === 0 ? (
-              <>
-                <CheckCircle2 className="w-4 h-4" />
-                <span>DxC EQUILIBRADO • D = C</span>
-              </>
-            ) : (
-              <>
-                <AlertCircle className="w-4 h-4" />
-                <span>DIFERENÇA: R$ {diferencaDxC.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              </>
-            )}
-          </div>
+          {modoVisualizacao === 'MENSAL' && (
+            <div className={`flex items-center space-x-2 px-2.5 py-1 rounded font-mono font-medium text-xs ${
+              diferencaDxC === 0 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                : 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+            }`}>
+              {diferencaDxC === 0 ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>DxC EQUILIBRADO</span>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  <span>DIF: R$ {diferencaDxC.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Grade do Balancete */}
-      <div className="flex-1 p-4 overflow-y-auto">
-        <div className="bg-[#181818] border border-white/10 rounded-lg overflow-hidden shadow-lg">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead className="bg-neutral-900/90 sticky top-0 border-b border-white/10 text-neutral-400 font-medium">
-              <tr>
-                <th className="py-2.5 px-3 w-36">Classificação</th>
-                <th className="py-2.5 px-2 w-16 text-center">Red.</th>
-                <th className="py-2.5 px-3">Nome da Conta Contábil</th>
-                <th className="py-2.5 px-3 w-32 text-right">Saldo Anterior</th>
-                <th className="py-2.5 px-3 w-32 text-right">Débitos (R$)</th>
-                <th className="py-2.5 px-3 w-32 text-right">Créditos (R$)</th>
-                <th className="py-2.5 px-3 w-36 text-right">Saldo Atual (R$)</th>
-                <th className="py-2.5 px-2 w-12 text-center">Nat.</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5 font-sans">
-              {items.map((item) => {
-                const isSintetica = item.tipo === 'S';
-                const paddingGrau = (item.grau - 1) * 16;
+      <div className="flex-1 p-3 overflow-y-auto custom-scrollbar">
+        {modoVisualizacao === 'MENSAL' ? (
+          <div className="bg-[#181818] border border-white/10 rounded-lg overflow-hidden shadow-lg">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-neutral-900/90 sticky top-0 border-b border-white/10 text-neutral-400 font-medium">
+                <tr>
+                  <th className="py-2.5 px-3 w-36">Classificação</th>
+                  <th className="py-2.5 px-2 w-16 text-center">Red.</th>
+                  <th className="py-2.5 px-3">Nome da Conta Contábil</th>
+                  <th className="py-2.5 px-3 w-32 text-right">Saldo Anterior</th>
+                  <th className="py-2.5 px-3 w-32 text-right">Débitos (R$)</th>
+                  <th className="py-2.5 px-3 w-32 text-right">Créditos (R$)</th>
+                  <th className="py-2.5 px-3 w-36 text-right">Saldo Atual (R$)</th>
+                  <th className="py-2.5 px-2 w-12 text-center">Nat.</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-sans">
+                {items.map((item) => {
+                  const isSintetica = item.tipo === 'S';
+                  const paddingGrau = (item.grau - 1) * 16;
 
-                return (
-                  <tr
-                    key={item.id}
-                    onDoubleClick={() => onOpenRazaoConta && item.tipo === 'A' && onOpenRazaoConta(item.id)}
-                    className={`transition-colors ${
-                      isSintetica
-                        ? 'bg-neutral-900/40 font-semibold text-neutral-100'
-                        : 'hover:bg-blue-600/10 cursor-pointer text-neutral-300'
-                    }`}
-                    title={item.tipo === 'A' ? 'Clique duplo para abrir Razão da Conta' : undefined}
-                  >
-                    <td className="py-2 px-3 font-mono text-neutral-400">{item.classificacao}</td>
-                    <td className="py-2 px-2 text-center font-mono text-neutral-500">
-                      {item.tipo === 'A' ? item.codigoReduzido : ''}
-                    </td>
-                    <td className="py-2 px-3">
-                      <div style={{ paddingLeft: `${paddingGrau}px` }} className="flex items-center space-x-1.5">
-                        <span className={isSintetica ? 'text-white' : 'text-neutral-200'}>{item.nome}</span>
-                        {item.tipo === 'A' && (
-                          <ArrowUpRight className="w-3 h-3 text-neutral-600 opacity-0 group-hover:opacity-100" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono text-neutral-400">
-                      {item.saldoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono text-blue-400">
-                      {item.debitos > 0 ? item.debitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono text-indigo-400">
-                      {item.creditos > 0 ? item.creditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}
-                    </td>
-                    <td className={`py-2 px-3 text-right font-mono font-semibold ${isSintetica ? 'text-neutral-100' : 'text-emerald-400'}`}>
-                      {item.saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-2 px-2 text-center font-mono font-bold text-neutral-400">
-                      {item.saldoAtualNatureza}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            {/* Totais do Balancete */}
-            <tfoot className="bg-neutral-900 border-t-2 border-white/20 font-mono font-bold text-xs">
-              <tr>
-                <td colSpan={4} className="py-3 px-3 text-right uppercase tracking-wider text-neutral-300">
-                  Totais das Contas Analíticas:
-                </td>
-                <td className="py-3 px-3 text-right text-blue-400">
-                  R$ {totalDebitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="py-3 px-3 text-right text-indigo-400">
-                  R$ {totalCreditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-                <td colSpan={2} className="py-3 px-3 text-right text-emerald-400">
-                  Diferença: R$ {diferencaDxC.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                  return (
+                    <tr
+                      key={item.id}
+                      onDoubleClick={() => onOpenRazaoConta && item.tipo === 'A' && onOpenRazaoConta(item.id)}
+                      className={`transition-colors ${
+                        isSintetica
+                          ? 'bg-neutral-900/40 font-semibold text-neutral-100'
+                          : 'hover:bg-blue-600/10 cursor-pointer text-neutral-300'
+                      }`}
+                      title={item.tipo === 'A' ? 'Clique duplo para abrir Razão da Conta' : undefined}
+                    >
+                      <td className="py-2 px-3 font-mono text-neutral-400">{item.classificacao}</td>
+                      <td className="py-2 px-2 text-center font-mono text-neutral-500">
+                        {item.tipo === 'A' ? item.codigoReduzido : ''}
+                      </td>
+                      <td className="py-2 px-3">
+                        <div style={{ paddingLeft: `${paddingGrau}px` }} className="flex items-center space-x-1.5">
+                          <span className={isSintetica ? 'text-white' : 'text-neutral-200'}>{item.nome}</span>
+                          {item.tipo === 'A' && (
+                            <ArrowUpRight className="w-3 h-3 text-neutral-600 opacity-0 group-hover:opacity-100" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono text-neutral-400">
+                        {item.saldoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono text-blue-400">
+                        {item.debitos > 0 ? item.debitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}
+                      </td>
+                      <td className="py-2 px-3 text-right font-mono text-indigo-400">
+                        {item.creditos > 0 ? item.creditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}
+                      </td>
+                      <td className={`py-2 px-3 text-right font-mono font-semibold ${isSintetica ? 'text-neutral-100' : 'text-emerald-400'}`}>
+                        {item.saldoAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2 px-2 text-center font-mono font-bold text-neutral-400">
+                        {item.saldoAtualNatureza}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              {/* Totais do Balancete */}
+              <tfoot className="bg-neutral-900 border-t-2 border-white/20 font-mono font-bold text-xs">
+                <tr>
+                  <td colSpan={4} className="py-3 px-3 text-right uppercase tracking-wider text-neutral-300">
+                    Totais das Contas Analíticas:
+                  </td>
+                  <td className="py-3 px-3 text-right text-blue-400">
+                    R$ {totalDebitos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-3 px-3 text-right text-indigo-400">
+                    R$ {totalCreditos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td colSpan={2} className="py-3 px-3 text-right text-emerald-400">
+                    Diferença: R$ {diferencaDxC.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ) : (
+          /* Evolução Comparativa 12 Meses (Multi-Período) */
+          <div className="bg-[#181818] border border-white/10 rounded-lg overflow-x-auto shadow-lg custom-scrollbar">
+            <table className="w-full text-left text-[11px] border-collapse min-w-[1300px]">
+              <thead className="bg-neutral-900/95 sticky top-0 border-b border-white/10 text-neutral-400 font-semibold uppercase tracking-wider text-[10px] z-10">
+                <tr>
+                  <th className="py-2.5 px-3 w-28 sticky left-0 bg-[#181818] z-20">Classificação</th>
+                  <th className="py-2.5 px-3 min-w-[200px] sticky left-28 bg-[#181818] z-20 border-r border-white/10">Conta Contábil</th>
+                  {mesesHeaders.map(m => (
+                    <th key={m} className="py-2.5 px-2 text-right w-24">{m}</th>
+                  ))}
+                  <th className="py-2.5 px-3 text-right w-32 bg-blue-950/20 text-blue-300 font-bold border-l border-white/10">
+                    Acumulado {anoReferencia}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 font-mono">
+                {multiPeriodItems.map((item) => {
+                  const isSintetica = item.tipo === 'S';
+                  const paddingGrau = (item.grau - 1) * 12;
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`hover:bg-white/[0.02] transition-colors ${
+                        isSintetica ? 'bg-neutral-900/30 font-bold text-neutral-100' : 'text-neutral-300'
+                      }`}
+                    >
+                      <td className="py-2 px-3 text-neutral-400 sticky left-0 bg-[#181818] z-10">{item.classificacao}</td>
+                      <td className="py-2 px-3 sticky left-28 bg-[#181818] z-10 border-r border-white/10 font-sans">
+                        <div style={{ paddingLeft: `${paddingGrau}px` }}>
+                          <span className={isSintetica ? 'text-white' : 'text-neutral-200'}>{item.nome}</span>
+                        </div>
+                      </td>
+                      {item.meses.map((val, idx) => (
+                        <td key={idx} className={`py-2 px-2 text-right ${
+                          val > 0 ? (isSintetica ? 'text-neutral-200' : 'text-emerald-400') : (val < 0 ? 'text-rose-400' : 'text-neutral-600')
+                        }`}>
+                          {val !== 0 ? val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                        </td>
+                      ))}
+                      <td className={`py-2 px-3 text-right font-bold border-l border-white/10 bg-blue-950/10 ${
+                        item.totalAno > 0 ? 'text-emerald-400' : (item.totalAno < 0 ? 'text-rose-400' : 'text-neutral-500')
+                      }`}>
+                        {item.totalAno.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

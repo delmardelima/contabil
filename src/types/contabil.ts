@@ -566,6 +566,23 @@ export interface VariaveisColaborador {
   outrosDescontos?: number;
 }
 
+export interface ProvisaoColaborador {
+  id: number;
+  empresaId: number;
+  colaboradorId: number;
+  colaboradorNome: string;
+  matricula: string | number;
+  competencia: string; // YYYY-MM
+  salarioBase: number;
+  provisaoFerias: number; // 1/12 avos
+  provisaoTercoConstitucional: number; // 1/3 s/ férias
+  provisaoDecimoTerceiro: number; // 1/12 avos
+  encargosINSSPatronal: number; // CPP 20% s/ total provisões
+  encargosFGTS: number; // FGTS 8% s/ total provisões
+  totalProvisaoMes: number;
+  integradaContabil?: boolean;
+}
+
 // ----------------------------------------------------
 // HONORÁRIOS CONTÁBEIS (HO)
 // ----------------------------------------------------
@@ -734,4 +751,26 @@ export interface DREEstruturaLinha {
   operacao: 'SOMA' | 'SUBTRAI';
   prefixoContas?: string;
   isBasePercentual: boolean;
+}
+
+export interface BalanceteMultiPeriodoItem {
+  id: number;
+  classificacao: string;
+  codigoReduzido: number;
+  nome: string;
+  grau: number;
+  tipo: TipoConta;
+  natureza: NaturezaConta;
+  meses: number[]; // Array com os 12 meses (Jan..Dez)
+  totalAno: number;
+}
+
+export interface DREMultiPeriodoItem {
+  ordem: number;
+  descricao: string;
+  tipoLinha: 'CONTA' | 'SUBTOTAL' | 'TOTAL_GERAL';
+  operacao: 'SOMA' | 'SUBTRAI';
+  meses: number[]; // Array com os 12 meses (Jan..Dez)
+  totalAno: number;
+  mediaMensal: number;
 }
