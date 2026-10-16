@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Empresa, ModuloSistema } from '../../types/contabil';
+import { Empresa, ModuloSistema, SessaoUsuario } from '../../types/contabil';
 import { 
   Building2, 
   Calendar, 
@@ -14,7 +14,9 @@ import {
   BookOpen,
   Receipt,
   Users,
-  CreditCard
+  CreditCard,
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
 
 interface TitleBarProps {
@@ -27,6 +29,8 @@ interface TitleBarProps {
   onOpenCommandPalette: () => void;
   moduloAtivo: ModuloSistema;
   onSelectModulo: (mod: ModuloSistema) => void;
+  sessao?: SessaoUsuario | null;
+  onLogout?: () => void;
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -38,7 +42,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   onToggleTheme,
   onOpenCommandPalette,
   moduloAtivo,
-  onSelectModulo
+  onSelectModulo,
+  sessao,
+  onLogout
 }) => {
   // Atalhos Globais Alt+1 a Alt+4 para troca rápida de módulo
   useEffect(() => {
@@ -71,7 +77,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   ];
 
   return (
-    <header className="h-10 bg-[#181818] border-b border-white/10 flex items-center justify-between px-3 select-none text-xs text-neutral-300 z-50">
+    <header className="no-print h-10 bg-[#181818] border-b border-white/10 flex items-center justify-between px-3 select-none text-xs text-neutral-300 z-50" data-no-print="true">
       {/* Esquerda: Logo + Seletor de Módulos Oficiais */}
       <div className="flex items-center space-x-2.5">
         <div className="flex items-center space-x-2">
@@ -148,8 +154,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         </button>
       </div>
 
-      {/* Direita: Monitor DxC + Theme + Window Controls */}
-      <div className="flex items-center space-x-3">
+      {/* Direita: Monitor DxC + Usuário Autenticado + Logout + Theme + Window Controls */}
+      <div className="flex items-center space-x-2.5">
         {/* Monitor DxC em Tempo Real */}
         <div 
           className={`flex items-center space-x-1.5 px-2.5 py-0.5 rounded text-xs font-mono font-medium transition-colors ${
@@ -171,6 +177,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             </>
           )}
         </div>
+
+        {/* Badge do Usuário Autenticado e Botão de Logout */}
+        {sessao && (
+          <div className="hidden lg:flex items-center space-x-1.5 bg-neutral-900/80 px-2 py-0.5 rounded border border-white/10">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-[11px] font-medium text-neutral-200 max-w-[120px] truncate">
+              {sessao.usuarioNome}
+            </span>
+            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300">
+              {sessao.perfil}
+            </span>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="ml-1 p-0.5 hover:bg-red-500/20 text-neutral-400 hover:text-red-400 rounded transition"
+                title="Encerrar Sessão (Logout)"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Botão Dark/Light */}
         <button

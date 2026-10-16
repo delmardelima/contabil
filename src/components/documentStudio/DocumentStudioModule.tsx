@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Empresa, ContaContabil, LancamentoContabil, DocumentoStudio } from '../../types/contabil';
 import { AccountingEngine } from '../../engine/accountingEngine';
 import { exportToDOCX } from '../../utils/exportUtils';
@@ -20,6 +21,68 @@ interface DocumentStudioModuleProps {
   onSaveDocumento: (doc: DocumentoStudio) => void;
 }
 
+const MODELOS_NORMATIVOS_PADRAO: DocumentoStudio[] = [
+  {
+    id: 1,
+    empresaId: 1,
+    titulo: 'Notas Explicativas às Demonstrações Contábeis (NBC TG 1000)',
+    tipo: 'NOTAS_EXPLICATIVAS',
+    ultimaModificacao: new Date().toISOString().slice(0, 10),
+    conteudoHtml: `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #111; line-height: 1.6;">
+        <h2 style="text-align: center; text-transform: uppercase; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 16px;">
+          NOTAS EXPLICATIVAS ÀS DEMONSTRAÇÕES CONTÁBEIS — EXERCÍCIO {{exercicio_ano}}
+        </h2>
+        <p><strong>Entidade:</strong> {{empresa_razao_social}} &nbsp;|&nbsp; <strong>CNPJ:</strong> {{empresa_cnpj}}</p>
+        <h4>Nota 1. Contexto Operacional</h4>
+        <p>As demonstrações contábeis foram elaboradas em conformidade com as Normas Brasileiras de Contabilidade (NBC TG 1000 / ITG 1000) emitidas pelo Conselho Federal de Contabilidade (CFC).</p>
+        <h4>Nota 2. Resumo das Principais Práticas Contábeis</h4>
+        <p>O regime contábil adotado para o registro das mutações patrimoniais e apuração do resultado é o Regime de Competência. As disponibilidades em Caixa e Equivalentes de Caixa encerraram o período com saldo de <strong>{{saldo_caixa_total}}</strong>.</p>
+        <h4>Nota 3. Síntese Patrimonial e Resultado do Exercício</h4>
+        {{tabela_balanco_sintetico}}
+        <p>A Receita Operacional Líquida acumulada no período perfez <strong>{{receita_liquida}}</strong>, resultando em Resultado Líquido do Exercício de <strong>{{lucro_liquido_exercicio}}</strong>.</p>
+        <p style="margin-top: 32px; text-align: right;">{{data_extenso_atual}}</p>
+        <p style="margin-top: 24px; text-align: center;"><strong>{{contador_nome}}</strong><br/>Contabilista Responsável — {{contador_crc}}</p>
+      </div>
+    `
+  },
+  {
+    id: 2,
+    empresaId: 1,
+    titulo: 'Carta de Responsabilidade da Administração (CFC ITG 1000)',
+    tipo: 'CARTA_RESPONSABILIDADE',
+    ultimaModificacao: new Date().toISOString().slice(0, 10),
+    conteudoHtml: `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #111; line-height: 1.6;">
+        <h2 style="text-align: center; text-transform: uppercase; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 16px;">
+          CARTA DE RESPONSABILIDADE DA ADMINISTRAÇÃO — EXERCÍCIO {{exercicio_ano}}
+        </h2>
+        <p>À Contabilidade Responsável (<strong>{{contador_nome}} — {{contador_crc}}</strong>),</p>
+        <p>Declaramos, na qualidade de administradores legais da empresa <strong>{{empresa_razao_social}}</strong>, inscrita no CNPJ sob o nº <strong>{{empresa_cnpj}}</strong>, que as informações e os documentos hábeis fornecidos para a escrituração contábil do exercício de {{exercicio_ano}} são fidedignos e refletem integralmente as operações realizadas.</p>
+        <p>Declaramos ainda que não temos conhecimento de quaisquer fatos ou passivos contingentes não revelados que possam afetar significativamente a posição patrimonial de Ativo Total (<strong>{{total_ativo}}</strong>) e Passivo (<strong>{{total_passivo}}</strong>).</p>
+        <p style="margin-top: 40px; text-align: right;">{{data_extenso_atual}}</p>
+      </div>
+    `
+  },
+  {
+    id: 3,
+    empresaId: 1,
+    titulo: 'Termo de Abertura e Encerramento do Livro Diário',
+    tipo: 'TERMO_ABERTURA_ENCERRAMENTO',
+    ultimaModificacao: new Date().toISOString().slice(0, 10),
+    conteudoHtml: `
+      <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #111; line-height: 1.6;">
+        <h2 style="text-align: center; text-transform: uppercase; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 16px;">
+          TERMO DE ABERTURA E ENCERRAMENTO — LIVRO DIÁRIO GERAL ({{exercicio_ano}})
+        </h2>
+        <p>Contém o presente Livro Diário Geral da empresa <strong>{{empresa_razao_social}}</strong>, inscrita no CNPJ sob o nº <strong>{{empresa_cnpj}}</strong>, os lançamentos contábeis escriturados em partidas dobradas referentes ao exercício social de <strong>{{exercicio_ano}}</strong>.</p>
+        <p style="margin-top: 40px; text-align: right;">{{data_extenso_atual}}</p>
+        <p style="margin-top: 28px; text-align: center;"><strong>{{contador_nome}}</strong><br/>Contabilista Responsável — {{contador_crc}}</p>
+      </div>
+    `
+  }
+];
+
 export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
   empresa,
   contas,
@@ -27,12 +90,20 @@ export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
   documentos,
   onSaveDocumento
 }) => {
-  const [selectedDocId, setSelectedDocId] = useState<number>(documentos[0]?.id || 1);
-  const activeDoc = documentos.find(d => d.id === selectedDocId) || documentos[0];
+  const listaDocs = documentos.length > 0 ? documentos : MODELOS_NORMATIVOS_PADRAO.map(m => ({ ...m, empresaId: empresa.id }));
+  const [selectedDocId, setSelectedDocId] = useState<number>(listaDocs[0]?.id || 1);
+  const activeDoc = listaDocs.find(d => d.id === selectedDocId) || listaDocs[0];
 
   const [conteudo, setConteudo] = useState<string>(activeDoc?.conteudoHtml || '');
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [viewMode, setViewMode] = useState<'VISUAL' | 'RAW'>('VISUAL');
+  const [isPrinting, setIsPrinting] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (activeDoc) {
+      setConteudo(activeDoc.conteudoHtml);
+    }
+  }, [selectedDocId, empresa.id]);
 
   // Cálculos contábeis para interpolação dinâmica
   const balances = AccountingEngine.calculateBalances(contas, lancamentos, false);
@@ -80,16 +151,16 @@ export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
   // Interpolação das tags dinâmicas
   const interpolarTags = (texto: string) => {
     return texto
-      .replace(/{{empresa_razao_social}}/g, empresa.razaoSocial)
-      .replace(/{{empresa_cnpj}}/g, empresa.cnpj)
+      .replace(/{{empresa_razao_social}}/g, empresa.razaoSocial || 'RAZÃO SOCIAL NÃO INFORMADA')
+      .replace(/{{empresa_cnpj}}/g, empresa.cnpj || '—')
       .replace(/{{exercicio_ano}}/g, empresa.exercicioAtivo.toString())
       .replace(/{{saldo_caixa_total}}/g, `R$ ${saldoCaixaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
       .replace(/{{lucro_liquido_exercicio}}/g, `R$ ${lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
       .replace(/{{total_ativo}}/g, `R$ ${totalAtivo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
       .replace(/{{total_passivo}}/g, `R$ ${totalPassivo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
       .replace(/{{receita_liquida}}/g, `R$ ${receitaLiquida.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
-      .replace(/{{contador_nome}}/g, empresa.contadorNome || '')
-      .replace(/{{contador_crc}}/g, empresa.contadorCRC || '')
+      .replace(/{{contador_nome}}/g, empresa.contadorNome || empresa.contadorResponsavel || '')
+      .replace(/{{contador_crc}}/g, empresa.contadorCRC || empresa.crcContador || '')
       .replace(/{{data_extenso_atual}}/g, new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }))
       .replace(/{{tabela_balanco_sintetico}}/g, tabelaBalancoHTML);
   };
@@ -100,6 +171,8 @@ export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
     if (activeDoc) {
       onSaveDocumento({
         ...activeDoc,
+        empresaId: empresa.id,
+        ultimaModificacao: new Date().toISOString().slice(0, 10),
         conteudoHtml: conteudo
       });
       setIsSaved(true);
@@ -116,10 +189,29 @@ export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
     exportToDOCX(filename, conteudoRenderizado);
   };
 
+  const handlePrintA4 = () => {
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 100);
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#181818] text-neutral-200 overflow-hidden select-none">
+      {/* Portal dedicado de impressão A4 isolada */}
+      {isPrinting && typeof document !== 'undefined' && createPortal(
+        <div className="print-modal-root">
+          <div
+            className="a4-page"
+            dangerouslySetInnerHTML={{ __html: conteudoRenderizado }}
+          />
+        </div>,
+        document.body
+      )}
+
       {/* Barra de Ferramentas Superior do Document Studio (Estilo Word 365) */}
-      <div className="px-4 py-2.5 bg-[#202020] border-b border-white/10 flex items-center justify-between text-xs no-print">
+      <div className="px-4 py-2.5 bg-[#202020] border-b border-white/10 flex items-center justify-between text-xs no-print" data-no-print="true">
         {/* Lado Esquerdo: Seletor de Documento e Ações de Estilo */}
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-2">
@@ -129,12 +221,12 @@ export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
               onChange={(e) => {
                 const id = Number(e.target.value);
                 setSelectedDocId(id);
-                const doc = documentos.find(d => d.id === id);
+                const doc = listaDocs.find(d => d.id === id);
                 if (doc) setConteudo(doc.conteudoHtml);
               }}
               className="bg-neutral-900 border border-white/10 rounded px-2.5 py-1 text-neutral-100 font-medium outline-none"
             >
-              {documentos.map(d => (
+              {listaDocs.map(d => (
                 <option key={d.id} value={d.id}>{d.titulo}</option>
               ))}
             </select>
@@ -210,7 +302,7 @@ export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
           </button>
 
           <button
-            onClick={() => window.print()}
+            onClick={handlePrintA4}
             className="flex items-center space-x-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium transition-colors shadow-sm"
             title="Imprimir folha A4 oficial ou gerar PDF vetorial"
           >
@@ -221,17 +313,17 @@ export const DocumentStudioModule: React.FC<DocumentStudioModuleProps> = ({
       </div>
 
       {/* Área Central: Visualizador em Folha A4 Real com Margens */}
-      <div className="flex-1 bg-[#282828] overflow-y-auto p-6 flex justify-center">
+      <div className="print-scroll-container flex-1 bg-[#282828] overflow-y-auto p-6 flex justify-center">
         {viewMode === 'VISUAL' ? (
           <div 
-            className="a4-page rounded-sm outline-none focus:ring-2 focus:ring-blue-500/50"
+            className="a4-page rounded-sm outline-none focus:ring-2 focus:ring-blue-500/50 select-text"
             contentEditable
             suppressContentEditableWarning
             onBlur={(e) => setConteudo(e.currentTarget.innerHTML)}
             dangerouslySetInnerHTML={{ __html: conteudoRenderizado }}
           />
         ) : (
-          <div className="w-full max-w-4xl bg-[#1e1e1e] border border-white/10 rounded-xl p-4 flex flex-col h-[700px]">
+          <div className="w-full max-w-4xl bg-[#1e1e1e] border border-white/10 rounded-xl p-4 flex flex-col h-[700px] no-print">
             <label className="text-xs font-semibold text-neutral-400 mb-2">
               Edição Direta do Modelo de Documento com Placeholders
             </label>

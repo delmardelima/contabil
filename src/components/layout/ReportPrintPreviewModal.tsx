@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Printer, 
@@ -7,7 +8,6 @@ import {
   ZoomIn, 
   ZoomOut, 
   RotateCw, 
-  Maximize2,
   FileSpreadsheet
 } from 'lucide-react';
 import { Empresa } from '../../types/contabil';
@@ -33,7 +33,7 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
   empresa,
   tituloRelatorio,
   subtitulo,
-  periodo = '01/01/2026 a 31/10/2026',
+  periodo = '01/01/2026 a 31/12/2026',
   orientacaoPadrao = 'portrait',
   numeroLivro = 1,
   folhaInicial = 1,
@@ -52,7 +52,7 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
   const handleExportWord = () => {
     const element = document.getElementById('print-preview-content');
     if (element) {
-      exportToDOCX(`${tituloRelatorio.replace(/\s+/g, '_')}_${empresa.razaoSocial.slice(0, 15)}`, element.innerHTML);
+      exportToDOCX(`${tituloRelatorio.replace(/\s+/g, '_')}_${(empresa.razaoSocial || 'Empresa').slice(0, 15)}`, element.innerHTML);
     }
   };
 
@@ -66,10 +66,19 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
     minute: '2-digit'
   });
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/85 backdrop-blur-md text-neutral-100 select-none animate-fadeIn">
+  const modalContent = (
+    <div className="print-modal-root fixed inset-0 z-50 flex flex-col bg-black/85 backdrop-blur-md text-neutral-100 select-none animate-fadeIn">
+      <style>{`
+        @media print {
+          @page {
+            size: A4 ${orientacao};
+            margin: 10mm;
+          }
+        }
+      `}</style>
+
       {/* 1. Barra de Ferramentas Superior (Document Studio Toolbar) */}
-      <header className="h-14 px-6 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between shadow-2xl flex-shrink-0">
+      <header className="no-print h-14 px-6 bg-[#1a1a1a] border-b border-white/10 flex items-center justify-between shadow-2xl flex-shrink-0" data-no-print="true">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center font-bold">
             <FileText size={18} />
@@ -82,7 +91,7 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
               </span>
             </h2>
             <p className="text-[11px] text-neutral-400 font-mono">
-              {empresa.razaoSocial} • CNPJ: {empresa.cnpj}
+              {empresa.razaoSocial || 'Empresa não configurada'} • CNPJ: {empresa.cnpj || '—'}
             </p>
           </div>
         </div>
@@ -148,7 +157,7 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
             className="flex items-center gap-1.5 px-4 py-1.5 text-xs rounded-md bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/30 transition"
           >
             <Printer size={15} />
-            <span>Imprimir (Ctrl+P)</span>
+            <span>Imprimir / PDF A4</span>
           </button>
 
           <button
@@ -162,15 +171,15 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
       </header>
 
       {/* 2. Área de Rolagem do Documento com Folha A4 Centralizada */}
-      <div className="flex-1 overflow-auto p-8 flex justify-center bg-[#0d0d0d]">
+      <div className="print-scroll-container flex-1 overflow-auto p-8 flex justify-center bg-[#0d0d0d]">
         <div 
           style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center', transition: 'transform 0.15s ease-out' }}
-          className="transition-all"
+          className="print-zoom-wrapper transition-all"
         >
           {/* Folha A4 Física */}
           <div 
             id="print-preview-content"
-            className={`bg-white text-neutral-900 shadow-2xl rounded-sm p-10 flex flex-col justify-between print:p-0 print:shadow-none print:m-0 ${
+            className={`a4-page bg-white text-neutral-900 shadow-2xl rounded-sm p-10 flex flex-col justify-between select-text ${
               orientacao === 'portrait' 
                 ? 'w-[210mm] min-h-[297mm]' 
                 : 'w-[297mm] min-h-[210mm]'
@@ -182,13 +191,13 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <h1 className="text-base font-bold uppercase tracking-wider text-neutral-950 font-sans">
-                    {empresa.razaoSocial}
+                    {empresa.razaoSocial || 'RAZÃO SOCIAL NÃO INFORMADA'}
                   </h1>
                   <p className="text-[11px] text-neutral-700 font-mono mt-0.5">
-                    CNPJ: {empresa.cnpj} {empresa.inscricaoEstadual ? `• IE: ${empresa.inscricaoEstadual}` : ''} {empresa.nire ? `• NIRE: ${empresa.nire}` : ''}
+                    CNPJ: {empresa.cnpj || '—'} {empresa.inscricaoEstadual ? `• IE: ${empresa.inscricaoEstadual}` : ''} {empresa.nire ? `• NIRE: ${empresa.nire}` : ''}
                   </p>
                   <p className="text-[10px] text-neutral-600 font-sans">
-                    {empresa.logradouro}, {empresa.numero} {empresa.complemento || ''} - {empresa.bairro} • {empresa.cidade}/{empresa.uf} - CEP: {empresa.cep}
+                    {[empresa.logradouro, empresa.numero, empresa.complemento, empresa.bairro].filter(Boolean).join(', ')} {empresa.cidade ? `• ${empresa.cidade}/${empresa.uf}` : ''} {empresa.cep ? `- CEP: ${empresa.cep}` : ''}
                   </p>
                 </div>
                 <div className="text-right font-mono text-[10px] text-neutral-600 pl-4">
@@ -222,11 +231,11 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
             {/* RODAPÉ OFICIAL DE FECHAMENTO COM TERMO E ASSINATURAS */}
             <div className="mt-8 pt-4 border-t border-neutral-400 break-inside-avoid">
               <p className="text-[10px] text-center text-neutral-600 italic mb-8 font-serif">
-                Reconhecemos a exatidão do presente demonstrativo contábil, levantado em estrita consonância com a legislação societária e os Princípios Fundamentais de Contabilidade (CFC / NBC).
+                Reconhecemos a exatidão do presente demonstrativo contábil, levantado em estrita consonância com a legislação societária e as Normas Brasileiras de Contabilidade (CFC / NBC TG).
               </p>
 
               <div className="text-[11px] text-right font-serif text-neutral-800 mb-8 mr-4">
-                {empresa.cidade || 'São Paulo'} - {empresa.uf || 'SP'}, {dataAtualFormatada}.
+                {empresa.cidade || 'Local'}, {dataAtualFormatada}.
               </div>
 
               {/* Linhas de Assinatura Duplas: Responsável Legal e Contador com CRC */}
@@ -234,13 +243,13 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
                 <div className="text-center">
                   <div className="border-t border-neutral-800 pt-1.5">
                     <p className="font-bold text-neutral-950 uppercase text-[11px]">
-                      {empresa.responsavelLegal}
+                      {empresa.responsavelLegal || empresa.razaoSocial || 'Representante Legal'}
                     </p>
                     <p className="text-[10px] text-neutral-700 font-mono">
-                      CPF: {empresa.cpfResponsavel}
+                      CPF: {empresa.cpfResponsavel || '—'}
                     </p>
                     <p className="text-[10px] text-neutral-600 font-sans">
-                      Representante Legal / Titular
+                      Representante Legal / Administrador
                     </p>
                   </div>
                 </div>
@@ -248,10 +257,10 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
                 <div className="text-center">
                   <div className="border-t border-neutral-800 pt-1.5">
                     <p className="font-bold text-neutral-950 uppercase text-[11px]">
-                      {empresa.contadorNome}
+                      {empresa.contadorNome || empresa.contadorResponsavel || 'Contabilista Responsável'}
                     </p>
                     <p className="text-[10px] text-neutral-700 font-mono">
-                      {empresa.contadorCRC} {empresa.contadorCPF ? `• CPF: ${empresa.contadorCPF}` : ''}
+                      {empresa.contadorCRC || empresa.crcContador || 'CRC'} {empresa.contadorCPF ? `• CPF: ${empresa.contadorCPF}` : ''}
                     </p>
                     <p className="text-[10px] text-neutral-600 font-sans">
                       Contabilista Responsável
@@ -265,4 +274,6 @@ export const ReportPrintPreviewModal: React.FC<ReportPrintPreviewModalProps> = (
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 };

@@ -6,7 +6,13 @@ import {
   DREItemCalculado, 
   NaturezaConta,
   BalanceteMultiPeriodoItem,
-  DREMultiPeriodoItem 
+  DREMultiPeriodoItem,
+  RelatorioAnaliseBalanco,
+  IndicesLiquidez,
+  IndicesEndividamento,
+  IndicesRentabilidade,
+  AnaliseTermometroKanitz,
+  ItemAnaliseVerticalHorizontal
 } from '../types/contabil';
 
 export class AccountingEngine {
@@ -522,5 +528,207 @@ export class AccountingEngine {
         mediaMensal
       };
     });
+  }
+
+  /**
+   * Gera o Relatório Completo de Análise das Demonstrações Contábeis & Índices Econômico-Financeiros
+   * (Análise Horizontal/Vertical, Coeficientes de Liquidez, Endividamento, Rentabilidade e Termômetro de Kanitz)
+   */
+  public static generateFinancialAnalysis(
+    empresaId: number,
+    contas: ContaContabil[],
+    lancamentos: LancamentoContabil[],
+    exercicioAtual: number = 2026,
+    exercicioAnterior: number = 2025
+  ): RelatorioAnaliseBalanco {
+    const balances = this.calculateBalances(contas, lancamentos, false);
+    const balancesSemZeramento = this.calculateBalances(contas, lancamentos, true);
+
+    // Identificar contas-chave de balanço
+    let totalAtivoAtual = 0;
+    let totalAtivoAnterior = 0;
+    let ativoCirculanteAtual = 0;
+    let disponibilidadesAtual = 0;
+    let estoquesAtual = 0;
+    let rlpAtual = 0;
+    let imobilizadoAtual = 0;
+
+    let passivoCirculanteAtual = 0;
+    let passivoNaoCirculanteAtual = 0;
+    let patrimonioLiquidoAtual = 0;
+
+    for (const c of contas) {
+      const b = balances.get(c.id);
+      const sAtual = b ? b.saldoAtual : 0;
+      const sAnt = c.saldoAnterior || 0;
+
+      if (c.classificacao === '1') {
+        totalAtivoAtual = sAtual;
+        totalAtivoAnterior = sAnt;
+      } else if (c.classificacao === '1.01' || c.classificacao === '1.1') {
+        ativoCirculanteAtual = sAtual;
+      } else if (c.classificacao.startsWith('1.01.01') || c.classificacao.startsWith('1.1.01')) {
+        if (c.tipo === 'A') disponibilidadesAtual += sAtual;
+      } else if (c.classificacao.startsWith('1.01.04') || c.classificacao.startsWith('1.1.04')) {
+        if (c.tipo === 'A') estoquesAtual += sAtual;
+      } else if (c.classificacao === '1.02.01' || c.classificacao === '1.2.01') {
+        rlpAtual = sAtual;
+      } else if (c.classificacao === '1.02.03' || c.classificacao === '1.2.03') {
+        imobilizadoAtual = sAtual;
+      } else if (c.classificacao === '2.01' || c.classificacao === '2.1') {
+        passivoCirculanteAtual = sAtual;
+      } else if (c.classificacao === '2.02' || c.classificacao === '2.2') {
+        passivoNaoCirculanteAtual = sAtual;
+      } else if (c.classificacao === '2.03' || c.classificacao === '2.3') {
+        patrimonioLiquidoAtual = sAtual;
+      }
+    }
+
+    // Se as contas sintéticas de topo não estavam com saldo preenchido, calcula somando grupos
+    if (totalAtivoAtual === 0 && contas.length > 0) {
+      for (const c of contas) {
+        if (c.tipo === 'A' && c.classificacao.startsWith('1')) {
+          totalAtivoAtual += (balances.get(c.id)?.saldoAtual || 0);
+          totalAtivoAnterior += (c.saldoAnterior || 0);
+        }
+      }
+    }
+
+    // DRE e Resultados Econômicos
+    const dre = this.generateIncomeStatement(contas, lancamentos);
+    const receitaLiquida = dre.receitaLiquida || 1;
+    const lucroOperacional = dre.resultadoOperacional;
+    const lucroLiquido = dre.lucroLiquido;
+
+    // 1. Índices de Liquidez
+    const pc = passivoCirculanteAtual > 0 ? passivoCirculanteAtual : 1;
+    const pTotal = (passivoCirculanteAtual + passivoNaoCirculanteAtual) > 0 ? (passivoCirculanteAtual + passivoNaoCirculanteAtual) : 1;
+
+    const liquidez: IndicesLiquidez = {
+      liquidezImediata: Math.round((disponibilidadesAtual / pc) * 100) / 100,
+      liquidezCorrente: Math.round((ativoCirculanteAtual / pc) * 100) / 100,
+      liquidezSeca: Math.round(((ativoCirculanteAtual - estoquesAtual) / pc) * 100) / 100,
+      liquidezGeral: Math.round(((ativoCirculanteAtual + rlpAtual) / pTotal) * 100) / 100
+    };
+
+    // 2. Índices de Endividamento
+    const ativTotal = totalAtivoAtual > 0 ? totalAtivoAtual : 1;
+    const pl = Math.abs(patrimonioLiquidoAtual) > 0 ? Math.abs(patrimonioLiquidoAtual) : 1;
+
+    const endividamento: IndicesEndividamento = {
+      endividamentoGeral: Math.round(((passivoCirculanteAtual + passivoNaoCirculanteAtual) / ativTotal) * 10000) / 100,
+      participacaoCapitalTerceiros: Math.round(((passivoCirculanteAtual + passivoNaoCirculanteAtual) / pl) * 10000) / 100,
+      composicaoEndividamentoCurtoPrazo: Math.round((passivoCirculanteAtual / pTotal) * 10000) / 100,
+      imobilizacaoPatrimonioLiquido: Math.round((imobilizadoAtual / pl) * 10000) / 100,
+      imobilizacaoRecursosNaoCorrentes: Math.round((imobilizadoAtual / (pl + passivoNaoCirculanteAtual)) * 10000) / 100
+    };
+
+    // 3. Índices de Rentabilidade
+    const rentabilidade: IndicesRentabilidade = {
+      giroAtivo: Math.round((receitaLiquida / ativTotal) * 100) / 100,
+      margemOperacional: Math.round((lucroOperacional / receitaLiquida) * 10000) / 100,
+      margemLiquida: Math.round((lucroLiquido / receitaLiquida) * 10000) / 100,
+      retornoSobreAtivo: Math.round((lucroLiquido / ativTotal) * 10000) / 100,
+      retornoSobrePatrimonioLiquido: Math.round((lucroLiquido / pl) * 10000) / 100
+    };
+
+    // 4. Termômetro de Insolvência de Stephen Kanitz
+    // Fator Z = 0.05*ROE + 1.65*LG + 3.55*LS - 1.06*LC - 0.33*EG
+    const fatorZCalc = (
+      0.05 * (rentabilidade.retornoSobrePatrimonioLiquido) +
+      1.65 * liquidez.liquidezGeral +
+      3.55 * liquidez.liquidezSeca -
+      1.06 * liquidez.liquidezCorrente -
+      0.33 * (endividamento.endividamentoGeral / 100)
+    );
+    const fatorZ = Math.round(fatorZCalc * 100) / 100;
+
+    let classifKanitz: 'SOLVENTE' | 'PENUMBRA_ALERTA' | 'INSOLVENTE' = 'SOLVENTE';
+    let interpKanitz = 'A empresa opera em faixa de solvência segura e confortável, com excelente capacidade de honrar obrigações correntes.';
+    if (fatorZ < -3) {
+      classifKanitz = 'INSOLVENTE';
+      interpKanitz = 'Zona de alto risco de insolvência financeira. Exige renegociação de dívidas e reforço urgente no capital de giro.';
+    } else if (fatorZ <= 0) {
+      classifKanitz = 'PENUMBRA_ALERTA';
+      interpKanitz = 'Zona de penumbra / alerta moderado. Recomendada atenção à composição de endividamento e controle rigoroso de custos.';
+    }
+
+    const kanitz: AnaliseTermometroKanitz = {
+      fatorZ,
+      classificacao: classifKanitz,
+      interpretacao: interpKanitz
+    };
+
+    // 5. Itens de Análise Vertical (AV%) e Horizontal (AH%) do Balanço
+    const baseAtivoAnt = totalAtivoAnterior > 0 ? totalAtivoAnterior : 1;
+    const baseAtivoAtual = totalAtivoAtual > 0 ? totalAtivoAtual : 1;
+
+    const itensAnaliseBalanco: ItemAnaliseVerticalHorizontal[] = contas
+      .filter(c => (c.classificacao.startsWith('1') || c.classificacao.startsWith('2')) && c.grau <= 3)
+      .sort((a, b) => a.classificacao.localeCompare(b.classificacao, undefined, { numeric: true }))
+      .map(c => {
+        const sAtual = balances.get(c.id)?.saldoAtual || 0;
+        const sAnt = c.saldoAnterior || 0;
+        const avAnt = Math.round((sAnt / baseAtivoAnt) * 10000) / 100;
+        const avAtual = Math.round((sAtual / baseAtivoAtual) * 10000) / 100;
+        const varNominal = sAtual - sAnt;
+        const ah = sAnt !== 0 ? Math.round(((sAtual - sAnt) / Math.abs(sAnt)) * 10000) / 100 : 0;
+
+        return {
+          classificacao: c.classificacao,
+          descricaoConta: c.nome,
+          grau: c.grau,
+          saldoExercicioAnterior: sAnt,
+          saldoExercicioAtual: sAtual,
+          analiseVerticalAnteriorPercent: avAnt,
+          analiseVerticalAtualPercent: avAtual,
+          variacaoHorizontalNominal: varNominal,
+          analiseHorizontalPercent: ah
+        };
+      });
+
+    // 6. Itens de Análise Vertical (AV%) e Horizontal (AH%) da DRE
+    const itensAnaliseDRE: ItemAnaliseVerticalHorizontal[] = contas
+      .filter(c => (c.classificacao.startsWith('3') || c.classificacao.startsWith('4')) && c.grau <= 3)
+      .sort((a, b) => a.classificacao.localeCompare(b.classificacao, undefined, { numeric: true }))
+      .map(c => {
+        const sAtual = balancesSemZeramento.get(c.id)?.saldoAtual || 0;
+        const sAnt = c.saldoAnterior || 0;
+        const avAnt = Math.round((sAnt / (receitaLiquida || 1)) * 10000) / 100;
+        const avAtual = Math.round((sAtual / (receitaLiquida || 1)) * 10000) / 100;
+        const varNominal = sAtual - sAnt;
+        const ah = sAnt !== 0 ? Math.round(((sAtual - sAnt) / Math.abs(sAnt)) * 10000) / 100 : 0;
+
+        return {
+          classificacao: c.classificacao,
+          descricaoConta: c.nome,
+          grau: c.grau,
+          saldoExercicioAnterior: sAnt,
+          saldoExercicioAtual: sAtual,
+          analiseVerticalAnteriorPercent: avAnt,
+          analiseVerticalAtualPercent: avAtual,
+          variacaoHorizontalNominal: varNominal,
+          analiseHorizontalPercent: ah
+        };
+      });
+
+    return {
+      empresaId,
+      exercicioAtual,
+      exercicioAnterior,
+      totalAtivo: totalAtivoAtual,
+      totalPassivoCirculante: passivoCirculanteAtual,
+      totalPassivoNaoCirculante: passivoNaoCirculanteAtual,
+      totalPatrimonioLiquido: patrimonioLiquidoAtual,
+      receitaLiquida,
+      lucroOperacional,
+      lucroLiquido,
+      liquidez,
+      endividamento,
+      rentabilidade,
+      kanitz,
+      itensAnaliseBalanco,
+      itensAnaliseDRE
+    };
   }
 }
