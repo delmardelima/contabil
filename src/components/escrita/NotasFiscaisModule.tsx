@@ -48,7 +48,26 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
   const [filtroTipo, setFiltroTipo] = useState<'TODOS' | 'ENTRADA' | 'SAIDA' | 'SERVICO'>('TODOS');
   const [filtroTexto, setFiltroTexto] = useState<string>('');
   const [notaExpandidaId, setNotaExpandidaId] = useState<number | null>(null);
-  const [abaDetalhe, setAbaDetalhe] = useState<'itens' | 'parcelas' | 'impostos'>('itens');
+  const [abaDetalhe, setAbaDetalhe] = useState<'itens' | 'parcelas' | 'impostos' | 'contabil'>('itens');
+
+  // Parâmetros de Integração Escrita -> Contabilidade (Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm)
+  const [geraLancamentosContabeis, setGeraLancamentosContabeis] = useState<boolean>(true);
+  const [mostrarSempreLancamento, setMostrarSempreLancamento] = useState<boolean>(true);
+  const [partidaPreviewModal, setPartidaPreviewModal] = useState<{
+    notaId: number;
+    notaNumero: string;
+    tipoNota: string;
+    modalidadePagamento: 'A_VISTA' | 'A_PRAZO';
+    acumuladorDescricao: string;
+    dataLancamento: string;
+    contaDebitoCodigo: number;
+    contaDebitoNome: string;
+    contaCreditoCodigo: number;
+    contaCreditoNome: string;
+    valor: number;
+    historico: string;
+    tipoOrigemCaixa: string;
+  } | null>(null);
   
   const [showNovoModal, setShowNovoModal] = useState<boolean>(false);
   const [mensagem, setMensagem] = useState<string>('');
@@ -62,6 +81,7 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
   const [cfop, setCfop] = useState<string>('5102');
   const [acumuladorId, setAcumuladorId] = useState<number>(acumuladores[0]?.id || 1);
   const [valorTotal, setValorTotal] = useState<string>('1000,00');
+  const [formaPagamentoManual, setFormaPagamentoManual] = useState<'A_VISTA' | 'A_PRAZO'>('A_VISTA');
   
   // Itens Manuais
   const [itensManuais, setItensManuais] = useState<ItemNotaFiscal[]>([
@@ -104,6 +124,40 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
     setParticipantes(dbService.getParticipantes(empresa.id));
     setProdutos(dbService.getProdutos(empresa.id));
   }, [empresa.id]);
+
+  const handleContabilizarNotaIndividual = (notaId: number, exibirModalConferencia: boolean) => {
+    if (exibirModalConferencia) {
+      const sim = dbService.simularOuGravarContabilizacaoNotaFiscal(notaId, false);
+      if (sim.sucesso && sim.partida) {
+        setPartidaPreviewModal({
+          notaId,
+          ...sim.partida
+        });
+      }
+    } else {
+      const res = dbService.simularOuGravarContabilizacaoNotaFiscal(notaId, true);
+      setNotas([...dbService.getNotasFiscais(empresa.id)]);
+      setMensagem(res.mensagem);
+      setTimeout(() => setMensagem(''), 4000);
+    }
+  };
+
+  const handleContabilizarPendentesEmLote = () => {
+    const pendentes = notasFiltradas.filter(n => !n.integradaContabil);
+    if (pendentes.length === 0) {
+      setMensagem('Todas as notas fiscais listadas já estão integradas na Contabilidade.');
+      setTimeout(() => setMensagem(''), 3500);
+      return;
+    }
+    let count = 0;
+    for (const nf of pendentes) {
+      const r = dbService.simularOuGravarContabilizacaoNotaFiscal(nf.id, true);
+      if (r.sucesso) count++;
+    }
+    setNotas([...dbService.getNotasFiscais(empresa.id)]);
+    setMensagem(`✅ ${count} nota(s) fiscal(is) contabilizada(s) automaticamente no Livro Diário e Livro Caixa!`);
+    setTimeout(() => setMensagem(''), 4500);
+  };
 
   // Upload e Parser Avançado Mestre-Detalhe de Múltiplos XMLs
   const handleXMLUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -314,8 +368,11 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
           };
 
           dbService.saveNotaFiscal(nota);
+          if (geraLancamentosContabeis && !mostrarSempreLancamento) {
+            dbService.simularOuGravarContabilizacaoNotaFiscal(nota.id, true);
+          }
           importadas++;
-          setNotas(dbService.getNotasFiscais(empresa.id));
+          setNotas([...dbService.getNotasFiscais(empresa.id)]);
           setParticipantes(dbService.getParticipantes(empresa.id));
           setProdutos(dbService.getProdutos(empresa.id));
           setMensagem(`✅ ${importadas} XML(s) processados com itens detalhados! Cadastrados: ${novosParticipantesCount} participantes e ${novosProdutosCount} novos produtos.`);
@@ -338,6 +395,10 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
     if (isNaN(val) || val <= 0) return;
 
     const partSelecionado = participantes.find(p => p.id === participanteId);
+    const parcelasNota: ParcelaNotaFiscal[] =
+      formaPagamentoManual === 'A_VISTA'
+        ? [{ id: 1, numeroParcela: 1, dataVencimento: dataEmissao, valor: val }]
+        : parcelasManuais;
 
     const nota: NotaFiscal = {
       id: Date.now(),
@@ -361,17 +422,36 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
       cfop,
       acumuladorId,
       itens: itensManuais,
-      parcelas: parcelasManuais,
+      parcelas: parcelasNota,
       integradaContabil: false
     };
 
     dbService.saveNotaFiscal(nota);
-    setNotas(dbService.getNotasFiscais(empresa.id));
     setShowNovoModal(false);
     setNumero('');
     setValorTotal('');
-    setMensagem('Nota Fiscal e itens salvos com sucesso!');
-    setTimeout(() => setMensagem(''), 3000);
+
+    if (geraLancamentosContabeis) {
+      if (mostrarSempreLancamento) {
+        const sim = dbService.simularOuGravarContabilizacaoNotaFiscal(nota.id, false);
+        if (sim.sucesso && sim.partida) {
+          setPartidaPreviewModal({
+            notaId: nota.id,
+            ...sim.partida
+          });
+        }
+      } else {
+        dbService.simularOuGravarContabilizacaoNotaFiscal(nota.id, true);
+      }
+    }
+
+    setNotas([...dbService.getNotasFiscais(empresa.id)]);
+    setMensagem(
+      geraLancamentosContabeis && !mostrarSempreLancamento
+        ? 'Nota Fiscal gravada e contabilizada automaticamente no Livro Diário / Caixa!'
+        : 'Nota Fiscal salva com sucesso!'
+    );
+    setTimeout(() => setMensagem(''), 3500);
   };
 
   const handleExcluir = (id: number) => {
@@ -429,17 +509,26 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
           </div>
           <div>
             <h2 className="text-sm font-semibold text-neutral-100 flex items-center space-x-2">
-              <span>Movimentação Mestre-Detalhe de Notas Fiscais (EFNOTA)</span>
+              <span>Movimentação de Notas Fiscais & Integração Contábil (EFNOTA)</span>
               <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono font-medium">NF-e 55 / NFC-e 65 / NFS-e</span>
             </h2>
             <p className="text-[11px] text-neutral-400">
-              Importação em lote de arquivos XML com auto-cadastro de participantes/itens e controle de duplicatas
+              Importação de XMLs, classificação por Acumuladores (À Vista / A Prazo) e geração automática no Livro Diário e Caixa
             </p>
           </div>
         </div>
 
         {/* Botões de Ação */}
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleContabilizarPendentesEmLote}
+            className="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-semibold flex items-center space-x-1.5 transition"
+            title="Contabilizar todas as notas pendentes conforme Acumulador Fiscal"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Contabilizar Notas Pendentes</span>
+          </button>
+
           <label className="px-3.5 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 rounded-lg border border-white/10 text-xs font-medium flex items-center space-x-1.5 cursor-pointer transition shadow">
             <Upload className="w-3.5 h-3.5 text-blue-400" />
             <span>Importar XMLs em Lote</span>
@@ -516,8 +605,8 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
         </div>
       </div>
 
-      {/* Barra de Filtros */}
-      <div className="px-5 py-2.5 bg-[#181818] border-b border-white/10 flex items-center justify-between text-xs mt-3 flex-shrink-0">
+      {/* Barra de Filtros & Parâmetros de Integração Contábil (Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm) */}
+      <div className="px-5 py-2.5 bg-[#181818] border-b border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs mt-3 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-1 bg-neutral-900 rounded-lg p-0.5 border border-white/10">
             {(['TODOS', 'ENTRADA', 'SAIDA', 'SERVICO'] as const).map(t => (
@@ -533,7 +622,7 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
             ))}
           </div>
 
-          <div className="flex items-center space-x-2 bg-[#141414] border border-white/10 rounded-lg px-2.5 py-1 w-72">
+          <div className="flex items-center space-x-2 bg-[#141414] border border-white/10 rounded-lg px-2.5 py-1 w-64">
             <Search className="w-3.5 h-3.5 text-neutral-400" />
             <input
               type="text"
@@ -543,6 +632,31 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
               className="bg-transparent text-neutral-200 outline-none w-full text-xs"
             />
           </div>
+        </div>
+
+        {/* Parâmetros da Escrita Fiscal -> Contabilidade */}
+        <div className="flex items-center space-x-4 bg-neutral-900/90 border border-blue-500/20 px-3 py-1.5 rounded-lg text-[11px]">
+          <span className="text-blue-400 font-semibold">Parâmetros Contábeis:</span>
+          <label className="flex items-center space-x-1.5 cursor-pointer text-neutral-200">
+            <input
+              type="checkbox"
+              checked={geraLancamentosContabeis}
+              onChange={(e) => setGeraLancamentosContabeis(e.target.checked)}
+              className="rounded border-neutral-700 bg-neutral-950 text-blue-500"
+            />
+            <span>Gera Lançamentos Contábeis</span>
+          </label>
+          {geraLancamentosContabeis && (
+            <label className="flex items-center space-x-1.5 cursor-pointer text-emerald-300">
+              <input
+                type="checkbox"
+                checked={mostrarSempreLancamento}
+                onChange={(e) => setMostrarSempreLancamento(e.target.checked)}
+                className="rounded border-neutral-700 bg-neutral-950 text-emerald-500"
+              />
+              <span>Mostrar sempre (Conferir partida antes de gravar)</span>
+            </label>
+          )}
         </div>
       </div>
 
@@ -562,8 +676,8 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
                 <th className="py-2.5 px-2 text-center w-16">Itens</th>
                 <th className="py-2.5 px-3 w-28 text-right">Valor Total</th>
                 <th className="py-2.5 px-3 w-24 text-right">ICMS</th>
-                <th className="py-2.5 px-3 w-24 text-center">Status</th>
-                <th className="py-2.5 px-3 w-16 text-center">Ações</th>
+                <th className="py-2.5 px-3 w-28 text-center">Contabilidade</th>
+                <th className="py-2.5 px-3 w-20 text-center">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-sans">
@@ -623,15 +737,19 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
                         <td className="py-2.5 px-3 text-right font-mono text-neutral-300">
                           {formatCurrency(n.valorICMS || 0)}
                         </td>
-                        <td className="py-2.5 px-3 text-center">
+                        <td className="py-2.5 px-3 text-center" onClick={e => e.stopPropagation()}>
                           {n.integradaContabil ? (
                             <span className="text-[10px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/20 font-semibold">
-                              INTEGRADA
+                              CONTABILIZADA
                             </span>
                           ) : (
-                            <span className="text-[10px] bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-full border border-amber-500/20 font-semibold">
-                              PENDENTE
-                            </span>
+                            <button
+                              onClick={() => handleContabilizarNotaIndividual(n.id, mostrarSempreLancamento)}
+                              className="text-[10px] bg-blue-600/20 hover:bg-blue-600/40 text-blue-300 px-2 py-0.5 rounded-full border border-blue-500/30 font-semibold transition"
+                              title="Gerar ou conferir lançamento contábil desta nota"
+                            >
+                              Contabilizar →
+                            </button>
                           )}
                         </td>
                         <td className="py-2.5 px-3 text-center" onClick={e => e.stopPropagation()}>
@@ -681,6 +799,16 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
                                   >
                                     <FileCode size={13} />
                                     <span>Apuração de Tributos Detalhada</span>
+                                  </button>
+
+                                  <button
+                                    onClick={() => setAbaDetalhe('contabil')}
+                                    className={`flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg transition font-medium ${
+                                      abaDetalhe === 'contabil' ? 'bg-emerald-600 text-white shadow' : 'text-neutral-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <Layers size={13} />
+                                    <span>Espelho Contábil (À Vista / A Prazo)</span>
                                   </button>
                                 </div>
 
@@ -807,6 +935,62 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
                                 </div>
                               )}
 
+                              {/* SUB-ABA 4: ESPELHO CONTÁBIL (À VISTA / A PRAZO - Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm) */}
+                              {abaDetalhe === 'contabil' && (() => {
+                                const sim = dbService.simularOuGravarContabilizacaoNotaFiscal(n.id, false);
+                                const p = sim.partida;
+                                if (!p) return null;
+                                return (
+                                  <div className="p-4 bg-[#181818] border border-emerald-500/20 rounded-lg space-y-3">
+                                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-xs font-bold text-emerald-400">
+                                          INTEGRAÇÃO AUTOMÁTICA ESCRITA FISCAL → CONTABILIDADE
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[10px] font-mono">
+                                          {p.modalidadePagamento === 'A_VISTA' ? 'OPERAÇÃO À VISTA (CAIXA / BANCO)' : 'OPERAÇÃO A PRAZO (CONTA CLIENTE / FORNECEDOR)'}
+                                        </span>
+                                        <span className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 text-[10px] font-mono">
+                                          Origem: {p.tipoOrigemCaixa}
+                                        </span>
+                                      </div>
+                                      {!n.integradaContabil && (
+                                        <button
+                                          onClick={() => handleContabilizarNotaIndividual(n.id, false)}
+                                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold transition"
+                                        >
+                                          Gravar Lançamento no Diário / Caixa
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-3 text-xs">
+                                      <div className="p-2.5 bg-[#141414] border border-white/5 rounded-lg">
+                                        <span className="text-[10px] text-neutral-500 uppercase block font-mono">Conta Débito (D)</span>
+                                        <span className="font-semibold text-blue-400">
+                                          {p.contaDebitoCodigo} - {p.contaDebitoNome}
+                                        </span>
+                                      </div>
+                                      <div className="p-2.5 bg-[#141414] border border-white/5 rounded-lg">
+                                        <span className="text-[10px] text-neutral-500 uppercase block font-mono">Conta Crédito (C)</span>
+                                        <span className="font-semibold text-indigo-400">
+                                          {p.contaCreditoCodigo} - {p.contaCreditoNome}
+                                        </span>
+                                      </div>
+                                      <div className="p-2.5 bg-[#141414] border border-white/5 rounded-lg">
+                                        <span className="text-[10px] text-neutral-500 uppercase block font-mono">Acumulador Utilizado</span>
+                                        <span className="font-medium text-neutral-200">{p.acumuladorDescricao}</span>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-xs text-neutral-400 font-mono bg-[#141414] px-3 py-2 rounded border border-white/5 flex items-center justify-between">
+                                      <span>Histórico: {p.historico}</span>
+                                      <span className="font-bold text-emerald-400">Valor: {formatCurrency(p.valor)}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
                             </div>
                           </td>
                         </tr>
@@ -886,7 +1070,7 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="md:col-span-2">
                   <label className="block text-xs font-medium text-neutral-300 mb-1">
-                    {tipo === 'SAIDA' ? 'Cliente (Destinatário) *' : 'Fornecedor (Emitente) *'}
+                    {tipo === 'SAIDA' || tipo === 'SERVICO' ? 'Cliente (Destinatário) *' : 'Fornecedor (Emitente) *'}
                   </label>
                   <select
                     value={participanteId}
@@ -914,7 +1098,19 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-neutral-300 mb-1">Condição de Pagamento *</label>
+                  <select
+                    value={formaPagamentoManual}
+                    onChange={e => setFormaPagamentoManual(e.target.value as 'A_VISTA' | 'A_PRAZO')}
+                    className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs text-emerald-300 font-semibold focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="A_VISTA">À Vista (Caixa / Banco)</option>
+                    <option value="A_PRAZO">A Prazo (Conta Cliente / Fornecedor)</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-xs font-medium text-neutral-300 mb-1">CFOP da Operação *</label>
                   <input
@@ -959,6 +1155,85 @@ export const NotasFiscaisModule: React.FC<NotasFiscaisModuleProps> = ({ empresa 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE CONFERÊNCIA DE LANÇAMENTO CONTÁBIL DA NOTA ("Mostrar sempre" de Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm) */}
+      {partidaPreviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#181818] border border-emerald-500/30 rounded-xl w-full max-w-xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                  <CheckCircle2 size={16} />
+                  <span>Conferência de Lançamento Contábil Automático ("Mostrar sempre")</span>
+                </h3>
+                <p className="text-[11px] text-neutral-400 mt-0.5">
+                  Documento Fiscal nº {partidaPreviewModal.notaNumero} • Origem: {partidaPreviewModal.tipoOrigemCaixa}
+                </p>
+              </div>
+              <button onClick={() => setPartidaPreviewModal(null)} className="text-neutral-400 hover:text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-[#141414] border border-white/10 rounded-lg flex items-center justify-between">
+                <span className="text-neutral-400">Regra do Acumulador Aplicada:</span>
+                <span className="font-semibold text-neutral-200">{partidaPreviewModal.acumuladorDescricao}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-blue-950/20 border border-blue-500/30 rounded-lg space-y-1">
+                  <span className="text-[10px] font-mono text-blue-300 uppercase block">Conta a Debitar (D)</span>
+                  <div className="font-bold text-blue-400">
+                    {partidaPreviewModal.contaDebitoCodigo} - {partidaPreviewModal.contaDebitoNome}
+                  </div>
+                </div>
+                <div className="p-3 bg-indigo-950/20 border border-indigo-500/30 rounded-lg space-y-1">
+                  <span className="text-[10px] font-mono text-indigo-300 uppercase block">Conta a Creditar (C)</span>
+                  <div className="font-bold text-indigo-400">
+                    {partidaPreviewModal.contaCreditoCodigo} - {partidaPreviewModal.contaCreditoNome}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 bg-[#141414] border border-white/10 rounded-lg space-y-1 font-mono">
+                <div className="flex justify-between text-neutral-300">
+                  <span>Data do Lançamento:</span>
+                  <span>{partidaPreviewModal.dataLancamento.split('-').reverse().join('/')}</span>
+                </div>
+                <div className="flex justify-between text-emerald-400 font-bold text-sm">
+                  <span>Valor da Partida Dobrada:</span>
+                  <span>{formatCurrency(partidaPreviewModal.valor)}</span>
+                </div>
+                <div className="pt-1 text-[11px] text-neutral-400 font-sans">
+                  Histórico: {partidaPreviewModal.historico}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setPartidaPreviewModal(null)}
+                className="px-4 py-2 text-xs rounded-lg text-neutral-400 hover:text-white"
+              >
+                Apenas Fechar (Não Gravar)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = partidaPreviewModal.notaId;
+                  setPartidaPreviewModal(null);
+                  handleContabilizarNotaIndividual(id, false);
+                }}
+                className="px-5 py-2 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 transition"
+              >
+                Confirmar e Gravar na Contabilidade
+              </button>
+            </div>
           </div>
         </div>
       )}

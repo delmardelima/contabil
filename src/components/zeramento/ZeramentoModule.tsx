@@ -52,27 +52,48 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
 }) => {
   const [abaAtiva, setAbaAtiva] = useState<'ZERAMENTO' | 'DESTINACAO' | 'ATA'>('ZERAMENTO');
   
-  // Parâmetros do Zeramento (Aba 1)
+  // Parâmetros do Zeramento (Aba 1 - Zeramento_Contabilidade.htm & Op__es_Contabilidade.htm)
   const [dataZeramento, setDataZeramento] = useState('2026-12-31');
   const [tipoEncerramento, setTipoEncerramento] = useState<'ANUAL' | 'TRIMESTRAL' | 'MENSAL'>('ANUAL');
   const [contaDestinoId, setContaDestinoId] = useState<number>(41); // Lucro Líquido do Exercício em Curso (ARE)
   const [historicoId, setHistoricoId] = useState<number>(8); // Zeramento de encerramento
+  const [gruposParaZerar, setGruposParaZerar] = useState<string[]>(['3.', '4.']);
+  const [novoGrupoPrefixo, setNovoGrupoPrefixo] = useState<string>('3.01');
   const [sucessoMsg, setSucessoMsg] = useState('');
   const [encerramentoExecutado, setEncerramentoExecutado] = useState(false);
 
-  // Parâmetros da Destinação de Lucro (Aba 2)
-  const [percentualDistribuicao, setPercentualDistribuicao] = useState<number>(90);
+  // Parâmetros da Destinação de Lucro Isento (Aba 2 - Art. 14 LC 123/2006 & ITG 1000)
+  const [percentualDistribuicao, setPercentualDistribuicao] = useState<number>(100);
+  const [constituirReservaLegal, setConstituirReservaLegal] = useState<boolean>(false); // Dispensada para ME/EPP/Ltda ITG 1000
+  const [pagarDiretoCaixaBanco, setPagarDiretoCaixaBanco] = useState<boolean>(false);
   const [destinacaoIntegrada, setDestinacaoIntegrada] = useState<boolean>(false);
   const [mensagemDestinacao, setMensagemDestinacao] = useState<string>('');
 
-  // Parâmetros da Ata de Reunião de Sócios (Aba 3)
+  // Parâmetros da Ata / Recibos & Informe de Rendimentos Isentos (Aba 3)
   const [dataReuniao, setDataReuniao] = useState<string>('2026-12-31');
   const [localReuniao, setLocalReuniao] = useState<string>('Sede Social da Empresa');
 
-  // Contas analíticas de PL elegíveis para destino
+  // Contas analíticas de PL elegíveis para destino (Guia Zeramento -> Conta destino)
   const contasDestinoPossiveis = contas.filter(c => c.tipo === 'A' && c.classificacao.startsWith('2.03'));
+  const contasSinteticasResultado = contas.filter(
+    c => c.tipo === 'S' && (c.classificacao.startsWith('3') || c.classificacao.startsWith('4') || c.classificacao.startsWith('5'))
+  );
 
-  // Gera o preview dos lançamentos de zeramento
+  const handleIncluirGrupoZeramento = () => {
+    const pref = novoGrupoPrefixo.trim();
+    if (!pref) return;
+    const norm = pref.endsWith('.') ? pref : `${pref}.`;
+    if (!gruposParaZerar.includes(norm)) {
+      setGruposParaZerar([...gruposParaZerar, norm]);
+    }
+  };
+
+  const handleExcluirGrupoZeramento = (pref: string) => {
+    if (gruposParaZerar.length <= 1) return;
+    setGruposParaZerar(gruposParaZerar.filter(g => g !== pref));
+  };
+
+  // Gera o preview dos lançamentos de zeramento conforme Guia Zeramento
   const novosLancamentos = useMemo(() => {
     return AccountingEngine.executeZeramento(
       empresaId,
@@ -80,9 +101,10 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
       lancamentos,
       dataZeramento,
       contaDestinoId,
-      historicoId
+      historicoId,
+      gruposParaZerar
     );
-  }, [empresaId, contas, lancamentos, dataZeramento, contaDestinoId, historicoId]);
+  }, [empresaId, contas, lancamentos, dataZeramento, contaDestinoId, historicoId, gruposParaZerar]);
 
   // Cálculos de Resultado do Período
   const { totalReceitas, totalDespesas, resultadoLiquido, contasReceitasCount, contasDespesasCount } = useMemo(() => {
@@ -118,20 +140,26 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
 
   const totalZerado = novosLancamentos.reduce((acc, l) => acc + l.valor, 0);
 
+  // Comparativo de Isenção Art. 14 da LC 123/2006 (Presunção 8%/32% vs Escrituração Contábil ITG 1000)
+  const comparativoIsencaoSimples = useMemo(() => {
+    const baseLucro = resultadoLiquido > 0 ? resultadoLiquido : 148500.00;
+    return dbService.calcularLimitesLucroIsentoSimplesMei(empresaId, baseLucro);
+  }, [empresaId, resultadoLiquido]);
+
   // Proposta de Destinação do Resultado Calculada (Aba 2)
   const propostaCalculada: PropostaDestinacaoResultado = useMemo(() => {
     const exercicio = empresa?.exercicioAtivo || 2026;
     const baseLucro = resultadoLiquido > 0 ? resultadoLiquido : 148500.00;
     
-    // 1. Reserva Legal: 5% do Lucro Líquido (Art. 193 Lei 6.404/76)
-    const percReserva = 5;
+    // 1. Reserva Legal: Opcional para ME/EPP/Simples Nacional (ITG 1000); 5% quando marcada
+    const percReserva = constituirReservaLegal ? 5 : 0;
     const valorReserva = Math.round((baseLucro * (percReserva / 100)) * 100) / 100;
     const lucroAposReserva = baseLucro - valorReserva;
 
-    // 2. Dividendos a Distribuir aos Sócios
+    // 2. Lucros Isentos a Distribuir aos Sócios / Titular MEI (Art. 14 LC 123/2006)
     const valorTotalDistr = Math.round((lucroAposReserva * (percentualDistribuicao / 100)) * 100) / 100;
 
-    // 3. Retenção para Expansão / Reserva Estatutária (Art. 196 Lei 6.404/76)
+    // 3. Saldo Remanescente em Lucros Acumulados (ITG 1000)
     const valorRetencao = Math.round((lucroAposReserva - valorTotalDistr) * 100) / 100;
 
     // Sócios do QSA
@@ -160,28 +188,144 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
       valorRetencaoExpansao: valorRetencao,
       dataAprovacao: dataReuniao
     };
-  }, [empresa, empresaId, resultadoLiquido, percentualDistribuicao, dataReuniao]);
+  }, [empresa, empresaId, resultadoLiquido, percentualDistribuicao, constituirReservaLegal, dataReuniao]);
 
   // Ação 1: Processar Zeramento
   const handleConfirmarZeramento = () => {
     if (novosLancamentos.length === 0) return;
     onExecutarZeramento(novosLancamentos);
     setEncerramentoExecutado(true);
-    setSucessoMsg(`Encerramento executado com sucesso! Foram geradas ${novosLancamentos.length} partidas dobradas de transferência para a conta ARE.`);
+    setSucessoMsg(`Zeramento executado com sucesso! Foram geradas ${novosLancamentos.length} partidas com origem 'Zeramento' transferidas para a conta destino.`);
     setTimeout(() => setSucessoMsg(''), 7000);
   };
 
   // Ação 2: Integrar Destinação do Resultado
   const handleIntegrarDestinacao = () => {
-    const res = dbService.integrarDestinacaoResultadoContabil(empresaId, propostaCalculada);
+    const res = dbService.integrarDestinacaoResultadoContabil(empresaId, propostaCalculada, pagarDiretoCaixaBanco);
     if (res.success) {
       setDestinacaoIntegrada(true);
-      setMensagemDestinacao(`✅ Lote Contábil #${res.loteId} de Destinação do Resultado integrado com sucesso! ${res.partidas} partidas geradas (Reserva Legal 5%, Dividendos a Pagar e Retenção).`);
+      setMensagemDestinacao(
+        `✅ Lote Contábil #${res.loteId} de Distribuição de Lucros Isentos (LC 123/2006 Art. 14) integrado com sucesso! (${res.partidas} partida(s) gerada(s) no Diário${pagarDiretoCaixaBanco ? ' e no Livro Caixa/Banco' : ''}).`
+      );
       setTimeout(() => setMensagemDestinacao(''), 8000);
     }
   };
 
-  // Ação 3: Imprimir Ata de Reunião A4 Oficial
+  // Ação 3: Imprimir Informe de Rendimentos Isentos & Recibo de Distribuição de Lucros (DIRPF / MEI / Simples)
+  const handleImprimirInformeIsentosA4 = () => {
+    if (!onOpenReportPreview) return;
+
+    const razaoSocial = empresa?.razaoSocial || 'EMPRESA CONTÁBIL MODELO LTDA';
+    const cnpj = empresa?.cnpj || '12.345.678/0001-90';
+    const contador = empresa?.contadorNome || 'Bel. Roberto Silva';
+    const crc = empresa?.contadorCRC || 'CRC-SP 123456/O-8';
+
+    const conteudoInforme = (
+      <div className="font-sans text-black space-y-5 text-xs">
+        <div className="border-2 border-black p-3 bg-gray-100">
+          <h2 className="text-sm font-bold uppercase">
+            COMPROVANTE DE DISTRIBUIÇÃO DE LUCROS ISENTOS & INFORME PARA DIRPF (FICHA RENDIMENTOS ISENTOS - CÓD. 09 / 13)
+          </h2>
+          <p className="text-[11px] text-gray-700 mt-0.5">
+            Base Legal: Art. 14, §§ 1º e 2º da Lei Complementar nº 123/2006, Art. 10 da Lei nº 9.249/1995 e Resolução CFC ITG 1000
+          </p>
+        </div>
+
+        <div className="border border-black p-3 grid grid-cols-2 gap-2 text-xs">
+          <div><strong>Fonte Pagadora (PJ):</strong> {razaoSocial}</div>
+          <div><strong>CNPJ:</strong> <span className="font-mono">{cnpj}</span></div>
+          <div><strong>Regime Tributário:</strong> {empresa?.regimeTributario.replace('_', ' ')} ({empresa?.porteEmpresa || 'ME'})</div>
+          <div><strong>Ano-Calendário / Exercício:</strong> {propostaCalculada.exercicio}</div>
+        </div>
+
+        {/* Quadro Comparativo Art. 14 LC 123/2006 */}
+        <div className="border border-black">
+          <div className="bg-gray-100 font-bold p-2 border-b border-black uppercase text-[11px]">
+            1. DEMONSTRATIVO TÉCNICO DE ISENÇÃO DO LUCRO DISTRIBUÍDO (ART. 14 DA LC 123/2006)
+          </div>
+          <div className="p-3 space-y-1.5 font-mono text-[11px]">
+            <div className="flex justify-between">
+              <span className="font-sans">Receita Bruta Acumulada Comércio (Presunção 8% = R$ {comparativoIsencaoSimples.presuncaoComercio8Porcento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}):</span>
+              <span>R$ {comparativoIsencaoSimples.receitaComercio12M.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-sans">Receita Bruta Acumulada Serviços (Presunção 32% = R$ {comparativoIsencaoSimples.presuncaoServicos32Porcento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}):</span>
+              <span>R$ {comparativoIsencaoSimples.receitaServicos12M.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between text-gray-700">
+              <span className="font-sans">Limite Isento por Presunção Legal (Sem Contabilidade — Art. 14, § 1º LC 123/06):</span>
+              <span>R$ {comparativoIsencaoSimples.limiteIsentoSemEscrituracao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+            <div className="flex justify-between font-bold border-t border-black pt-1.5 text-black">
+              <span className="font-sans">Limite Isento com Escrituração Contábil ITG 1000 (Art. 14, § 2º LC 123/06 — 100% do Lucro):</span>
+              <span>R$ {comparativoIsencaoSimples.limiteIsentoComEscrituracaoItg1000.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Quadro de Beneficiários (Sócios / Titular MEI) */}
+        <div className="border border-black">
+          <div className="bg-gray-100 font-bold p-2 border-b border-black uppercase text-[11px]">
+            2. RELAÇÃO DE SÓCIOS / TITULAR BENEFICIÁRIOS E VALORES ISENTOS DE IRPF
+          </div>
+          <table className="w-full border-collapse text-[11px] font-mono">
+            <thead>
+              <tr className="border-b border-black bg-gray-50">
+                <th className="p-2 text-left font-sans">Nome do Sócio / Titular</th>
+                <th className="p-2 text-left">CPF</th>
+                <th className="p-2 text-center">% Quotas</th>
+                <th className="p-2 text-right">Lucro Isento Pago/Creditado (R$)</th>
+                <th className="p-2 text-right">IRRF Retido (R$)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {propostaCalculada.distribuicaoSocios.map((s, idx) => (
+                <tr key={idx} className="border-b border-gray-300">
+                  <td className="p-2 font-sans font-bold">{s.socioNome}</td>
+                  <td className="p-2">{s.cpf}</td>
+                  <td className="p-2 text-center">{s.percentual.toFixed(2)}%</td>
+                  <td className="p-2 text-right font-bold">R$ {s.valorDividendo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="p-2 text-right">R$ 0,00 (ISENTO)</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-black font-bold bg-gray-100">
+                <td colSpan={3} className="p-2 text-right font-sans uppercase">TOTAL DE LUCROS ISENTOS DISTRIBUÍDOS:</td>
+                <td className="p-2 text-right">R$ {propostaCalculada.valorTotalDistribuir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td className="p-2 text-right">R$ 0,00</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <div className="border border-black p-3 bg-gray-50 text-[11px] leading-relaxed">
+          <strong>Orientação para Declaração de Ajuste Anual (DIRPF Pessoa Física):</strong> Os valores acima devem ser informados na ficha{' '}
+          <em>"Rendimentos Isentos e Não Tributáveis"</em> sob o <strong>Código 09</strong> (Lucros e dividendos recebidos) ou{' '}
+          <strong>Código 13</strong> (Rendimento de sócio ou titular de microempresa ou empresa de pequeno porte optante pelo Simples Nacional), tendo a empresa mantido escrituração contábil regular conforme Resolução CFC ITG 1000.
+        </div>
+
+        <div className="grid grid-cols-2 gap-8 pt-8 text-center">
+          <div className="border-t border-black pt-2">
+            <div className="font-bold">{empresa?.responsavelLegal || razaoSocial}</div>
+            <div className="text-[10px]">Representante Legal / Sócio Administrador</div>
+          </div>
+          <div className="border-t border-black pt-2">
+            <div className="font-bold">{contador}</div>
+            <div className="text-[10px]">Contador Responsável Técnico • {crc}</div>
+          </div>
+        </div>
+      </div>
+    );
+
+    onOpenReportPreview({
+      titulo: 'INFORME E RECIBO DE DISTRIBUIÇÃO DE LUCROS ISENTOS (SIMPLES NACIONAL / MEI)',
+      subtitulo: `Art. 14, §§ 1º e 2º da Lei Complementar nº 123/2006 • Escrituração Contábil ITG 1000`,
+      conteudo: conteudoInforme
+    });
+  };
+
+  // Ação 4: Imprimir Ata de Reunião A4 Oficial
   const handleImprimirAtaA4 = () => {
     if (!onOpenReportPreview) return;
 
@@ -205,10 +349,10 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
             Sede: {endereco}
           </p>
           <h2 className="text-sm font-bold uppercase tracking-wide mt-3 text-neutral-800">
-            ATA DA REUNIÃO ORDINÁRIA DE SÓCIOS / DELIBERAÇÃO DA ADMINISTRAÇÃO
+            ATA DE APROVAÇÃO DE CONTAS (ITG 1000) E DISTRIBUIÇÃO DE LUCROS ISENTOS (LC 123/2006)
           </h2>
           <p className="text-xs italic text-neutral-600 font-sans">
-            Aprovação das Contas do Exercício Social e Destinação do Resultado Líquido Apurado
+            Aprovação das Demonstrações Contábeis Simplificadas e Destinação do Lucro Líquido Apurado
           </p>
         </div>
 
@@ -221,37 +365,27 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
             <strong>2. CONVOCAÇÃO E PRESENÇAS:</strong> Dispensadas as formalidades convocatórias prévias tendo em vista o comparecimento unânime de todos os sócios detentores do capital social, nos termos facultados pelo Artigo 1.072, § 2º da Lei Federal nº 10.406/2002 (Código Civil).
           </p>
           <p>
-            <strong>3. MESA DIRETORA:</strong> Assumiu a presidência dos trabalhos o Sr(a). <strong>{propostaCalculada.distribuicaoSocios[0]?.socioNome || 'Sócio Administrador'}</strong>, que convidou para secretariar os trabalhos o Sr(a). <strong>{propostaCalculada.distribuicaoSocios[1]?.socioNome || 'Sócio Cotista'}</strong>.
-          </p>
-          <p>
-            <strong>4. ORDEM DO DIA:</strong> Deliberar sobre: (a) Tomada de contas dos administradores, exame, discussão e votação das Demonstrações Contábeis (Balanço Patrimonial e DRE) do exercício social encerrado em {dataReuniao}; (b) Destinação do Resultado Líquido Apurado conforme a Lei nº 6.404/76 e Código Civil; (c) Outros assuntos de interesse societário.
-          </p>
-          <p>
-            <strong>5. DELIBERAÇÕES TOMADAS POR UNANIMIDADE:</strong> Instalada a sessão e postas as matérias em discussão e votação, deliberaram os sócios:
+            <strong>3. DELIBERAÇÕES TOMADAS POR UNANIMIDADE:</strong> Examinadas e aprovadas sem ressalvas as Demonstrações Contábeis (Balanço Patrimonial e DRE elaborados segundo a Resolução CFC ITG 1000) relativas ao exercício de {empresa?.exercicioAtivo || 2026}, que evidenciaram um <strong>Lucro Contábil Líquido de R$ {propostaCalculada.lucroLiquidoApurado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>, deliberaram os sócios:
           </p>
           <div className="pl-4 border-l-2 border-neutral-300 space-y-2 text-xs italic font-serif">
             <p>
-              <strong>a) APROVAÇÃO DAS DEMONSTRAÇÕES CONTÁBEIS:</strong> Foram examinadas e aprovadas sem reservas nem ressalvas as Demonstrações Contábeis e Financeiras da sociedade relativas ao exercício social de {empresa?.exercicioAtivo || 2026}, elaboradas em estrita observância às Normas Brasileiras de Contabilidade (NBC TG / CFC), as quais evidenciaram um <strong>Lucro Líquido do Exercício no montante de R$ {propostaCalculada.lucroLiquidoApurado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
-            </p>
-            <p>
-              <strong>b) CONSTITUIÇÃO DA RESERVA LEGAL:</strong> Nos termos imperativos do Artigo 193 da Lei Federal nº 6.404/1976, aplicável subsidiariamente, foi aprovada a destinação de <strong>5% (cinco por cento)</strong> do lucro líquido, totalizando <strong>R$ {propostaCalculada.valorReservaLegal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>, para a conta de Reserva Legal do Patrimônio Líquido.
-            </p>
-            <p>
-              <strong>c) DISTRIBUIÇÃO DE DIVIDENDOS AOS SÓCIOS:</strong> Do saldo remanescente, deliberou-se pela distribuição de <strong>R$ {propostaCalculada.valorTotalDistribuir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> a título de lucros e dividendos isentos de imposto de renda aos sócios, proporcionalmente às respectivas participações no capital:
+              <strong>a) DISTRIBUIÇÃO DE LUCROS ISENTOS DE IRRF (ART. 14, § 2º DA LC 123/2006):</strong> Tendo a sociedade mantido escrituração contábil regular no Livro Diário, fica aprovada a distribuição de <strong>R$ {propostaCalculada.valorTotalDistribuir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ({propostaCalculada.percentualDistribuicao}%)</strong> a título de lucros totalmente isentos de Imposto de Renda na Fonte e na Declaração dos Sócios:
             </p>
             <ul className="list-disc pl-6 space-y-1 font-sans text-[11px] not-italic">
               {propostaCalculada.distribuicaoSocios.map((s, idx) => (
                 <li key={idx}>
-                  <strong>{s.socioNome}</strong> (CPF: {s.cpf}, {s.percentual}% de participação) $\rightarrow$ <strong>R$ {s.valorDividendo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
+                  <strong>{s.socioNome}</strong> (CPF: {s.cpf}, {s.percentual}% de participação) — <strong>R$ {s.valorDividendo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
                 </li>
               ))}
             </ul>
-            <p>
-              <strong>d) RETENÇÃO DE LUCROS PARA INVESTIMENTOS:</strong> O saldo remanescente de <strong>R$ {propostaCalculada.valorRetencaoExpansao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> será retido na conta de Reserva Estatutária / Expansão (Art. 196 da Lei 6.404/76) para autofinanciamento e investimentos da sociedade.
-            </p>
+            {propostaCalculada.valorRetencaoExpansao > 0 && (
+              <p>
+                <strong>b) SALDO EM LUCROS ACUMULADOS:</strong> O saldo remanescente de <strong>R$ {propostaCalculada.valorRetencaoExpansao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> permanecerá retido na conta de Lucros Acumulados do Patrimônio Líquido para reforço de capital de giro.
+              </p>
+            )}
           </div>
           <p>
-            <strong>6. ENCERRAMENTO:</strong> Nada mais havendo a tratar, foram encerrados os trabalhos e lavrada a presente ata que, lida e achada conforme por todos os presentes, vai por eles devidamente assinada.
+            <strong>4. ENCERRAMENTO:</strong> Nada mais havendo a tratar, foi lavrada a presente ata e assinada pelos sócios e pelo contador responsável.
           </p>
         </div>
 
@@ -279,8 +413,8 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
     );
 
     onOpenReportPreview({
-      titulo: 'ATA DE REUNIÃO DE SÓCIOS / DESTINAÇÃO DO RESULTADO',
-      subtitulo: `Exercício Social ${empresa?.exercicioAtivo || 2026} • Em conformidade com a Lei Federal nº 6.404/76 e Código Civil`,
+      titulo: 'ATA DE APROVAÇÃO DE CONTAS E DISTRIBUIÇÃO DE LUCROS ISENTOS (ITG 1000)',
+      subtitulo: `Exercício Social ${empresa?.exercicioAtivo || 2026} • Art. 14 da LC 123/2006 e Resolução CFC ITG 1000`,
       conteudo: conteudoAta
     });
   };
@@ -295,11 +429,11 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
           </div>
           <div>
             <h2 className="text-sm font-semibold text-neutral-100 flex items-center space-x-2">
-              <span>Assistente Oficial de Encerramento do Exercício & Destinação</span>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-medium">NBC TG / Lei 6.404/76</span>
+              <span>Zeramento do Exercício & Distribuição de Lucros Isentos (Simples / MEI)</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-medium">ITG 1000 & LC 123 Art. 14</span>
             </h2>
             <p className="text-[11px] text-neutral-400">
-              Rotina automatizada de apuração da ARE, cálculo legal da Reserva Legal, distribuição aos sócios e lavratura de ata societária.
+              Zeramento das contas de resultado (`Zeramento_Contabilidade.htm`), comparativo de isenção (Presunção 8%/32% vs Contabilidade) e Informe DIRPF A4.
             </p>
           </div>
         </div>
@@ -315,7 +449,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
             }`}
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>1. Zeramento & ARE</span>
+            <span>1. Zeramento (`Utilitários\Zeramento`)</span>
           </button>
 
           <button
@@ -327,7 +461,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
             }`}
           >
             <PieChart className="w-3.5 h-3.5" />
-            <span>2. Destinação & Dividendos</span>
+            <span>2. Lucros Isentos (Art. 14 LC 123)</span>
           </button>
 
           <button
@@ -339,7 +473,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>3. Ata de Sócios A4</span>
+            <span>3. Informe DIRPF & Ata A4</span>
           </button>
         </div>
       </div>
@@ -395,7 +529,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
               </div>
 
               <div className="bg-[#181818] border border-white/10 rounded-xl p-3.5 shadow-sm">
-                <span className="text-[11px] text-neutral-400 font-medium block">Resultado Líquido do Exercício</span>
+                <span className="text-[11px] text-neutral-400 font-medium block">Resultado Contábil Líquido (ITG 1000)</span>
                 <div className="flex items-center space-x-2 mt-1">
                   <span className={`text-lg font-bold font-mono ${
                     resultadoLiquido >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -405,11 +539,11 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                   <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
                     resultadoLiquido >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'
                   }`}>
-                    {resultadoLiquido >= 0 ? 'LUCRO' : 'PREJUÍZO'}
+                    {resultadoLiquido >= 0 ? 'LUCRO ISENTO' : 'PREJUÍZO'}
                   </span>
                 </div>
                 <span className="text-[10px] text-neutral-500 mt-1 block">
-                  Saldo transferível para ARE / PL
+                  100% isento de IRPF c/ escrituração (Art. 14 § 2º LC 123)
                 </span>
               </div>
 
@@ -424,12 +558,12 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
               </div>
             </div>
 
-            {/* Parâmetros do Zeramento */}
-            <div className="bg-[#181818] border border-white/10 rounded-xl p-4 shadow-sm space-y-3">
+            {/* Parâmetros do Zeramento + Guia Zeramento (Op__es_Contabilidade.htm) */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-4 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
                 <h3 className="font-semibold text-xs text-neutral-200 uppercase tracking-wider flex items-center space-x-2">
                   <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Configurações do Encerramento do Exercício</span>
+                  <span>Parâmetros de Zeramento (`Utilitários\Zeramento` & `Opções\Guia Zeramento`)</span>
                 </h3>
                 <span className="text-[11px] text-neutral-500">
                   Empresa: <strong className="text-neutral-300">{empresa?.razaoSocial}</strong> (Exercício {empresa?.exercicioAtivo || 2026})
@@ -438,7 +572,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
 
               <div className="grid grid-cols-4 gap-4 text-xs">
                 <div>
-                  <label className="block text-neutral-400 mb-1">Data do Zeramento</label>
+                  <label className="block text-neutral-400 mb-1">Data de Zeramento</label>
                   <input
                     type="date"
                     value={dataZeramento}
@@ -454,14 +588,14 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                     onChange={(e) => setTipoEncerramento(e.target.value as any)}
                     className="w-full bg-neutral-900 border border-white/10 rounded p-2 text-neutral-100 outline-none focus:border-blue-500 text-xs"
                   >
-                    <option value="ANUAL">Anual (31/12 - Obrigatório NBC TG)</option>
-                    <option value="TRIMESTRAL">Trimestral (Lucro Real / Presumido)</option>
+                    <option value="ANUAL">Anual (31/12 - Padrão ITG 1000 / Simples)</option>
+                    <option value="TRIMESTRAL">Trimestral</option>
                     <option value="MENSAL">Mensal Gerencial</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-neutral-400 mb-1">Conta de Destino (ARE / PL)</label>
+                  <label className="block text-neutral-400 mb-1">Conta Destino Analítica (`Opções\Guia Zeramento`)</label>
                   <select
                     value={contaDestinoId}
                     onChange={(e) => setContaDestinoId(Number(e.target.value))}
@@ -476,7 +610,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-neutral-400 mb-1">Histórico Padrão</label>
+                  <label className="block text-neutral-400 mb-1">Histórico do Zeramento (`Enter` aceita padrão)</label>
                   <select
                     value={historicoId}
                     onChange={(e) => setHistoricoId(Number(e.target.value))}
@@ -491,10 +625,64 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-white/10">
+              {/* Guia Zeramento: Contas que deverão ser zeradas (Botões Incluir e Excluir de Op__es_Contabilidade.htm) */}
+              <div className="p-3 bg-[#141414] border border-white/5 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center space-x-2 flex-wrap gap-y-1.5">
+                  <span className="text-neutral-400 font-medium">Contas/Grupos que deverão ser zerados:</span>
+                  {gruposParaZerar.map(pref => {
+                    const codigoLimpo = pref.replace(/\.$/, '');
+                    const contaGrupo = contas.find(c => c.classificacao === codigoLimpo);
+                    return (
+                      <span
+                        key={pref}
+                        className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded bg-blue-500/15 border border-blue-500/30 text-blue-300 font-mono text-[11px]"
+                      >
+                        <span>
+                          Grupo {codigoLimpo} ({contaGrupo ? contaGrupo.nome : codigoLimpo === '3' ? 'Receitas' : 'Custos e Despesas'})
+                        </span>
+                        {gruposParaZerar.length > 1 && (
+                          <button
+                            onClick={() => handleExcluirGrupoZeramento(pref)}
+                            className="text-blue-400 hover:text-rose-400 ml-1 font-sans font-bold"
+                            title="Excluir grupo do zeramento"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <select
+                    value={novoGrupoPrefixo}
+                    onChange={(e) => setNovoGrupoPrefixo(e.target.value)}
+                    className="bg-[#1c1c1c] border border-white/10 rounded px-2 py-1 text-neutral-200 font-mono text-xs"
+                  >
+                    <option value="3">3 - RECEITAS OPERACIONAIS</option>
+                    <option value="4">4 - CUSTOS E DESPESAS</option>
+                    {contasSinteticasResultado.map(cs => (
+                      <option key={cs.id} value={cs.classificacao}>
+                        {cs.classificacao} - {cs.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleIncluirGrupoZeramento}
+                    className="px-2.5 py-1 bg-[#242424] hover:bg-neutral-700 border border-white/10 rounded text-neutral-200 text-xs font-medium transition"
+                  >
+                    + Incluir Grupo
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-2 border-t border-white/10">
                 <div className="text-xs text-neutral-400 flex items-center space-x-2">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Transferência de saldos por partidas dobradas em conformidade com o Decreto nº 9.580/2018 (RIR).</span>
+                  <span>
+                    Você ainda poderá emitir Balanço ou Balancete marcando <em>"Desconsiderar Zeramento"</em> conforme `Zeramento_Contabilidade.htm`.
+                  </span>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -504,14 +692,14 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded font-medium text-xs transition flex items-center space-x-2 shadow-lg shadow-blue-900/30"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    <span>Processar Zeramento e Fechar Período</span>
+                    <span>Executar Zeramento (`Origem: Zeramento`)</span>
                   </button>
 
                   <button
                     onClick={() => setAbaAtiva('DESTINACAO')}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-medium text-xs transition flex items-center space-x-2 shadow-lg shadow-emerald-900/30"
                   >
-                    <span>Avançar para Destinação do Lucro</span>
+                    <span>2. Calcular Lucro Isento dos Sócios</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -521,9 +709,9 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
             {/* Tabela de Pré-visualização dos Lançamentos de Zeramento */}
             <div className="bg-[#181818] border border-white/10 rounded-xl overflow-hidden shadow-lg">
               <div className="p-3 bg-neutral-900 border-b border-white/10 flex items-center justify-between text-xs font-semibold text-neutral-300">
-                <span className="uppercase tracking-wider">GRADE DE PARTIDAS DOBRADAS GERADAS PARA A CONTA ARE</span>
+                <span className="uppercase tracking-wider">GRADE DE PARTIDAS DOBRADAS GERADAS PARA A CONTA DESTINO</span>
                 <span className="text-[11px] text-neutral-500 font-normal">
-                  Todas as contas abaixo terão seus saldos zerados
+                  Todas as contas analíticas subordinadas aos grupos selecionados serão zeradas
                 </span>
               </div>
 
@@ -534,6 +722,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                     <th className="py-2.5 px-3 w-24">Data</th>
                     <th className="py-2.5 px-3">Conta de Origem (Resultado)</th>
                     <th className="py-2.5 px-3">Conta de Destino (ARE / PL)</th>
+                    <th className="py-2.5 px-3 w-24 text-center">Origem</th>
                     <th className="py-2.5 px-3 w-32 text-right">Valor Zerado (R$)</th>
                     <th className="py-2.5 px-3">Histórico / Descrição</th>
                   </tr>
@@ -554,6 +743,11 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                         <td className="py-2 px-3 text-emerald-400 font-medium">
                           {contaDestino?.nome}
                         </td>
+                        <td className="py-2 px-3 text-center">
+                          <span className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 font-mono text-[10px]">
+                            Zeramento
+                          </span>
+                        </td>
                         <td className="py-2 px-3 text-right font-mono font-semibold text-blue-400">
                           {l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </td>
@@ -564,7 +758,7 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
 
                   {novosLancamentos.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center text-neutral-500 text-xs">
+                      <td colSpan={7} className="py-12 text-center text-neutral-500 text-xs">
                         Todas as contas de resultado já se encontram zeradas ou sem movimentação pendente no período.
                       </td>
                     </tr>
@@ -576,28 +770,111 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
         )}
 
         {/* ============================================================== */}
-        {/* ABA 2: DESTINAÇÃO DO RESULTADO & DIVIDENDOS (LEI 6.404/76) */}
+        {/* ABA 2: ASSISTENTE GUIADO DE LUCROS ISENTOS (ART. 14 LC 123/2006) */}
         {/* ============================================================== */}
         {abaAtiva === 'DESTINACAO' && (
           <div className="space-y-4">
-            {/* Banner de Conformidade Legal */}
-            <div className="p-4 bg-[#181818] border border-white/10 rounded-xl flex items-center justify-between shadow-sm">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                  <Award className="w-5 h-5" />
+            {/* Painel Comparativo Art. 14 da LC 123/2006: Sem Contabilidade (8%/32%) vs Com Contabilidade ITG 1000 */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-neutral-100 uppercase tracking-wider">
+                      Comparativo de Isenção de IRPF sobre Lucros Distribuídos — Art. 14, §§ 1º e 2º da LC 123/2006
+                    </h3>
+                    <p className="text-[11px] text-neutral-400">
+                      Demonstra ao cliente do escritório a economia tributária gerada pela escrituração contábil regular (ITG 1000) em relação ao limite de presunção.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-xs font-bold text-neutral-100 uppercase tracking-wider">
-                    Plano de Destinação do Lucro Líquido (Art. 193 a 202 da Lei nº 6.404/76 & Código Civil)
-                  </h3>
-                  <p className="text-[11px] text-neutral-400">
-                    Aplicação automática da Reserva Legal obrigatória de 5% e distribuição de lucros aos sócios com base no QSA da empresa.
+
+                <button
+                  onClick={handleImprimirInformeIsentosA4}
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-medium transition flex items-center space-x-1.5"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Emitir Informe de Rendimentos Isentos (DIRPF) A4</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 text-xs">
+                {/* Coluna 1: Regra da Presunção (Sem Contabilidade) */}
+                <div className="p-3.5 bg-[#141414] border border-white/5 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between text-neutral-400">
+                    <span className="font-semibold text-[11px] uppercase">1. Sem Escrituração Contábil (Art. 14 § 1º)</span>
+                    <span className="text-[10px] font-mono bg-neutral-800 px-1.5 py-0.5 rounded">Presunção 8% / 32%</span>
+                  </div>
+                  <div className="text-base font-bold font-mono text-neutral-300">
+                    R$ {comparativoIsencaoSimples.limiteIsentoSemEscrituracao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-[10px] text-neutral-500 font-mono">
+                    8% Comércio (R$ {comparativoIsencaoSimples.presuncaoComercio8Porcento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) + 32% Serviços (R$ {comparativoIsencaoSimples.presuncaoServicos32Porcento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}) - IRPJ DAS
+                  </p>
+                </div>
+
+                {/* Coluna 2: Regra da Contabilidade ITG 1000 */}
+                <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/30 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between text-emerald-300">
+                    <span className="font-semibold text-[11px] uppercase">2. Com Escrituração ITG 1000 (Art. 14 § 2º)</span>
+                    <span className="text-[10px] font-mono bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">100% Isento IRRF</span>
+                  </div>
+                  <div className="text-base font-bold font-mono text-emerald-400">
+                    R$ {comparativoIsencaoSimples.limiteIsentoComEscrituracaoItg1000.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-[10px] text-emerald-300/80">
+                    100% do Lucro Contábil apurado no Livro Diário pode ser distribuído sem IRRF.
+                  </p>
+                </div>
+
+                {/* Coluna 3: Ganho de Isenção Gerado pelo Contador */}
+                <div className="p-3.5 bg-[#141414] border border-amber-500/20 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between text-amber-300">
+                    <span className="font-semibold text-[11px] uppercase">3. Ganho Extra de Isenção p/ Sócios</span>
+                    <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">Valor Agregado</span>
+                  </div>
+                  <div className="text-base font-bold font-mono text-amber-400">
+                    + R$ {comparativoIsencaoSimples.ganhoIsencaoPelaContabilidade.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <p className="text-[10px] text-neutral-400">
+                    Parcela adicional de lucro protegida de tributação na Pessoa Física (até 27,5% de IRPF economizado).
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* Controles Simplificados para Pequenos Escritórios */}
+            <div className="p-4 bg-[#181818] border border-white/10 rounded-xl flex flex-wrap items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-center space-x-6 text-xs">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={constituirReservaLegal}
+                    onChange={(e) => setConstituirReservaLegal(e.target.checked)}
+                    className="rounded bg-neutral-900 border-white/20 text-blue-500 focus:ring-0"
+                  />
+                  <span className="text-neutral-300">
+                    Retenção de Reserva Legal 5% <span className="text-neutral-500">(Opcional para ME / EPP / Ltda)</span>
+                  </span>
+                </label>
+
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={pagarDiretoCaixaBanco}
+                    onChange={(e) => setPagarDiretoCaixaBanco(e.target.checked)}
+                    className="rounded bg-neutral-900 border-white/20 text-emerald-500 focus:ring-0"
+                  />
+                  <span className="text-neutral-300">
+                    Baixar pagamento direto no Caixa / Banco (`Saída`)
+                  </span>
+                </label>
+              </div>
 
               <div className="flex items-center space-x-3">
-                <span className="text-xs text-neutral-400">Percentual de Distribuição:</span>
+                <span className="text-xs text-neutral-400">Percentual do Lucro a Distribuir:</span>
                 <input
                   type="number"
                   min="0"
@@ -613,42 +890,42 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
             {/* Cards de Resumo da Destinação */}
             <div className="grid grid-cols-4 gap-3">
               <div className="bg-[#181818] border border-white/10 rounded-xl p-3.5 shadow-sm">
-                <span className="text-[11px] text-neutral-400 font-medium block">Lucro Líquido do Exercício (ARE)</span>
+                <span className="text-[11px] text-neutral-400 font-medium block">Lucro Contábil Apurado (ARE)</span>
                 <span className="text-lg font-bold text-emerald-400 font-mono mt-1 block">
                   R$ {propostaCalculada.lucroLiquidoApurado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10px] text-neutral-500 mt-1 block">
-                  Base de cálculo para as destinações
+                  Base contábil apurada na DRE
                 </span>
               </div>
 
               <div className="bg-[#181818] border border-white/10 rounded-xl p-3.5 shadow-sm">
-                <span className="text-[11px] text-neutral-400 font-medium block">Reserva Legal (5% Obrigatório)</span>
+                <span className="text-[11px] text-neutral-400 font-medium block">Reserva Legal ({propostaCalculada.percentualReservaLegal}%)</span>
                 <span className="text-lg font-bold text-blue-400 font-mono mt-1 block">
                   R$ {propostaCalculada.valorReservaLegal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10px] text-neutral-500 mt-1 block">
-                  Limite de 20% do Capital Social (Art. 193)
+                  {constituirReservaLegal ? 'Retida no Patrimônio Líquido' : 'Dispensada (100% livre p/ sócios)'}
                 </span>
               </div>
 
               <div className="bg-[#181818] border border-white/10 rounded-xl p-3.5 shadow-sm">
-                <span className="text-[11px] text-neutral-400 font-medium block">Dividendos a Distribuir ({percentualDistribuicao}%)</span>
+                <span className="text-[11px] text-neutral-400 font-medium block">Lucros Isentos a Distribuir ({percentualDistribuicao}%)</span>
                 <span className="text-lg font-bold text-amber-400 font-mono mt-1 block">
                   R$ {propostaCalculada.valorTotalDistribuir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10px] text-neutral-500 mt-1 block">
-                  Isento de IRRF (Art. 10 Lei 9.249/95)
+                  100% Isento de IRRF (Art. 14 LC 123/06)
                 </span>
               </div>
 
               <div className="bg-[#181818] border border-white/10 rounded-xl p-3.5 shadow-sm">
-                <span className="text-[11px] text-neutral-400 font-medium block">Retenção para Expansão (Art. 196)</span>
+                <span className="text-[11px] text-neutral-400 font-medium block">Saldo em Lucros Acumulados</span>
                 <span className="text-lg font-bold text-purple-400 font-mono mt-1 block">
                   R$ {propostaCalculada.valorRetencaoExpansao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
                 <span className="text-[10px] text-neutral-500 mt-1 block">
-                  Reserva Estatutária de Lucros
+                  Mantido no Patrimônio Líquido (ITG 1000)
                 </span>
               </div>
             </div>
@@ -658,22 +935,22 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
               <div className="p-3 bg-neutral-900 border-b border-white/10 flex items-center justify-between text-xs font-semibold text-neutral-300">
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4 text-emerald-400" />
-                  <span className="uppercase tracking-wider">QUADRO SOCIETÁRIO (QSA) & DISTRIBUIÇÃO PROPORCIONAL DE DIVIDENDOS</span>
+                  <span className="uppercase tracking-wider">QUADRO DE SÓCIOS / TITULAR (QSA) & DISTRIBUIÇÃO DE LUCROS ISENTOS</span>
                 </div>
                 <span className="text-[11px] text-neutral-400 font-mono">
-                  Total Distribuído: R$ {propostaCalculada.valorTotalDistribuir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  Total Isento: R$ {propostaCalculada.valorTotalDistribuir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </span>
               </div>
 
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-neutral-900/60 border-b border-white/10 text-neutral-400 font-medium">
                   <tr>
-                    <th className="py-2.5 px-3">Sócio / Beneficiário</th>
+                    <th className="py-2.5 px-3">Sócio / Titular Beneficiário</th>
                     <th className="py-2.5 px-3 w-36">CPF</th>
-                    <th className="py-2.5 px-3 w-28 text-center">% Capital</th>
-                    <th className="py-2.5 px-3 w-40 text-right">Valor Dividendo (R$)</th>
-                    <th className="py-2.5 px-3 w-48">Conta de Passivo Vinculada</th>
-                    <th className="py-2.5 px-3 w-28 text-center">Status</th>
+                    <th className="py-2.5 px-3 w-28 text-center">% Participação</th>
+                    <th className="py-2.5 px-3 w-40 text-right">Lucro Isento (R$)</th>
+                    <th className="py-2.5 px-3 w-52">Contrapartida Contábil</th>
+                    <th className="py-2.5 px-3 w-28 text-center">Tributação IRPF</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 font-sans">
@@ -690,11 +967,11 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                         R$ {s.valorDividendo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                       <td className="py-2.5 px-3 font-mono text-neutral-400 text-[11px]">
-                        2.1.05.01 - Dividendos a Pagar
+                        {pagarDiretoCaixaBanco ? '102 - Bancos Conta Movimento' : '2.01.02 - Lucros a Pagar'}
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">
-                          APROVADO
+                          ISENTO (0%)
                         </span>
                       </td>
                     </tr>
@@ -706,29 +983,39 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                 <div className="text-xs text-neutral-400 flex items-center space-x-2">
                   <Landmark className="w-4 h-4 text-blue-400" />
                   <span>
-                    O lançamento contábil debitará a conta <strong>ARE/Lucros</strong> e creditará <strong>Reserva Legal</strong>, <strong>Dividendos a Pagar</strong> e <strong>Reserva de Expansão</strong>.
+                    Debita <strong>ARE / Lucros Acumulados</strong> e credita <strong>{pagarDiretoCaixaBanco ? 'Bancos / Caixa Geral' : 'Lucros e Dividendos a Pagar'}</strong>.
                   </span>
                 </div>
 
-                <button
-                  onClick={handleIntegrarDestinacao}
-                  disabled={destinacaoIntegrada}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded font-medium text-xs transition flex items-center space-x-2 shadow-lg shadow-emerald-900/30"
-                >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>{destinacaoIntegrada ? 'Destinação Já Integrada ao Diário' : 'Efetivar Proposta & Integrar à Contabilidade'}</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handleImprimirInformeIsentosA4}
+                    className="px-3.5 py-2 bg-[#242424] hover:bg-neutral-700 border border-white/10 text-neutral-200 rounded font-medium text-xs transition flex items-center space-x-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Imprimir Informe DIRPF A4</span>
+                  </button>
+
+                  <button
+                    onClick={handleIntegrarDestinacao}
+                    disabled={destinacaoIntegrada}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded font-medium text-xs transition flex items-center space-x-2 shadow-lg shadow-emerald-900/30"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{destinacaoIntegrada ? 'Distribuição Já Integrada ao Diário' : 'Gravar Distribuição na Contabilidade'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
         {/* ============================================================== */}
-        {/* ABA 3: ATA DE REUNIÃO DE SÓCIOS / DELIBERAÇÃO A4 */}
+        {/* ABA 3: INFORME DE RENDIMENTOS ISENTOS (DIRPF) & ATA DE SÓCIOS A4 */}
         {/* ============================================================== */}
         {abaAtiva === 'ATA' && (
           <div className="space-y-4">
-            {/* Barra Superior de Ações da Ata */}
+            {/* Barra Superior de Ações da Ata e Informe */}
             <div className="bg-[#181818] border border-white/10 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
@@ -736,17 +1023,17 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                 </div>
                 <div>
                   <h3 className="text-xs font-semibold text-neutral-200">
-                    Ata Formal de Reunião de Sócios & Aprovação de Contas
+                    Informe de Rendimentos Isentos (DIRPF Sócios) & Ata Simplificada de Aprovação de Contas (ITG 1000)
                   </h3>
                   <p className="text-[10px] text-neutral-400">
-                    Documento jurídico oficial pronto para registro na Junta Comercial e arquivo contábil.
+                    Documentos oficiais prontos para entrega aos sócios/titular MEI na declaração de Imposto de Renda Pessoa Física e arquivo contábil.
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2 text-xs">
-                  <span className="text-neutral-400">Data da Reunião:</span>
+                  <span className="text-neutral-400">Data da Deliberação:</span>
                   <input
                     type="date"
                     value={dataReuniao}
@@ -756,52 +1043,54 @@ export const ZeramentoModule: React.FC<ZeramentoModuleProps> = ({
                 </div>
 
                 <button
-                  onClick={handleImprimirAtaA4}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-xs transition flex items-center space-x-2 shadow-lg"
+                  onClick={handleImprimirInformeIsentosA4}
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded font-medium text-xs transition flex items-center space-x-1.5 shadow-sm"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  <span>Visualizar & Imprimir A4 Oficial</span>
+                  <span>Imprimir Informe de Lucros Isentos (DIRPF) A4</span>
+                </button>
+
+                <button
+                  onClick={handleImprimirAtaA4}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-xs transition flex items-center space-x-1.5 shadow-sm"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Imprimir Ata de Aprovação A4</span>
                 </button>
               </div>
             </div>
 
-            {/* Visualizador de Folha de Ata A4 Formal */}
+            {/* Visualizador de Folha de Ata e Informe A4 Formal */}
             <div className="bg-[#1c1c1c] border border-white/10 rounded-xl p-6 shadow-xl max-w-4xl mx-auto space-y-5 text-neutral-300 font-serif">
               <div className="text-center border-b border-white/10 pb-4">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-white">
                   {empresa?.razaoSocial || 'EMPRESA CONTÁBIL MODELO LTDA'}
                 </h2>
                 <p className="text-xs text-neutral-400 font-sans mt-0.5">
-                  CNPJ: {empresa?.cnpj || '12.345.678/0001-90'} • NIRE: {empresa?.nire || '35.234.567.890'}
+                  CNPJ: {empresa?.cnpj || '12.345.678/0001-90'} • Regime: {empresa?.regimeTributario.replace('_', ' ')} ({empresa?.porteEmpresa || 'ME'})
                 </p>
-                <h3 className="text-xs font-bold uppercase tracking-wide mt-2 text-blue-400">
-                  ATA DA REUNIÃO ORDINÁRIA DE SÓCIOS / DELIBERAÇÃO SOBRE O EXERCÍCIO SOCIAL
+                <h3 className="text-xs font-bold uppercase tracking-wide mt-2 text-emerald-400 font-sans">
+                  CERTIFICADO DE DISTRIBUIÇÃO DE LUCROS ISENTOS (ART. 14 DA LC 123/2006) & DELIBERAÇÃO DE CONTAS
                 </h3>
               </div>
 
               <div className="text-xs text-justify space-y-3 leading-relaxed">
                 <p>
-                  <strong>1. DATA, HORA E LOCAL:</strong> Aos 31 dias do mês de dezembro de {empresa?.exercicioAtivo || 2026}, às 17:00 horas, reuniram-se na sede da sociedade empresária <strong>{empresa?.razaoSocial}</strong>, os sócios componentes do quadro societário, representando 100% (cem por cento) do capital social integralizado.
+                  <strong>1. APURAÇÃO CONTÁBIL REGULAR (ITG 1000):</strong> A sociedade empresária <strong>{empresa?.razaoSocial}</strong>, mantendo escrituração contábil regular no Livro Diário conforme o § 2º do Art. 14 da Lei Complementar nº 123/2006 e a Resolução CFC ITG 1000, apurou no exercício social encerrado em {dataReuniao} o <strong>Lucro Contábil Líquido de R$ {propostaCalculada.lucroLiquidoApurado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
                 </p>
                 <p>
-                  <strong>2. ORDEM DO DIA:</strong> Deliberar sobre: (a) Tomada de contas dos administradores, exame, discussão e aprovação das Demonstrações Contábeis e Financeiras do exercício social findo; (b) Destinação do Resultado Líquido Apurado em estrita conformidade com a Lei Federal nº 6.404/76 e o Código Civil; (c) Outros assuntos societários.
+                  <strong>2. EVIDENCIAÇÃO DA VANTAGEM PELA CONTABILIDADE:</strong> Enquanto o limite de isenção por presunção legal (8% Comércio / 32% Serviços — Art. 14, § 1º) seria de <strong>R$ {comparativoIsencaoSimples.limiteIsentoSemEscrituracao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>, a manutenção da escrituração contábil assegura a isenção integral sobre <strong>R$ {comparativoIsencaoSimples.limiteIsentoComEscrituracaoItg1000.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
                 </p>
                 <p>
-                  <strong>3. DELIBERAÇÕES TOMADAS POR UNANIMIDADE:</strong>
+                  <strong>3. DISTRIBUIÇÃO APROVADA AOS SÓCIOS / TITULAR:</strong>
                 </p>
-                <div className="pl-4 border-l-2 border-blue-500/40 space-y-1.5 text-xs italic font-serif text-neutral-300">
-                  <p>
-                    • Aprovado o <strong>Lucro Líquido do Exercício de R$ {propostaCalculada.lucroLiquidoApurado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> apurado na conta ARE.
-                  </p>
-                  <p>
-                    • Destinado <strong>R$ {propostaCalculada.valorReservaLegal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} (5%)</strong> para a conta de Reserva Legal do Patrimônio Líquido.
-                  </p>
-                  <p>
-                    • Aprovada a distribuição de <strong>R$ {propostaCalculada.valorTotalDistribuir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> em dividendos isentos de IRRF entre os sócios proporcionais ao QSA.
-                  </p>
-                  <p>
-                    • Retido o valor de <strong>R$ {propostaCalculada.valorRetencaoExpansao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> para reserva estatutária e autofinanciamento.
-                  </p>
+                <div className="pl-4 border-l-2 border-emerald-500/40 space-y-1.5 text-xs font-sans text-neutral-200">
+                  {propostaCalculada.distribuicaoSocios.map((s, idx) => (
+                    <p key={idx}>
+                      • <strong>{s.socioNome}</strong> (CPF: <span className="font-mono">{s.cpf}</span> • Quotas: {s.percentual.toFixed(2)}%) — Lucro Isento Creditado/Pago:{' '}
+                      <strong className="font-mono text-emerald-400">R$ {s.valorDividendo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> (Ficha DIRPF: Rendimentos Isentos e Não Tributáveis — Códigos 09 / 13).
+                    </p>
+                  ))}
                 </div>
               </div>
 

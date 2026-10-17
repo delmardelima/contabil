@@ -28,11 +28,13 @@ export const PgdasModule: React.FC = () => {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
   const [competencia, setCompetencia] = useState<string>('2026-04');
   const [apuracao, setApuracao] = useState<ApuracaoPgdas | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<'apuracao' | 'segregacoes' | 'das' | 'tabelas'>('apuracao');
+  const [activeSubTab, setActiveSubTab] = useState<'apuracao' | 'segregacoes' | 'faturamento12m' | 'das' | 'tabelas'>('apuracao');
 
   // Modais e Opções de Contabilização (Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm)
   const [showDasModal, setShowDasModal] = useState(false);
   const [showMemoriaModal, setShowMemoriaModal] = useState(false);
+  const [showDeclaracao12MModal, setShowDeclaracao12MModal] = useState(false);
+  const [showDemeiModal, setShowDemeiModal] = useState(false);
   const [copiadoPix, setCopiadoPix] = useState(false);
   const [copiadoCodigo, setCopiadoCodigo] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
@@ -94,6 +96,10 @@ export const PgdasModule: React.FC = () => {
   };
 
   const tabelas = useMemo(() => dbService.getTabelasSimplesNacional(), []);
+  const faturamentoDemei = useMemo(() => {
+    if (!empresa) return null;
+    return dbService.getFaturamentoUltimoAnoEDemei(empresa.id, competencia);
+  }, [empresa, competencia, apuracao]);
 
   return (
     <div className="h-full flex flex-col bg-[#141414] text-neutral-200 overflow-hidden font-sans">
@@ -179,6 +185,16 @@ export const PgdasModule: React.FC = () => {
         >
           <Layers size={13} />
           <span>Segregação de Receitas por Anexo</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('faturamento12m')}
+          className={`h-full flex items-center space-x-2 text-xs font-medium border-b-2 transition ${
+            activeSubTab === 'faturamento12m' ? 'border-amber-500 text-amber-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'
+          }`}
+        >
+          <FileCheck2 size={13} />
+          <span>Faturamento Último Ano & DEMEI (447)</span>
         </button>
 
         <button
@@ -700,6 +716,278 @@ export const PgdasModule: React.FC = () => {
           </div>
         )}
 
+        {/* Tab 3.5: Faturamento do Último Ano (12 Meses) & Relatório 447 - DEMEI */}
+        {activeSubTab === 'faturamento12m' && faturamentoDemei && (
+          <div className="space-y-6">
+            {/* Banner de Controle de Enquadramento (SIMPLESN_ULTRAPASSOU_PAR) */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-neutral-100 flex items-center gap-2">
+                    <ShieldCheck size={16} className="text-amber-400" />
+                    Termômetro de Enquadramento Legal (`SIMPLESN_ULTRAPASSOU_PAR` — LC 123/2006)
+                  </h3>
+                  <p className="text-xs text-neutral-400">
+                    Monitoramento automático de limites para MEI / SIMEI (R$ 81.000,00), Microempresa ME (R$ 360.000,00) e EPP (R$ 4.800.000,00)
+                  </p>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowDeclaracao12MModal(true)}
+                    className="flex items-center space-x-1.5 bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-2 rounded-lg text-xs font-medium transition shadow-sm"
+                  >
+                    <Printer size={14} />
+                    <span>Declaração de Faturamento 12M (Bancos/Crédito) A4</span>
+                  </button>
+
+                  <button
+                    onClick={() => setShowDemeiModal(true)}
+                    className="flex items-center space-x-1.5 bg-[#1c1c1c] hover:bg-neutral-800 border border-white/10 text-neutral-200 px-3.5 py-2 rounded-lg text-xs font-medium transition"
+                  >
+                    <FileCheck2 size={14} />
+                    <span>Emitir Relatório 447 - DEMEI A4</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                {/* Limite MEI */}
+                <div className="p-4 bg-[#1c1c1c] border border-white/5 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-neutral-200">Teto SIMEI / MEI Anual</span>
+                    <span className={`font-mono font-bold ${
+                      faturamentoDemei.enquadramento.ultrapassouMei ? 'text-amber-400' : 'text-emerald-400'
+                    }`}>
+                      {faturamentoDemei.enquadramento.percentualMei.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-[#141414] rounded-full overflow-hidden border border-white/5">
+                    <div
+                      className={`h-full transition-all ${
+                        faturamentoDemei.enquadramento.ultrapassouMei ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(100, faturamentoDemei.enquadramento.percentualMei)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono text-neutral-400">
+                    <span>RBT12: R$ {faturamentoDemei.totais12Meses.faturamentoTotalRbt12.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span>Limite: R$ 81.000,00</span>
+                  </div>
+                </div>
+
+                {/* Limite ME */}
+                <div className="p-4 bg-[#1c1c1c] border border-white/5 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-neutral-200">Teto Microempresa (ME)</span>
+                    <span className={`font-mono font-bold ${
+                      faturamentoDemei.enquadramento.ultrapassouMe ? 'text-amber-400' : 'text-emerald-400'
+                    }`}>
+                      {faturamentoDemei.enquadramento.percentualMe.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-[#141414] rounded-full overflow-hidden border border-white/5">
+                    <div
+                      className={`h-full transition-all ${
+                        faturamentoDemei.enquadramento.ultrapassouMe ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(100, faturamentoDemei.enquadramento.percentualMe)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono text-neutral-400">
+                    <span>RBT12: R$ {faturamentoDemei.totais12Meses.faturamentoTotalRbt12.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span>Limite: R$ 360.000,00</span>
+                  </div>
+                </div>
+
+                {/* Limite EPP */}
+                <div className="p-4 bg-[#1c1c1c] border border-white/5 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-neutral-200">Teto Pequeno Porte (EPP)</span>
+                    <span className="font-mono font-bold text-blue-400">
+                      {faturamentoDemei.enquadramento.percentualEpp.toFixed(2)}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-[#141414] rounded-full overflow-hidden border border-white/5">
+                    <div
+                      className="h-full bg-blue-500 transition-all"
+                      style={{ width: `${Math.min(100, faturamentoDemei.enquadramento.percentualEpp)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] font-mono text-neutral-400">
+                    <span>Média/Mês: R$ {faturamentoDemei.totais12Meses.mediaMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span>Limite: R$ 4.800.000,00</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-3.5 py-2 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-center justify-between text-xs text-amber-300">
+                <span className="font-mono text-[11px]">{faturamentoDemei.enquadramento.alertaSimplesnUltrapassouPar}</span>
+                <span className="font-mono text-[11px] text-neutral-400">
+                  Período Apurado: {faturamentoDemei.competenciaInicial} a {faturamentoDemei.competenciaFinal}
+                </span>
+              </div>
+            </div>
+
+            {/* Quadro 1: Relação de Faturamento dos Últimos 12 Meses (Faturamento__ltimo_Ano_Escrita_Fiscal.htm & Demonstrativo_Mensal_Escrita_Fiscal.htm) */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-white/10 flex items-center justify-between bg-[#1a1a1a]">
+                <div>
+                  <h4 className="text-xs font-semibold text-neutral-100 uppercase tracking-wider">
+                    Relação de Faturamento do Último Ano — 12 Meses (Entradas, Comércio, Serviços e Acumulado)
+                  </h4>
+                  <p className="text-[11px] text-neutral-400">
+                    Demonstrativo Mensal e Acumulado conforme Escrita Fiscal (`Faturamento__ltimo_Ano_Escrita_Fiscal.htm`)
+                  </p>
+                </div>
+                <span className="text-xs font-mono text-amber-400 font-semibold">
+                  RBT12 Total: R$ {faturamentoDemei.totais12Meses.faturamentoTotalRbt12.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs text-left">
+                  <thead className="bg-[#141414] text-neutral-400 text-[10px] font-mono uppercase border-b border-white/10">
+                    <tr>
+                      <th className="py-2.5 px-4">Mês/Ano</th>
+                      <th className="py-2.5 px-4 text-right">Entradas (R$)</th>
+                      <th className="py-2.5 px-4 text-right">Saídas Comércio (R$)</th>
+                      <th className="py-2.5 px-4 text-right">Prest. Serviços (R$)</th>
+                      <th className="py-2.5 px-4 text-right">Faturamento Mês (R$)</th>
+                      <th className="py-2.5 px-4 text-right">Acumulado 12M (R$)</th>
+                      <th className="py-2.5 px-4 text-right">Indexador (UFIR)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-mono text-[11px]">
+                    {faturamentoDemei.meses.map((m) => (
+                      <tr key={m.competencia} className={`hover:bg-white/[0.02] ${m.competencia === competencia ? 'bg-amber-500/5' : ''}`}>
+                        <td className="py-2 px-4 font-bold text-neutral-200 flex items-center gap-2">
+                          <span>{m.labelMes}</span>
+                          {m.competencia === competencia && (
+                            <span className="text-[9px] font-sans bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded">Atual</span>
+                          )}
+                        </td>
+                        <td className="py-2 px-4 text-right text-neutral-400">
+                          {m.entradasMercadorias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2 px-4 text-right text-neutral-200">
+                          {m.totalComercio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2 px-4 text-right text-neutral-200">
+                          {m.totalServicos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2 px-4 text-right font-semibold text-amber-400">
+                          {m.faturamentoBrutoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2 px-4 text-right text-emerald-400 font-semibold">
+                          {m.acumuladoAteMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-2 px-4 text-right text-neutral-400">
+                          {m.valorUfirMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-[#141414] border-t border-white/10 font-mono text-xs font-bold">
+                    <tr>
+                      <td className="py-2.5 px-4 text-neutral-200 uppercase">Totais 12 Meses</td>
+                      <td className="py-2.5 px-4 text-right text-neutral-300">
+                        R$ {faturamentoDemei.totais12Meses.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-neutral-100">
+                        R$ {faturamentoDemei.totais12Meses.comercio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-neutral-100">
+                        R$ {faturamentoDemei.totais12Meses.servicos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-amber-400">
+                        R$ {faturamentoDemei.totais12Meses.faturamentoTotalRbt12.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-emerald-400">
+                        Média: R$ {faturamentoDemei.totais12Meses.mediaMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="py-2.5 px-4 text-right text-neutral-300">
+                        {faturamentoDemei.totais12Meses.totalUfir.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} UFIR
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Quadro 2: Demonstrativo 447 - DEMEI (Relatório Mensal das Receitas Brutas para MEI - CGSN / LC 123 Art. 26) */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div>
+                  <h4 className="text-xs font-semibold text-neutral-100 uppercase tracking-wider flex items-center gap-2">
+                    <Receipt size={14} className="text-amber-400" />
+                    Relatório `447 - DEMEI` — Demonstrativo Mensal das Receitas Brutas (Competência {competencia})
+                  </h4>
+                  <p className="text-[11px] text-neutral-400">
+                    Segregação automática de Receitas Com e Sem Emissão de Documento Fiscal para cumprimento do Art. 26, § 1º da LC 123/2006 (MEI / SIMEI)
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDemeiModal(true)}
+                  className="flex items-center space-x-1.5 bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                >
+                  <Printer size={13} />
+                  <span>Imprimir 447 - DEMEI A4</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Receita de Comércio (I a III) */}
+                <div className="p-4 bg-[#1c1c1c] border border-white/5 rounded-xl space-y-2.5 text-xs">
+                  <div className="font-semibold text-amber-400 uppercase text-[11px] border-b border-white/5 pb-1.5">
+                    Receita Bruta Mensal – Revenda de Mercadorias (Comércio)
+                  </div>
+                  <div className="flex justify-between text-neutral-300">
+                    <span>I – Revenda de mercadorias com dispensa de emissão de documento fiscal:</span>
+                    <span className="font-mono">R$ {faturamentoDemei.demeiMesAtual.comercioSemDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-300">
+                    <span>II – Revenda de mercadorias com documento fiscal emitido:</span>
+                    <span className="font-mono">R$ {faturamentoDemei.demeiMesAtual.comercioComDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-neutral-100 border-t border-white/10 pt-1.5">
+                    <span>III – Total das receitas com revenda de mercadorias (I + II):</span>
+                    <span className="font-mono text-amber-400">R$ {faturamentoDemei.demeiMesAtual.totalComercio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                {/* Receita de Serviços (VII a IX) */}
+                <div className="p-4 bg-[#1c1c1c] border border-white/5 rounded-xl space-y-2.5 text-xs">
+                  <div className="font-semibold text-blue-400 uppercase text-[11px] border-b border-white/5 pb-1.5">
+                    Receita Bruta Mensal – Prestação de Serviços
+                  </div>
+                  <div className="flex justify-between text-neutral-300">
+                    <span>VII – Receita com prestação de serviços com dispensa de emissão de documento fiscal:</span>
+                    <span className="font-mono">R$ {faturamentoDemei.demeiMesAtual.servicosSemDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between text-neutral-300">
+                    <span>VIII – Receita com prestação de serviços com documento fiscal emitido:</span>
+                    <span className="font-mono">R$ {faturamentoDemei.demeiMesAtual.servicosComDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-neutral-100 border-t border-white/10 pt-1.5">
+                    <span>IX – Total das receitas com prestação de serviços (VII + VIII):</span>
+                    <span className="font-mono text-blue-400">R$ {faturamentoDemei.demeiMesAtual.totalServicos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-[#141414] border border-white/10 rounded-xl flex items-center justify-between text-xs">
+                <span className="font-bold text-neutral-200 uppercase">
+                  X – Total Geral das Receitas Brutas no Mês (III + VI + IX):
+                </span>
+                <span className="font-mono text-base font-bold text-emerald-400">
+                  R$ {faturamentoDemei.demeiMesAtual.receitaBrutaTotalMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab 4: Tabelas Oficiais do Simples Nacional */}
         {activeSubTab === 'tabelas' && (
           <div className="space-y-6">
@@ -899,6 +1187,172 @@ export const PgdasModule: React.FC = () => {
               </p>
               <div className="text-right font-bold font-mono text-sm pt-2">
                 TOTAL GERAL DAS DA COMPETÊNCIA: R$ {apuracao.totalDevidoDas.toFixed(2)}
+              </div>
+            </div>
+          </div>
+        </ReportPrintPreviewModal>
+      )}
+
+      {/* Modal A4: Declaração Oficial de Faturamento dos Últimos 12 Meses (Faturamento__ltimo_Ano_Escrita_Fiscal.htm) */}
+      {showDeclaracao12MModal && faturamentoDemei && empresa && (
+        <ReportPrintPreviewModal
+          isOpen={showDeclaracao12MModal}
+          onClose={() => setShowDeclaracao12MModal(false)}
+          empresa={empresa}
+          tituloRelatorio="RELAÇÃO E DECLARAÇÃO OFICIAL DE FATURAMENTO DOS ÚLTIMOS 12 MESES"
+          subtitulo="Demonstrativo Oficial de Receita Bruta Mensal para Instituições Financeiras, Cadastro e Licitações"
+          periodo={`Período: ${faturamentoDemei.competenciaInicial} a ${faturamentoDemei.competenciaFinal}`}
+        >
+          <div className="space-y-4 text-black font-sans text-xs">
+            <p className="text-justify leading-relaxed">
+              Declaramos, para os devidos fins de comprovação junto a instituições financeiras, órgãos públicos, fornecedores e análises de crédito, que a empresa{' '}
+              <strong>{empresa.razaoSocial}</strong>, inscrita no CNPJ sob o nº <strong>{empresa.cnpj}</strong>, enquadrada no regime tributário{' '}
+              <strong>{empresa.regimeTributario.replace('_', ' ')} ({empresa.porteEmpresa || 'ME'})</strong>, auferiu nos últimos 12 (doze) meses a Receita Bruta Mensal discriminada abaixo, fielmente extraída da Escrita Fiscal e do Livro Diário / Caixa:
+            </p>
+
+            <table className="w-full border-collapse border border-black text-[11px] font-mono">
+              <thead>
+                <tr className="bg-gray-100 border-b border-black uppercase">
+                  <th className="border border-black p-1.5 text-left">Mês / Ano</th>
+                  <th className="border border-black p-1.5 text-right">Entradas (R$)</th>
+                  <th className="border border-black p-1.5 text-right">Venda Mercadorias (R$)</th>
+                  <th className="border border-black p-1.5 text-right">Prest. Serviços (R$)</th>
+                  <th className="border border-black p-1.5 text-right">Receita Bruta Mês (R$)</th>
+                  <th className="border border-black p-1.5 text-right">Acumulado (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {faturamentoDemei.meses.map((m) => (
+                  <tr key={m.competencia} className="border-b border-gray-300">
+                    <td className="border border-black p-1.5 font-bold">{m.labelMes}</td>
+                    <td className="border border-black p-1.5 text-right">{m.entradasMercadorias.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="border border-black p-1.5 text-right">{m.totalComercio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="border border-black p-1.5 text-right">{m.totalServicos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="border border-black p-1.5 text-right font-bold">{m.faturamentoBrutoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td className="border border-black p-1.5 text-right">{m.acumuladoAteMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-100 font-bold border-t-2 border-black">
+                  <td className="border border-black p-1.5 uppercase">TOTAL 12 MESES (RBT12)</td>
+                  <td className="border border-black p-1.5 text-right">R$ {faturamentoDemei.totais12Meses.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="border border-black p-1.5 text-right">R$ {faturamentoDemei.totais12Meses.comercio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="border border-black p-1.5 text-right">R$ {faturamentoDemei.totais12Meses.servicos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="border border-black p-1.5 text-right">R$ {faturamentoDemei.totais12Meses.faturamentoTotalRbt12.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="border border-black p-1.5 text-right">Média: R$ {faturamentoDemei.totais12Meses.mediaMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                </tr>
+              </tfoot>
+            </table>
+
+            <div className="border border-black p-2.5 text-[11px] bg-gray-50">
+              <strong>Parecer de Enquadramento Fiscal:</strong> {faturamentoDemei.enquadramento.alertaSimplesnUltrapassouPar}
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 pt-10 text-center">
+              <div className="border-t border-black pt-2">
+                <div className="font-bold">{empresa.responsavelLegal || empresa.razaoSocial}</div>
+                <div className="text-[10px]">Responsável Legal / Administrador — CPF: {empresa.cpfResponsavel || '000.000.000-00'}</div>
+              </div>
+              <div className="border-t border-black pt-2">
+                <div className="font-bold">{empresa.contadorNome || empresa.contadorResponsavel || 'Contador Responsável'}</div>
+                <div className="text-[10px]">Contador Responsável — CRC: {empresa.contadorCRC || empresa.crcContador || 'CRC/SP'} — CPF: {empresa.contadorCPF || '000.000.000-00'}</div>
+              </div>
+            </div>
+          </div>
+        </ReportPrintPreviewModal>
+      )}
+
+      {/* Modal A4: Relatório 447 - DEMEI (Demonstrativo Mensal das Receitas Brutas MEI) */}
+      {showDemeiModal && faturamentoDemei && empresa && (
+        <ReportPrintPreviewModal
+          isOpen={showDemeiModal}
+          onClose={() => setShowDemeiModal(false)}
+          empresa={empresa}
+          tituloRelatorio="RELATÓRIO MENSAL DAS RECEITAS BRUTAS (447 - DEMEI)"
+          subtitulo="Anexo Único da Resolução CGSN — Art. 26, § 1º da Lei Complementar nº 123/2006"
+          periodo={`Período de Apuração: ${competencia}`}
+        >
+          <div className="space-y-4 text-black font-sans text-xs">
+            <div className="border border-black p-3 grid grid-cols-2 gap-2">
+              <div><strong>CNPJ:</strong> {empresa.cnpj}</div>
+              <div><strong>Período de Apuração:</strong> {competencia}</div>
+              <div className="col-span-2"><strong>Empreendedor Individual / Razão Social:</strong> {empresa.razaoSocial}</div>
+            </div>
+
+            <div className="border border-black">
+              <div className="bg-gray-100 font-bold p-2 border-b border-black uppercase text-[11px]">
+                RECEITA BRUTA MENSAL – REVENDA DE MERCADORIAS (COMÉRCIO)
+              </div>
+              <div className="p-2.5 space-y-1.5 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="font-sans">I – Revenda de mercadorias com dispensa de emissão de documento fiscal</span>
+                  <span>R$ {faturamentoDemei.demeiMesAtual.comercioSemDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-sans">II – Revenda de mercadorias com documento fiscal emitido</span>
+                  <span>R$ {faturamentoDemei.demeiMesAtual.comercioComDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-black pt-1">
+                  <span className="font-sans">III – Total das receitas com revenda de mercadorias (I + II)</span>
+                  <span>R$ {faturamentoDemei.demeiMesAtual.totalComercio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-black">
+              <div className="bg-gray-100 font-bold p-2 border-b border-black uppercase text-[11px]">
+                RECEITA BRUTA MENSAL – VENDA DE PRODUTOS INDUSTRIALIZADOS (INDÚSTRIA)
+              </div>
+              <div className="p-2.5 space-y-1.5 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="font-sans">IV – Venda de produtos industrializados com dispensa de emissão de documento fiscal</span>
+                  <span>R$ 0,00</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-sans">V – Venda de produtos industrializados com documento fiscal emitido</span>
+                  <span>R$ 0,00</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-black pt-1">
+                  <span className="font-sans">VI – Total das receitas com venda de produtos industrializados (IV + V)</span>
+                  <span>R$ 0,00</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="border border-black">
+              <div className="bg-gray-100 font-bold p-2 border-b border-black uppercase text-[11px]">
+                RECEITA BRUTA MENSAL – PRESTAÇÃO DE SERVIÇOS
+              </div>
+              <div className="p-2.5 space-y-1.5 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="font-sans">VII – Receita com prestação de serviços com dispensa de emissão de documento fiscal</span>
+                  <span>R$ {faturamentoDemei.demeiMesAtual.servicosSemDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-sans">VIII – Receita com prestação de serviços com documento fiscal emitido</span>
+                  <span>R$ {faturamentoDemei.demeiMesAtual.servicosComDoc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between font-bold border-t border-black pt-1">
+                  <span className="font-sans">IX – Total das receitas com prestação de serviços (VII + VIII)</span>
+                  <span>R$ {faturamentoDemei.demeiMesAtual.totalServicos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-2 border-black p-3 bg-gray-100 flex justify-between font-bold text-sm">
+              <span>X – TOTAL GERAL DAS RECEITAS BRUTAS NO MÊS (III + VI + IX):</span>
+              <span className="font-mono">R$ {faturamentoDemei.demeiMesAtual.receitaBrutaTotalMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-8 pt-8 text-center">
+              <div className="border-t border-black pt-2">
+                <div className="font-bold">LOCAL E DATA</div>
+                <div className="text-[10px]">{empresa.cidade || 'São Paulo'}/{empresa.uf || 'SP'}, {new Date().toLocaleDateString('pt-BR')}</div>
+              </div>
+              <div className="border-t border-black pt-2">
+                <div className="font-bold">{empresa.responsavelLegal || empresa.razaoSocial}</div>
+                <div className="text-[10px]">Assinatura do Empreendedor / Responsável Legal</div>
               </div>
             </div>
           </div>

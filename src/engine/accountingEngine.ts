@@ -158,7 +158,8 @@ export class AccountingEngine {
   public static generateBalanceSheet(
     contas: ContaContabil[],
     lancamentos: LancamentoContabil[],
-    grauMaximo: number = 4
+    grauMaximo: number = 4,
+    desconsiderarZeramento: boolean = false
   ): {
     ativo: BalancoItem[];
     passivo: BalancoItem[];
@@ -169,7 +170,7 @@ export class AccountingEngine {
     isEquilibrado: boolean;
     isPassivoDescoberto: boolean;
   } {
-    const balances = this.calculateBalances(contas, lancamentos, false);
+    const balances = this.calculateBalances(contas, lancamentos, desconsiderarZeramento);
 
     const getGroupItems = (prefix: string) => {
       return contas
@@ -363,15 +364,17 @@ export class AccountingEngine {
     lancamentos: LancamentoContabil[],
     dataZeramento: string,
     contaDestinoId: number,
-    historicoId: number
+    historicoId: number,
+    gruposParaZerar: string[] = ['3.', '4.']
   ): Omit<LancamentoContabil, 'id' | 'createdAt'>[] {
     const balances = this.calculateBalances(contas, lancamentos, true);
     const novosLancamentos: Omit<LancamentoContabil, 'id' | 'createdAt'>[] = [];
     let numeroPartida = 9000;
 
     for (const c of contas) {
-      // Contas analíticas de Receitas (3) e Custos/Despesas (4)
-      if (c.tipo === 'A' && (c.classificacao.startsWith('3.') || c.classificacao.startsWith('4.'))) {
+      // Contas analíticas subordinadas aos grupos informados na Guia Zeramento (Op__es_Contabilidade.htm)
+      const pertenceAoGrupo = gruposParaZerar.some(prefix => c.classificacao.startsWith(prefix));
+      if (c.tipo === 'A' && c.id !== contaDestinoId && pertenceAoGrupo) {
         const b = balances.get(c.id);
         if (b && b.saldoAtual !== 0) {
           numeroPartida++;
@@ -389,6 +392,7 @@ export class AccountingEngine {
               valor,
               historicoId,
               complementoHistorico: `Zeramento de encerramento - ${c.nome}`,
+              tipoOrigemCaixa: 'Zeramento',
               isZeramento: true
             });
           } else {
@@ -403,6 +407,7 @@ export class AccountingEngine {
               valor,
               historicoId,
               complementoHistorico: `Zeramento de encerramento - ${c.nome}`,
+              tipoOrigemCaixa: 'Zeramento',
               isZeramento: true
             });
           }

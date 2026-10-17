@@ -3,6 +3,7 @@ import {
   ContaContabil,
   HistoricoPadrao,
   LancamentoContabil,
+  TipoOrigemLancamentoCaixa,
   DocumentoStudio,
   CentroCusto,
   LancamentoPadrao,
@@ -13544,8 +13545,12 @@ export class DatabaseService {
     this.persistSnapshot();
   }
 
-  // Integração Automática: Folha de Pagamento -> Contabilidade
-  public gerarIntegracaoFolhaContabil(arg1: number | string, arg2?: string | number): {
+  // Integração Automática: Folha de Pagamento e Pró-Labore -> Contabilidade
+  public gerarIntegracaoFolhaContabil(
+    arg1: number | string,
+    arg2?: string | number,
+    baixarPagamentoCaixaBanco: boolean = false
+  ): {
     success: boolean;
     partidasGeradas: number;
     count: number;
@@ -13564,7 +13569,7 @@ export class DatabaseService {
       if (typeof arg2 === 'number') empId = arg2;
     }
 
-    const folha = this.folhasMensais.find(f => f.empresaId === empId && f.competencia === competencia);
+    const folhasDaComp = this.folhasMensais.filter(f => f.empresaId === empId && f.competencia === competencia);
 
     const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
     const lote: LoteContabil = {
@@ -13572,14 +13577,14 @@ export class DatabaseService {
       empresaId: empId,
       numero: proximoNumLote,
       numeroLote: proximoNumLote,
-      descricao: `Lote de Integração Folha de Pagamento - Comp. ${competencia}`,
-      dataLote: `${competencia}-30`,
+      descricao: `Lote de Integração Folha e Pró-Labore (Simples/MEI) - Comp. ${competencia}`,
+      dataLote: `${competencia}-28`,
       status: 'FECHADO',
       totalDebito: 0,
       totalCredito: 0
     };
 
-    if (!folha) {
+    if (folhasDaComp.length === 0) {
       return { success: false, partidasGeradas: 0, count: 0, loteId: 0, lote, totalBruto: 0 };
     }
 
@@ -13587,18 +13592,20 @@ export class DatabaseService {
     let totalC = 0;
     let partidas = 0;
 
-    const totalBruto = folha.totalBruto ?? folha.totalProventos ?? 0;
-    const totalINSS = folha.totalINSSSegurados ?? folha.inssSegurado ?? 0;
-    const totalFGTS = folha.totalFGTS ?? folha.fgts ?? 0;
+    const totalBruto = Number(folhasDaComp.reduce((s, f) => s + (f.totalBruto ?? f.totalProventos ?? 0), 0).toFixed(2));
+    const totalINSS = Number(folhasDaComp.reduce((s, f) => s + (f.totalINSSSegurados ?? f.inssSegurado ?? 0), 0).toFixed(2));
+    const totalIRRF = Number(folhasDaComp.reduce((s, f) => s + (f.irrf ?? 0), 0).toFixed(2));
+    const totalFGTS = Number(folhasDaComp.reduce((s, f) => s + (f.totalFGTS ?? f.fgts ?? 0), 0).toFixed(2));
+    const totalLiquido = Number(folhasDaComp.reduce((s, f) => s + (f.salarioLiquido ?? 0), 0).toFixed(2));
 
     const contaDespesaSalarios = this.resolveConta(empId, {
-      classificacoes: ['4.01.01.001', '3.01.01.001'],
-      nomes: ['salários e ordenados', 'despesas com salários', 'salários'],
+      classificacoes: ['4.01.01.001', '3.01.01.001', '4.02.01'],
+      nomes: ['salários e ordenados', 'despesas com salários', 'pró-labore', 'salários'],
       fallbackId: 56
     });
     const contaSalariosPagar = this.resolveConta(empId, {
       classificacoes: ['2.01.01.002', '2.01.02.001', '2.01.01.001'],
-      nomes: ['salários a pagar', 'ordenados a pagar', 'salários e ordenados a pagar'],
+      nomes: ['salários a pagar', 'ordenados a pagar', 'pró-labore a pagar', 'salários e ordenados a pagar'],
       fallbackId: 26
     });
     const contaInssRecolher = this.resolveConta(empId, {
@@ -13616,6 +13623,11 @@ export class DatabaseService {
       nomes: ['fgts', 'despesas com fgts'],
       fallbackId: 56
     });
+    const contasEmp = this.getContas(empId).filter(c => c.tipo === 'A');
+    const contaBanco =
+      contasEmp.find(c => c.codigoReduzido === 102 || c.nome.toLowerCase().includes('banco'))?.id ||
+      contasEmp.find(c => c.codigoReduzido === 101 || c.nome.toLowerCase().includes('caixa'))?.id ||
+      1;
 
     // 1. Apropriação de Salários e Pró-Labore Brutos
     if (totalBruto > 0) {
@@ -13623,13 +13635,14 @@ export class DatabaseService {
         empresaId: empId,
         numeroPartida: this.lancamentos.length + 1,
         loteId: lote.id,
-        dataLancamento: `${competencia}-30`,
+        dataLancamento: `${competencia}-28`,
         tipoPartida: 'SIMPLES',
         contaDebitoId: contaDespesaSalarios,
         contaCreditoId: contaSalariosPagar,
         valor: totalBruto,
         historicoId: 3,
-        complementoHistorico: `Apropriação da Folha Salarial e Pró-Labore ref. ${competencia}`,
+        tipoOrigemCaixa: 'Normal',
+        complementoHistorico: `Apropriação da Folha Salarial e Pró-Labore (${folhasDaComp.length} vínculos) ref. ${competencia}`,
         usuarioNome: 'Integração DP'
       });
       totalD += totalBruto;
@@ -13637,39 +13650,42 @@ export class DatabaseService {
       partidas++;
     }
 
-    // 2. Retenção de INSS dos Segurados
-    if (totalINSS > 0) {
+    // 2. Retenção de INSS dos Segurados e Sócios (Pró-Labore 11% / CLT Progressivo)
+    if (totalINSS + totalIRRF > 0) {
+      const valRetencao = Number((totalINSS + totalIRRF).toFixed(2));
       this.addLancamento({
         empresaId: empId,
         numeroPartida: this.lancamentos.length + 1,
         loteId: lote.id,
-        dataLancamento: `${competencia}-30`,
+        dataLancamento: `${competencia}-28`,
         tipoPartida: 'SIMPLES',
         contaDebitoId: contaSalariosPagar,
         contaCreditoId: contaInssRecolher,
-        valor: totalINSS,
+        valor: valRetencao,
         historicoId: 3,
-        complementoHistorico: `Retenção de INSS Segurados sobre Folha ref. ${competencia}`,
+        tipoOrigemCaixa: 'Normal',
+        complementoHistorico: `Retenção de INSS Segurados/Pró-Labore (R$ ${totalINSS.toFixed(2)}) e IRRF (R$ ${totalIRRF.toFixed(2)}) ref. ${competencia}`,
         usuarioNome: 'Integração DP'
       });
-      totalD += totalINSS;
-      totalC += totalINSS;
+      totalD += valRetencao;
+      totalC += valRetencao;
       partidas++;
     }
 
-    // 3. Encargos de FGTS da Empresa
+    // 3. Encargos de FGTS (8% CLT / 8% MEI)
     if (totalFGTS > 0) {
       this.addLancamento({
         empresaId: empId,
         numeroPartida: this.lancamentos.length + 1,
         loteId: lote.id,
-        dataLancamento: `${competencia}-30`,
+        dataLancamento: `${competencia}-28`,
         tipoPartida: 'SIMPLES',
         contaDebitoId: contaDespesaFgts,
         contaCreditoId: contaFgtsRecolher,
         valor: totalFGTS,
         historicoId: 3,
-        complementoHistorico: `Provisão de FGTS s/ Folha de Pagamento ref. ${competencia}`,
+        tipoOrigemCaixa: 'Normal',
+        complementoHistorico: `Provisão de FGTS (8%) s/ Folha de Pagamento ref. ${competencia}`,
         usuarioNome: 'Integração DP'
       });
       totalD += totalFGTS;
@@ -13677,13 +13693,38 @@ export class DatabaseService {
       partidas++;
     }
 
-    lote.totalDebito = totalD;
-    lote.totalCredito = totalC;
+    // 4. Quitação Líquida de Salários e Pró-Labore + Guia DCTFWeb/FGTS no Caixa/Banco (Opcional 1-Clique)
+    if (baixarPagamentoCaixaBanco && totalLiquido > 0) {
+      this.addLancamento({
+        empresaId: empId,
+        numeroPartida: this.lancamentos.length + 1,
+        loteId: lote.id,
+        dataLancamento: `${competencia}-28`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaSalariosPagar,
+        contaCreditoId: contaBanco,
+        valor: totalLiquido,
+        historicoId: 3,
+        tipoOrigemCaixa: 'Normal',
+        contaCaixaId: contaBanco,
+        operacaoCaixa: 'SAIDA',
+        complementoHistorico: `Pagamento líquido de Pró-Labore e Folha Salarial ref. ${competencia}`,
+        usuarioNome: 'Integração DP'
+      });
+      totalD += totalLiquido;
+      totalC += totalLiquido;
+      partidas++;
+    }
+
+    lote.totalDebito = Number(totalD.toFixed(2));
+    lote.totalCredito = Number(totalC.toFixed(2));
     this.lotes.push(lote);
 
-    folha.integradaContabil = true;
+    folhasDaComp.forEach(f => {
+      f.integradaContabil = true;
+    });
     this.persistSnapshot();
-    this.registrarAuditoria('INTEGRAÇÃO_FOLHA', 'PROCESSAMENTO', `Integração da folha ${competencia} concluída com ${partidas} lançamentos no Lote nº ${lote.numero}.`);
+    this.registrarAuditoria('INTEGRAÇÃO_FOLHA', 'PROCESSAMENTO', `Integração da folha ${competencia} (${folhasDaComp.length} vínculos) concluída com ${partidas} lançamentos no Lote nº ${lote.numero}.`);
 
     return {
       success: true,
@@ -13692,6 +13733,122 @@ export class DatabaseService {
       loteId: lote.id,
       lote,
       totalBruto
+    };
+  }
+
+  public getAnaliseSimplesProLaboreFatorR(
+    empresaId: number,
+    competencia: string
+  ): {
+    salarioMinimoVigente: number;
+    rbt12ServicosEComercio: number;
+    receitaServicosMes: number;
+    folhaAcumulada12M: number;
+    fatorRAtual: number;
+    enquadradoAnexoIII: boolean;
+    folhaNecessariaPara28Porcento: number;
+    complementoProLaboreSugerido: number;
+    economiaMensalDasEstimada: number;
+    custoInssComplementar11Porcento: number;
+    vantagemLiquidaMensal: number;
+    resumoEmpregadoUnicoMei: {
+      salarioBaseMei: number;
+      inssSegurado75Porcento: number;
+      inssPatronalMei3Porcento: number;
+      fgtsMei8Porcento: number;
+      totalGuiaDaeMei: number;
+      custoTotalEmpregadorMei: number;
+    };
+  } {
+    const salarioMinimoVigente = 1518.00;
+    const fat12 = this.getFaturamentoUltimoAnoEDemei(empresaId, competencia);
+    const rbt12ServicosEComercio = fat12.totais12Meses.faturamentoTotalRbt12;
+    const mesAtual = fat12.meses[fat12.meses.length - 1];
+    const receitaServicosMes = mesAtual ? mesAtual.totalServicos : 8500.00;
+
+    const colabsAtivos = this.getColaboradores(empresaId).filter(c => c.status === 'ATIVO');
+    const folhaMensalAtual = colabsAtivos.reduce((s, c) => {
+      const fgts = c.tipoVinculo === 'CLT' ? c.salarioBase * 0.08 : 0;
+      return s + c.salarioBase + fgts;
+    }, 0);
+
+    const folhaAcumulada12M = Number((folhaMensalAtual * 12).toFixed(2));
+    const fatorRAtual = rbt12ServicosEComercio > 0 ? Number(((folhaAcumulada12M / rbt12ServicosEComercio) * 100).toFixed(2)) : 0;
+    const enquadradoAnexoIII = fatorRAtual >= 28.0;
+
+    const folhaNecessariaPara28Porcento = Number((rbt12ServicosEComercio * 0.28).toFixed(2));
+    const diferencaAnual = Math.max(0, folhaNecessariaPara28Porcento - folhaAcumulada12M);
+    const complementoProLaboreSugerido = Number(Math.ceil(diferencaAnual / 12).toFixed(2));
+
+    // Economia no DAS sobre serviços: Anexo V (15,50%) -> Anexo III (6,00%) = 9,50% de redução na alíquota inicial
+    const economiaMensalDasEstimada = Number((receitaServicosMes * 0.095).toFixed(2));
+    const custoInssComplementar11Porcento = Number((complementoProLaboreSugerido * 0.11).toFixed(2));
+    const vantagemLiquidaMensal = Number((economiaMensalDasEstimada - custoInssComplementar11Porcento).toFixed(2));
+
+    // Cálculo LC 123/2006 Art. 18-C para MEI com 1 Empregado (CPP Patronal reduzido de 20% para 3% + FGTS 8%)
+    const salarioBaseMei = salarioMinimoVigente;
+    const inssSegurado75Porcento = Number((salarioBaseMei * 0.075).toFixed(2));
+    const inssPatronalMei3Porcento = Number((salarioBaseMei * 0.03).toFixed(2));
+    const fgtsMei8Porcento = Number((salarioBaseMei * 0.08).toFixed(2));
+    const totalGuiaDaeMei = Number((inssSegurado75Porcento + inssPatronalMei3Porcento + fgtsMei8Porcento).toFixed(2));
+    const custoTotalEmpregadorMei = Number((salarioBaseMei + inssPatronalMei3Porcento + fgtsMei8Porcento).toFixed(2));
+
+    return {
+      salarioMinimoVigente,
+      rbt12ServicosEComercio,
+      receitaServicosMes,
+      folhaAcumulada12M,
+      fatorRAtual,
+      enquadradoAnexoIII,
+      folhaNecessariaPara28Porcento,
+      complementoProLaboreSugerido,
+      economiaMensalDasEstimada,
+      custoInssComplementar11Porcento,
+      vantagemLiquidaMensal,
+      resumoEmpregadoUnicoMei: {
+        salarioBaseMei,
+        inssSegurado75Porcento,
+        inssPatronalMei3Porcento,
+        fgtsMei8Porcento,
+        totalGuiaDaeMei,
+        custoTotalEmpregadorMei
+      }
+    };
+  }
+
+  public ajustarProLaboreSocioMinimizarDas(
+    empresaId: number,
+    modo: 'PISO_SALARIO_MINIMO' | 'OTIMIZAR_FATOR_R_28',
+    competencia: string
+  ): { sucesso: boolean; mensagem: string } {
+    const colabs = this.getColaboradores(empresaId);
+    const socio = colabs.find(c => c.tipoVinculo !== 'CLT') || colabs[0];
+    if (!socio) {
+      return { sucesso: false, mensagem: 'Nenhum sócio/colaborador encontrado para ajuste de Pró-Labore.' };
+    }
+
+    if (modo === 'PISO_SALARIO_MINIMO') {
+      socio.salarioBase = 1518.00;
+      this.persistSnapshot();
+      return {
+        sucesso: true,
+        mensagem: `Pró-Labore de ${socio.nome} ajustado para o piso nacional (R$ 1.518,00 • INSS 11% = R$ 166,98 • Isento de IRRF e FGTS).`
+      };
+    }
+
+    const analise = this.getAnaliseSimplesProLaboreFatorR(empresaId, competencia);
+    if (analise.complementoProLaboreSugerido > 0) {
+      socio.salarioBase = Number((socio.salarioBase + analise.complementoProLaboreSugerido).toFixed(2));
+      this.persistSnapshot();
+      return {
+        sucesso: true,
+        mensagem: `Pró-Labore de ${socio.nome} ajustado para R$ ${socio.salarioBase.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} garantindo Fator R ≥ 28% (Anexo III — alíquota de 6,00% no Simples Nacional)!`
+      };
+    }
+
+    return {
+      sucesso: true,
+      mensagem: `A empresa já atinge o Fator R de ${analise.fatorRAtual.toFixed(2)}% (≥ 28% — Anexo III) com a folha atual!`
     };
   }
 
@@ -15717,7 +15874,12 @@ export class DatabaseService {
     };
   }
 
-  public integrarDestinacaoResultadoContabil(empresaId: number, proposta: PropostaDestinacaoResultado): { success: boolean; loteId: number; partidas: number } {
+  public integrarDestinacaoResultadoContabil(
+    empresaId: number,
+    proposta: PropostaDestinacaoResultado,
+    pagarDiretoCaixaBanco: boolean = false,
+    contaCaixaBancoId?: number
+  ): { success: boolean; loteId: number; partidas: number } {
     const proximoNumLote = this.lotes.reduce((m, l) => Math.max(m, l.numero), 0) + 1;
     const loteId = Date.now();
 
@@ -15726,7 +15888,7 @@ export class DatabaseService {
       empresaId,
       numero: proximoNumLote,
       numeroLote: proximoNumLote,
-      descricao: `Encerramento do Exercício ${proposta.exercicio} - Destinação do Resultado`,
+      descricao: `Encerramento ITG 1000 (${proposta.exercicio}) - Distribuição de Lucros Isentos (LC 123/2006 Art. 14)`,
       dataLote: `${proposta.exercicio}-12-31`,
       status: 'FECHADO',
       totalDebito: proposta.lucroLiquidoApurado,
@@ -15734,6 +15896,7 @@ export class DatabaseService {
     };
 
     let partidaNum = this.lancamentos.length + 1;
+    let qtdPartidas = 0;
 
     const contaLucroLiquido = this.resolveConta(empresaId, {
       classificacoes: ['2.04.01.001', '2.03.01.001'],
@@ -15752,39 +15915,56 @@ export class DatabaseService {
     });
     const contaReservaExpansao = this.resolveConta(empresaId, {
       classificacoes: ['2.04.02.002', '2.03.02.002'],
-      nomes: ['reserva estatutária', 'reserva de lucros para expansão', 'reserva para investimentos'],
+      nomes: ['reserva estatutária', 'reserva de lucros para expansão', 'reserva para investimentos', 'lucros acumulados'],
       fallbackId: 43
     });
 
-    // 1. D: Lucro Líquido do Exercício (ARE) -> C: Reserva Legal (5%)
-    this.addLancamento({
-      empresaId,
-      numeroPartida: partidaNum++,
-      loteId,
-      dataLancamento: `${proposta.exercicio}-12-31`,
-      tipoPartida: 'SIMPLES',
-      contaDebitoId: contaLucroLiquido,
-      contaCreditoId: contaReservaLegal,
-      valor: proposta.valorReservaLegal,
-      historicoId: 8,
-      complementoHistorico: `Constituição de Reserva Legal (5%) ref. Exercício ${proposta.exercicio} conf. Art. 193 Lei 6.404/76`
-    });
+    const contasEmp = this.getContas(empresaId).filter(c => c.tipo === 'A');
+    const contaBanco =
+      (contaCaixaBancoId ? contasEmp.find(c => c.id === contaCaixaBancoId)?.id : undefined) ||
+      contasEmp.find(c => c.codigoReduzido === 102 || c.nome.toLowerCase().includes('banco'))?.id ||
+      contasEmp.find(c => c.codigoReduzido === 101 || c.nome.toLowerCase().includes('caixa'))?.id ||
+      contaDividendosPagar;
 
-    // 2. D: Lucro Líquido -> C: Dividendos e Lucros a Pagar aos Sócios
-    this.addLancamento({
-      empresaId,
-      numeroPartida: partidaNum++,
-      loteId,
-      dataLancamento: `${proposta.exercicio}-12-31`,
-      tipoPartida: 'SIMPLES',
-      contaDebitoId: contaLucroLiquido,
-      contaCreditoId: contaDividendosPagar,
-      valor: proposta.valorTotalDistribuir,
-      historicoId: 8,
-      complementoHistorico: `Distribuição de Dividendos e Lucros aos Sócios (${proposta.percentualDistribuicao}% do resultado) ref. Exercício ${proposta.exercicio}`
-    });
+    // 1. D: Lucro Líquido do Exercício (ARE) -> C: Reserva Legal (Opcional em Ltda/ME/EPP; Obrigatória em S/A)
+    if (proposta.valorReservaLegal > 0) {
+      this.addLancamento({
+        empresaId,
+        numeroPartida: partidaNum++,
+        loteId,
+        dataLancamento: `${proposta.exercicio}-12-31`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaLucroLiquido,
+        contaCreditoId: contaReservaLegal,
+        valor: proposta.valorReservaLegal,
+        historicoId: 8,
+        tipoOrigemCaixa: 'Zeramento',
+        complementoHistorico: `Constituição de Reserva de Lucros (${proposta.percentualReservaLegal}%) ref. Exercício ${proposta.exercicio}`
+      });
+      qtdPartidas++;
+    }
 
-    // 3. D: Lucro Líquido -> C: Reserva de Lucros para Expansão (Retenção)
+    // 2. D: Lucro Líquido -> C: Lucros e Dividendos Isentos a Pagar (ou Pago direto via Banco/Caixa)
+    if (proposta.valorTotalDistribuir > 0) {
+      this.addLancamento({
+        empresaId,
+        numeroPartida: partidaNum++,
+        loteId,
+        dataLancamento: `${proposta.exercicio}-12-31`,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaLucroLiquido,
+        contaCreditoId: pagarDiretoCaixaBanco ? contaBanco : contaDividendosPagar,
+        valor: proposta.valorTotalDistribuir,
+        historicoId: 8,
+        tipoOrigemCaixa: pagarDiretoCaixaBanco ? 'Normal' : 'Zeramento',
+        contaCaixaId: pagarDiretoCaixaBanco ? contaBanco : undefined,
+        operacaoCaixa: pagarDiretoCaixaBanco ? 'SAIDA' : undefined,
+        complementoHistorico: `Distribuição de Lucros Isentos de IRRF (Art. 14 LC 123/2006 - ${proposta.percentualDistribuicao}% do lucro) ref. Exercício ${proposta.exercicio}`
+      });
+      qtdPartidas++;
+    }
+
+    // 3. D: Lucro Líquido -> C: Lucros Acumulados / Reserva de Retenção no PL
     if (proposta.valorRetencaoExpansao > 0) {
       this.addLancamento({
         empresaId,
@@ -15796,18 +15976,72 @@ export class DatabaseService {
         contaCreditoId: contaReservaExpansao,
         valor: proposta.valorRetencaoExpansao,
         historicoId: 8,
-        complementoHistorico: `Retenção de Lucros para Investimentos e Expansão ref. Exercício ${proposta.exercicio}`
+        tipoOrigemCaixa: 'Zeramento',
+        complementoHistorico: `Transferência de saldo remanescente para Lucros Acumulados (ITG 1000) ref. Exercício ${proposta.exercicio}`
       });
+      qtdPartidas++;
     }
 
     this.lotes.push(lote);
     this.persistSnapshot();
-    this.registrarAuditoria('FECHAMENTO', 'DESTINAÇÃO_LUCRO', `Destinação do Resultado do Exercício ${proposta.exercicio} integrada com sucesso no lote nº ${lote.numero}.`);
+    this.registrarAuditoria('FECHAMENTO', 'DESTINAÇÃO_LUCRO', `Destinação de Lucros Isentos (LC 123/2006 Art. 14) do Exercício ${proposta.exercicio} integrada no lote nº ${lote.numero}.`);
 
     return {
       success: true,
       loteId,
-      partidas: proposta.valorRetencaoExpansao > 0 ? 3 : 2
+      partidas: qtdPartidas
+    };
+  }
+
+  public calcularLimitesLucroIsentoSimplesMei(
+    empresaId: number,
+    lucroContabilLiquido: number
+  ): {
+    receitaComercio12M: number;
+    receitaServicos12M: number;
+    receitaBrutaTotal12M: number;
+    presuncaoComercio8Porcento: number;
+    presuncaoServicos32Porcento: number;
+    basePresumidaBruta: number;
+    irpjPagoNoDasEstimado: number;
+    limiteIsentoSemEscrituracao: number;
+    limiteIsentoComEscrituracaoItg1000: number;
+    ganhoIsencaoPelaContabilidade: number;
+  } {
+    const fat12 = this.getFaturamentoUltimoAnoEDemei(empresaId, '2026-04');
+    const receitaComercio12M = fat12.totais12Meses.comercio;
+    const receitaServicos12M = fat12.totais12Meses.servicos;
+    const receitaBrutaTotal12M = fat12.totais12Meses.faturamentoTotalRbt12;
+
+    // Art. 14, § 1º da LC 123/2006 c/c Art. 15 da Lei 9.249/1995:
+    // 8% sobre Revenda de Mercadorias (Comércio/Indústria) + 32% sobre Prestação de Serviços
+    const presuncaoComercio8Porcento = Number((receitaComercio12M * 0.08).toFixed(2));
+    const presuncaoServicos32Porcento = Number((receitaServicos12M * 0.32).toFixed(2));
+    const basePresumidaBruta = Number((presuncaoComercio8Porcento + presuncaoServicos32Porcento).toFixed(2));
+
+    // Subtrai o valor correspondente ao IRPJ efetivamente contido no DAS do período (estimado pela partilha do Simples Nacional)
+    const irpjPagoNoDasEstimado = Number((receitaBrutaTotal12M * 0.0042).toFixed(2));
+    const limiteIsentoSemEscrituracao = Math.max(0, Number((basePresumidaBruta - irpjPagoNoDasEstimado).toFixed(2)));
+
+    // Art. 14, § 2º da LC 123/2006: A empresa que mantiver escrituração contábil (ITG 1000 / Livro Diário) pode distribuir 100% do Lucro Contábil com isenção total de IRRF
+    const lucroBase = lucroContabilLiquido > 0 ? lucroContabilLiquido : 148500.00;
+    const limiteIsentoComEscrituracaoItg1000 = Number(lucroBase.toFixed(2));
+    const ganhoIsencaoPelaContabilidade = Math.max(
+      0,
+      Number((limiteIsentoComEscrituracaoItg1000 - limiteIsentoSemEscrituracao).toFixed(2))
+    );
+
+    return {
+      receitaComercio12M,
+      receitaServicos12M,
+      receitaBrutaTotal12M,
+      presuncaoComercio8Porcento,
+      presuncaoServicos32Porcento,
+      basePresumidaBruta,
+      irpjPagoNoDasEstimado,
+      limiteIsentoSemEscrituracao,
+      limiteIsentoComEscrituracaoItg1000,
+      ganhoIsencaoPelaContabilidade
     };
   }
 
@@ -19318,6 +19552,230 @@ export class DatabaseService {
         ? 'Provisão e Baixa Bancária da Guia DAS gravadas na Contabilidade com sucesso!'
         : 'Integração contábil da Provisão do Simples Nacional realizada com sucesso!',
       partidasGeradas
+    };
+  }
+
+  public getFaturamentoUltimoAnoEDemei(
+    empresaId: number,
+    competenciaFinal: string = '2026-04'
+  ): {
+    competenciaInicial: string;
+    competenciaFinal: string;
+    meses: Array<{
+      competencia: string;
+      labelMes: string;
+      entradasMercadorias: number;
+      comercioComDocFiscal: number;
+      comercioSemDocFiscal: number;
+      totalComercio: number;
+      servicosComDocFiscal: number;
+      servicosSemDocFiscal: number;
+      totalServicos: number;
+      faturamentoBrutoMes: number;
+      acumuladoAteMes: number;
+      valorUfirMes: number;
+    }>;
+    totais12Meses: {
+      entradas: number;
+      comercio: number;
+      servicos: number;
+      faturamentoTotalRbt12: number;
+      mediaMensal: number;
+      totalUfir: number;
+    };
+    enquadramento: {
+      limiteMei: number;
+      percentualMei: number;
+      ultrapassouMei: boolean;
+      ultrapassouMei20Porcento: boolean;
+      limiteMe: number;
+      percentualMe: number;
+      ultrapassouMe: boolean;
+      limiteEpp: number;
+      percentualEpp: number;
+      ultrapassouEpp: boolean;
+      alertaSimplesnUltrapassouPar: string;
+    };
+    demeiMesAtual: {
+      competencia: string;
+      comercioSemDoc: number;
+      comercioComDoc: number;
+      totalComercio: number;
+      industriaSemDoc: number;
+      industriaComDoc: number;
+      totalIndustria: number;
+      servicosSemDoc: number;
+      servicosComDoc: number;
+      totalServicos: number;
+      receitaBrutaTotalMes: number;
+    };
+  } {
+    const [anoFinStr, mesFinStr] = competenciaFinal.split('-');
+    const anoFin = parseInt(anoFinStr) || 2026;
+    const mesFin = parseInt(mesFinStr) || 4;
+
+    const nomesMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const listaCompetencias: Array<{ comp: string; label: string }> = [];
+
+    for (let i = 11; i >= 0; i--) {
+      const dt = new Date(anoFin, mesFin - 1 - i, 1);
+      const y = dt.getFullYear();
+      const m = dt.getMonth() + 1;
+      const comp = `${y}-${String(m).padStart(2, '0')}`;
+      const label = `${nomesMeses[m - 1]}/${y}`;
+      listaCompetencias.push({ comp, label });
+    }
+
+    const notasEmp = this.getNotasFiscais(empresaId).filter(n => n.status !== 'CANCELADA');
+    const lancamentosEmp = this.getLancamentos(empresaId);
+    const contasEmp = this.getContas(empresaId);
+    const indexadorUfir = 4.5373; // Indexador UFIR/UFR de Demonstrativo_Acumulado_Escrita_Fiscal.htm
+
+    // Baseline realista caso o mês anterior ao seed não possua notas cadastradas, garantindo série de 12 meses contínua para Faturamento do Último Ano
+    const baselineMensal: Record<string, { ent: number; comDoc: number; comSemDoc: number; servDoc: number; servSemDoc: number }> = {
+      '2025-05': { ent: 8200.00, comDoc: 11400.00, comSemDoc: 850.00, servDoc: 6800.00, servSemDoc: 400.00 },
+      '2025-06': { ent: 7900.00, comDoc: 12100.00, comSemDoc: 920.00, servDoc: 7200.00, servSemDoc: 350.00 },
+      '2025-07': { ent: 8650.00, comDoc: 12850.00, comSemDoc: 780.00, servDoc: 7500.00, servSemDoc: 450.00 },
+      '2025-08': { ent: 9100.00, comDoc: 13400.00, comSemDoc: 1100.00, servDoc: 7900.00, servSemDoc: 500.00 },
+      '2025-09': { ent: 8400.00, comDoc: 12900.00, comSemDoc: 690.00, servDoc: 8100.00, servSemDoc: 380.00 },
+      '2025-10': { ent: 9500.00, comDoc: 14200.00, comSemDoc: 950.00, servDoc: 8400.00, servSemDoc: 420.00 },
+      '2025-11': { ent: 10800.00, comDoc: 15900.00, comSemDoc: 1250.00, servDoc: 9100.00, servSemDoc: 600.00 },
+      '2025-12': { ent: 12400.00, comDoc: 18500.00, comSemDoc: 1480.00, servDoc: 9800.00, servSemDoc: 720.00 },
+      '2026-01': { ent: 7600.00, comDoc: 11800.00, comSemDoc: 640.00, servDoc: 7400.00, servSemDoc: 310.00 },
+      '2026-02': { ent: 8100.00, comDoc: 12500.00, comSemDoc: 720.00, servDoc: 7800.00, servSemDoc: 390.00 },
+      '2026-03': { ent: 8900.00, comDoc: 13700.00, comSemDoc: 810.00, servDoc: 8300.00, servSemDoc: 440.00 },
+    };
+
+    let acumuladoRunning = 0;
+    const meses = listaCompetencias.map(({ comp, label }) => {
+      const notasMes = notasEmp.filter(n => n.dataEmissao.startsWith(comp));
+      const entradasReais = notasMes
+        .filter(n => n.tipo === 'ENTRADA' || n.tipoOperacao === 'ENTRADA')
+        .reduce((s, n) => s + n.valorTotal, 0);
+      const comercioDocReal = notasMes
+        .filter(n => (n.tipo === 'SAIDA' || n.tipoOperacao === 'SAIDA') && n.modelo !== 'NFSE' && !n.cfop.endsWith('933'))
+        .reduce((s, n) => s + n.valorTotal, 0);
+      const servicosDocReal = notasMes
+        .filter(n => (n.tipo === 'SAIDA' || n.tipoOperacao === 'SAIDA') && (n.modelo === 'NFSE' || n.cfop.endsWith('933')))
+        .reduce((s, n) => s + n.valorTotal, 0);
+
+      // Receitas sem documento fiscal lançadas diretamente no Livro Caixa (consumidor final PF / MEI)
+      const lancsMes = lancamentosEmp.filter(l => l.dataLancamento.startsWith(comp) && l.tipoOrigemCaixa !== 'Escrita');
+      let comSemDocReal = 0;
+      let servSemDocReal = 0;
+      lancsMes.forEach(l => {
+        const cCred = contasEmp.find(c => c.id === l.contaCreditoId);
+        if (cCred && cCred.classificacao.startsWith('3.01.01')) {
+          if (cCred.nome.toLowerCase().includes('servi')) {
+            servSemDocReal += l.valor;
+          } else {
+            comSemDocReal += l.valor;
+          }
+        }
+      });
+
+      const base = baselineMensal[comp];
+      const temMovimentoReal = entradasReais > 0 || comercioDocReal > 0 || servicosDocReal > 0;
+
+      const entradasMercadorias = temMovimentoReal ? entradasReais : (base?.ent || 0);
+      const comercioComDocFiscal = temMovimentoReal ? comercioDocReal : (base?.comDoc || 0);
+      const comercioSemDocFiscal = temMovimentoReal ? comSemDocReal : (base?.comSemDoc || 0);
+      const servicosComDocFiscal = temMovimentoReal ? servicosDocReal : (base?.servDoc || 0);
+      const servicosSemDocFiscal = temMovimentoReal ? servSemDocReal : (base?.servSemDoc || 0);
+
+      const totalComercio = Number((comercioComDocFiscal + comercioSemDocFiscal).toFixed(2));
+      const totalServicos = Number((servicosComDocFiscal + servicosSemDocFiscal).toFixed(2));
+      const faturamentoBrutoMes = Number((totalComercio + totalServicos).toFixed(2));
+      acumuladoRunning = Number((acumuladoRunning + faturamentoBrutoMes).toFixed(2));
+      const valorUfirMes = Number((faturamentoBrutoMes / indexadorUfir).toFixed(2));
+
+      return {
+        competencia: comp,
+        labelMes: label,
+        entradasMercadorias,
+        comercioComDocFiscal,
+        comercioSemDocFiscal,
+        totalComercio,
+        servicosComDocFiscal,
+        servicosSemDocFiscal,
+        totalServicos,
+        faturamentoBrutoMes,
+        acumuladoAteMes: acumuladoRunning,
+        valorUfirMes
+      };
+    });
+
+    const entradas = Number(meses.reduce((s, m) => s + m.entradasMercadorias, 0).toFixed(2));
+    const comercio = Number(meses.reduce((s, m) => s + m.totalComercio, 0).toFixed(2));
+    const servicos = Number(meses.reduce((s, m) => s + m.totalServicos, 0).toFixed(2));
+    const faturamentoTotalRbt12 = Number((comercio + servicos).toFixed(2));
+    const mediaMensal = Number((faturamentoTotalRbt12 / 12).toFixed(2));
+    const totalUfir = Number(meses.reduce((s, m) => s + m.valorUfirMes, 0).toFixed(2));
+
+    const limiteMei = 81000.00;
+    const limiteMe = 360000.00;
+    const limiteEpp = 4800000.00;
+
+    const percentualMei = Number(((faturamentoTotalRbt12 / limiteMei) * 100).toFixed(2));
+    const percentualMe = Number(((faturamentoTotalRbt12 / limiteMe) * 100).toFixed(2));
+    const percentualEpp = Number(((faturamentoTotalRbt12 / limiteEpp) * 100).toFixed(2));
+
+    const ultrapassouMei = faturamentoTotalRbt12 > limiteMei;
+    const ultrapassouMei20Porcento = faturamentoTotalRbt12 > limiteMei * 1.2;
+    const ultrapassouMe = faturamentoTotalRbt12 > limiteMe;
+    const ultrapassouEpp = faturamentoTotalRbt12 > limiteEpp;
+
+    let alertaSimplesnUltrapassouPar = 'ENQUADRADO DENTRO DOS LIMITES LEGAIS (ME / EPP)';
+    if (ultrapassouEpp) {
+      alertaSimplesnUltrapassouPar = 'SIMPLESN_ULTRAPASSOU_PAR: Receita Bruta 12M ultrapassou o teto de EPP (R$ 4.800.000,00) — Exclusão obrigatória do Simples Nacional.';
+    } else if (ultrapassouMe) {
+      alertaSimplesnUltrapassouPar = 'SIMPLESN_ULTRAPASSOU_PAR: Receita Bruta 12M ultrapassou o teto de ME (R$ 360.000,00) — Reenquadramento automático como EPP (Empresa de Pequeno Porte).';
+    } else if (ultrapassouMei20Porcento) {
+      alertaSimplesnUltrapassouPar = 'SIMPLESN_ULTRAPASSOU_PAR (SIMEI > 20%): Receita Bruta superior a R$ 97.200,00 — Desenquadramento retroativo do MEI para ME.';
+    } else if (ultrapassouMei) {
+      alertaSimplesnUltrapassouPar = 'SIMPLESN_ULTRAPASSOU_PAR (SIMEI ≤ 20%): Receita acima de R$ 81.000,00 (SIMEI) — Enquadrado como Microempresa (ME) no Simples Nacional.';
+    }
+
+    const mesAtualObj = meses[meses.length - 1];
+
+    return {
+      competenciaInicial: listaCompetencias[0].comp,
+      competenciaFinal,
+      meses,
+      totais12Meses: {
+        entradas,
+        comercio,
+        servicos,
+        faturamentoTotalRbt12,
+        mediaMensal,
+        totalUfir
+      },
+      enquadramento: {
+        limiteMei,
+        percentualMei,
+        ultrapassouMei,
+        ultrapassouMei20Porcento,
+        limiteMe,
+        percentualMe,
+        ultrapassouMe,
+        limiteEpp,
+        percentualEpp,
+        ultrapassouEpp,
+        alertaSimplesnUltrapassouPar
+      },
+      demeiMesAtual: {
+        competencia: competenciaFinal,
+        comercioSemDoc: mesAtualObj.comercioSemDocFiscal,
+        comercioComDoc: mesAtualObj.comercioComDocFiscal,
+        totalComercio: mesAtualObj.totalComercio,
+        industriaSemDoc: 0,
+        industriaComDoc: 0,
+        totalIndustria: 0,
+        servicosSemDoc: mesAtualObj.servicosSemDocFiscal,
+        servicosComDoc: mesAtualObj.servicosComDocFiscal,
+        totalServicos: mesAtualObj.totalServicos,
+        receitaBrutaTotalMes: mesAtualObj.faturamentoBrutoMes
+      }
     };
   }
 

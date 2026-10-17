@@ -64,6 +64,10 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
   });
   const [processando, setProcessando] = useState<boolean>(false);
   const [mensagem, setMensagem] = useState<string>('');
+  const [baixarPagamentoCaixaBanco, setBaixarPagamentoCaixaBanco] = useState<boolean>(true);
+  const [analiseSimplesFolha, setAnaliseSimplesFolha] = useState(() =>
+    dbService.getAnaliseSimplesProLaboreFatorR(empresa.id, empresa.competenciaAtiva)
+  );
 
   // ----------------------------------------------------
   // ESTADO: FÉRIAS (ART. 129 A 145 CLT)
@@ -387,7 +391,13 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
         const totalDesc = descontos.reduce((acc, d) => acc + d.valor, 0);
         const salarioLiquido = Math.max(0, Math.round((totalBruto - totalDesc) * 100) / 100);
 
-        const inssPatronal = isCLT ? Math.round((baseCalculoINSS * 0.20) * 100) / 100 : Math.round((baseCalculoINSS * 0.11) * 100) / 100;
+        const isSimplesOuMei = empresa.regimeTributario === 'SIMPLES_NACIONAL';
+        const isMei = (empresa as any).porteEmpresa === 'MEI' || empresa.razaoSocial.toUpperCase().includes('MEI');
+        // No Simples Nacional (Anexos I, II, III e V), a CPP Patronal já está embutida no DAS (0% separado na folha).
+        // No MEI com 1 empregado (Art. 18-C LC 123/2006), a CPP Patronal é de 3% sobre o salário de contribuição.
+        const inssPatronal = isCLT
+          ? Math.round((baseCalculoINSS * (isMei ? 0.03 : isSimplesOuMei ? 0 : 0.20)) * 100) / 100
+          : Math.round((baseCalculoINSS * (isSimplesOuMei ? 0 : 0.20)) * 100) / 100;
         const fgts = isCLT ? Math.round((baseCalculoINSS * 0.08) * 100) / 100 : 0;
 
         const folhaItem: FolhaMensal = {
@@ -416,19 +426,28 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
       }
 
       setFolhas(calculadas);
+      setAnaliseSimplesFolha(dbService.getAnaliseSimplesProLaboreFatorR(empresa.id, empresa.competenciaAtiva));
       setProcessando(false);
       setMensagem(`Folha de ${empresa.competenciaAtiva} calculada para ${calculadas.length} colaboradores.`);
       setTimeout(() => setMensagem(''), 5000);
     }, 350);
   };
 
+  const handleAjustarProLaboreSocio = (modo: 'PISO_SALARIO_MINIMO' | 'OTIMIZAR_FATOR_R_28') => {
+    const res = dbService.ajustarProLaboreSocioMinimizarDas(empresa.id, modo, empresa.competenciaAtiva);
+    setColaboradores(dbService.getColaboradores(empresa.id));
+    setAnaliseSimplesFolha(dbService.getAnaliseSimplesProLaboreFatorR(empresa.id, empresa.competenciaAtiva));
+    setMensagem(res.mensagem);
+    setTimeout(() => setMensagem(''), 6000);
+  };
+
   const handleIntegrarContabilidade = () => {
-    const res = dbService.gerarIntegracaoFolhaContabil(empresa.id, empresa.competenciaAtiva);
+    const res = dbService.gerarIntegracaoFolhaContabil(empresa.id, empresa.competenciaAtiva, baixarPagamentoCaixaBanco);
     if (res.count === 0) {
       setMensagem('Não há folha processada nesta competência para integração.');
       return;
     }
-    setMensagem(`Integração concluída! Lote nº ${res.lote.numero} gerado com ${res.count} partidas contábeis (Total: R$ ${res.totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}).`);
+    setMensagem(`Integração concluída! Lote nº ${res.lote.numero} gerado com ${res.count} partidas contábeis${baixarPagamentoCaixaBanco ? ' (incluindo baixa automática no Caixa/Banco)' : ''} • Total Bruto: R$ ${res.totalBruto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`);
     if (onIntegracaoSucesso) onIntegracaoSucesso();
     setTimeout(() => setMensagem(''), 6000);
   };
@@ -814,6 +833,19 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
         <div className="flex items-center space-x-2">
           {abaAtiva === 'FOLHA_MENSAL' && (
             <>
+              <label
+                title="Ao integrar a folha na Contabilidade, lança também a baixa automática do líquido pago no Caixa/Banco (Livro Caixa)"
+                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded bg-[#141414] border border-white/10 text-[11px] text-neutral-300 cursor-pointer hover:border-emerald-500/40 transition"
+              >
+                <input
+                  type="checkbox"
+                  checked={baixarPagamentoCaixaBanco}
+                  onChange={e => setBaixarPagamentoCaixaBanco(e.target.checked)}
+                  className="rounded border-white/20 bg-neutral-900 text-emerald-500 focus:ring-0"
+                />
+                <span>Baixar Líquido no Caixa/Banco</span>
+              </label>
+
               <button
                 onClick={handleProcessarFolha}
                 disabled={processando}
@@ -928,6 +960,107 @@ export const CalculoFolhaModule: React.FC<CalculoFolhaModuleProps> = ({
       {/* ---------------------------------------------------- */}
       {abaAtiva === 'FOLHA_MENSAL' && (
         <div className="flex-1 overflow-auto custom-scrollbar">
+          {/* Painel Rápido para Pequenos Escritórios: Pró-Labore de Sócios (11% INSS), Otimizador Fator R (28%) e Empregado Único MEI */}
+          <div className="px-5 py-3 bg-[#181818] border-b border-white/10 grid grid-cols-1 lg:grid-cols-3 gap-3 text-xs">
+            {/* Card 1: Pró-Labore Obrigatório de Sócios (11% INSS s/ FGTS) */}
+            {(() => {
+              const sociosAtivos = colaboradores.filter(c => c.status === 'ATIVO' && c.tipoVinculo !== 'CLT');
+              const totalProLaboreAtual = sociosAtivos.reduce((s, c) => s + (c.salarioBase || 0), 0);
+              return (
+                <div className="bg-[#141414] p-3 rounded-lg border border-white/10 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-purple-300 flex items-center space-x-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Pró-Labore de Sócios (INSS 11% s/ FGTS)</span>
+                      </span>
+                      <span className="text-[10px] font-mono bg-purple-500/15 text-purple-300 px-1.5 py-0.5 rounded border border-purple-500/30">
+                        {sociosAtivos.length} Sócio(s)
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed">
+                      Retirada atual: <strong className="font-mono text-neutral-200">R$ {totalProLaboreAtual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> • INSS 11%: <strong className="font-mono text-rose-400">R$ {(totalProLaboreAtual * 0.11).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> (CPP Patronal já inclusa no DAS Simples).
+                    </p>
+                  </div>
+                  <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-400 font-mono">
+                      Piso Salário Mínimo: R$ {analiseSimplesFolha.salarioMinimoVigente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <button
+                      onClick={() => handleAjustarProLaboreSocio('PISO_SALARIO_MINIMO')}
+                      className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 rounded border border-purple-500/30 text-[10px] font-medium transition"
+                    >
+                      Aplicar 1 Salário Mínimo
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Card 2: Termômetro e Otimizador Automático do Fator R (28% - Anexo III vs Anexo V) */}
+            <div className="bg-[#141414] p-3 rounded-lg border border-white/10 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-semibold text-emerald-300 flex items-center space-x-1.5">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Otimizador Fator R ≥ 28% (LC 123/2006)</span>
+                  </span>
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                    analiseSimplesFolha.enquadradoAnexoIII
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  }`}>
+                    Fator R: {analiseSimplesFolha.fatorRAtual.toFixed(2)}% ({analiseSimplesFolha.enquadradoAnexoIII ? 'Anexo III - 6%' : 'Anexo V - 15,5%'})
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  {analiseSimplesFolha.enquadradoAnexoIII ? (
+                    <>Folha 12M (<strong className="font-mono text-neutral-200">R$ {analiseSimplesFolha.folhaAcumulada12M.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>) já garante tributação reduzida no <strong className="text-emerald-400">Anexo III (6,00%)</strong>.</>
+                  ) : (
+                    <>Faltam <strong className="font-mono text-amber-300">R$ {analiseSimplesFolha.complementoProLaboreSugerido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</strong> na folha/pró-labore para migrar do Anexo V (15,5%) ao <strong className="text-emerald-400">Anexo III (6%)</strong>.</>
+                  )}
+                </p>
+              </div>
+              <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[10px] text-neutral-400 font-mono">
+                  Economia DAS: ~R$ {analiseSimplesFolha.economiaMensalDasEstimada.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                </span>
+                <button
+                  onClick={() => handleAjustarProLaboreSocio('OTIMIZAR_FATOR_R_28')}
+                  className="px-2.5 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 rounded border border-emerald-500/30 text-[10px] font-medium transition flex items-center space-x-1"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Otimizar Pró-Labore p/ 28%</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Card 3: Empregado Único do MEI (Art. 18-C LC 123/2006 - CPP 3% + FGTS 8%) */}
+            <div className="bg-[#141414] p-3 rounded-lg border border-white/10 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-semibold text-sky-300 flex items-center space-x-1.5">
+                    <Users className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Regra Empregado Único MEI (Art. 18-C LC 123)</span>
+                  </span>
+                  <span className="text-[10px] font-mono bg-sky-500/15 text-sky-300 px-1.5 py-0.5 rounded border border-sky-500/30">
+                    DAE eSocial MEI: 11% Encargo
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  Base Sal. Mínimo (<strong className="font-mono text-neutral-200">R$ {analiseSimplesFolha.resumoEmpregadoUnicoMei.salarioBaseMei.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>): CPP Patronal MEI <strong className="font-mono text-amber-300">3% (R$ {analiseSimplesFolha.resumoEmpregadoUnicoMei.inssPatronalMei3Porcento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})</strong> + FGTS <strong className="font-mono text-purple-300">8% (R$ {analiseSimplesFolha.resumoEmpregadoUnicoMei.fgtsMei8Porcento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})</strong>.
+                </p>
+              </div>
+              <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[10px] font-mono">
+                <span className="text-neutral-400">
+                  INSS Desc. Empregado: R$ {analiseSimplesFolha.resumoEmpregadoUnicoMei.inssSegurado75Porcento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+                <span className="text-sky-300 font-semibold">
+                  Guia DAE Total: R$ {analiseSimplesFolha.resumoEmpregadoUnicoMei.totalGuiaDaeMei.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          </div>
           <table className="w-full text-left text-xs border-collapse">
             <thead className="sticky top-0 bg-[#1e1e1e] border-b border-white/10 text-neutral-400 font-semibold uppercase tracking-wider text-[11px] z-10">
               <tr>
