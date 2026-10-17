@@ -456,18 +456,18 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-neutral-300 mb-1">Inscrição Estadual (IE)</label>
+                      <label className="block text-xs font-medium text-neutral-300 mb-1">Inscrição Estadual (IE - Comércio)</label>
                       <input
                         type="text"
                         value={selectedEmpresa.inscricaoEstadual || ''}
                         onChange={e => setSelectedEmpresa({ ...selectedEmpresa, inscricaoEstadual: e.target.value })}
-                        placeholder="Ex: 110.234.567.890"
+                        placeholder="Ex: 110.234.567.890 ou ISENTO"
                         className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-neutral-300 mb-1">Inscrição Municipal (IM)</label>
+                      <label className="block text-xs font-medium text-neutral-300 mb-1">Inscrição Municipal (IM - Serviços)</label>
                       <input
                         type="text"
                         value={selectedEmpresa.inscricaoMunicipal || ''}
@@ -478,31 +478,32 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-neutral-300 mb-1">Inscrição SUFRAMA</label>
-                      <input
-                        type="text"
-                        value={selectedEmpresa.inscricaoSuframa || ''}
-                        onChange={e => setSelectedEmpresa({ ...selectedEmpresa, inscricaoSuframa: e.target.value })}
-                        placeholder="Ex: 90.123.456-7"
-                        className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-500"
-                      />
+                      <label className="block text-xs font-medium text-neutral-300 mb-1">Regime Tributário (Pequeno Porte)</label>
+                      <select
+                        value={selectedEmpresa.regimeTributario || 'SIMPLES_NACIONAL'}
+                        onChange={e => setSelectedEmpresa({ ...selectedEmpresa, regimeTributario: e.target.value as RegimeTributario })}
+                        className="w-full px-3 py-2 bg-[#141414] border border-blue-500/30 rounded-lg text-xs font-semibold text-blue-300 focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="SIMPLES_NACIONAL">Simples Nacional (LC 123/2006 - ME / EPP / MEI)</option>
+                        <option value="IMUNE_ISENTA">Imune / Isenta (Associação / Entidade Local)</option>
+                      </select>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-neutral-300 mb-1">NIRE (Junta Comercial)</label>
+                      <label className="block text-xs font-medium text-neutral-300 mb-1">NIRE / Registro Junta</label>
                       <input
                         type="text"
                         value={selectedEmpresa.nire || ''}
                         onChange={e => setSelectedEmpresa({ ...selectedEmpresa, nire: e.target.value })}
-                        placeholder="11 dígitos"
+                        placeholder="11 dígitos (ou CCMEI)"
                         className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs font-mono text-white focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-neutral-300 mb-1">Data de Constituição</label>
+                      <label className="block text-xs font-medium text-neutral-300 mb-1">Data de Abertura</label>
                       <input
                         type="date"
                         value={selectedEmpresa.dataConstituicao || ''}
@@ -518,26 +519,22 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
                         onChange={e => setSelectedEmpresa({ ...selectedEmpresa, naturezaJuridica: e.target.value })}
                         className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
                       >
-                        <option value="206-2">206-2 - Sociedade Empresária Limitada</option>
-                        <option value="213-5">213-5 - Empresário Individual (EI)</option>
-                        <option value="205-4">205-4 - Sociedade Anônima Fechada</option>
-                        <option value="204-6">204-6 - Sociedade Anônima Aberta</option>
+                        <option value="206-2">206-2 - Sociedade Empresária Limitada (LTDA / SLU)</option>
+                        <option value="213-5">213-5 - Empresário Individual (EI / MEI)</option>
+                        <option value="224-0">224-0 - Sociedade Simples Limitada (Serviços)</option>
                         <option value="223-2">223-2 - Sociedade Simples Pura</option>
-                        <option value="224-0">224-0 - Sociedade Simples Limitada</option>
-                        <option value="230-5">230-5 - Empresa Individual de Resp. Ltda (EIRELI)</option>
                       </select>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-medium text-neutral-300 mb-1">Porte da Empresa</label>
+                      <label className="block text-xs font-medium text-neutral-300 mb-1">Porte / Enquadramento</label>
                       <select
                         value={selectedEmpresa.porteEmpresa || 'ME'}
                         onChange={e => setSelectedEmpresa({ ...selectedEmpresa, porteEmpresa: e.target.value as any })}
                         className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
                       >
-                        <option value="ME">ME - Microempresa</option>
-                        <option value="EPP">EPP - Empresa de Pequeno Porte</option>
-                        <option value="DEMAIS">DEMAIS - Médio / Grande Porte</option>
+                        <option value="ME">ME - Microempresa / MEI (Até R$ 360 mil/ano)</option>
+                        <option value="EPP">EPP - Empresa de Pequeno Porte (Até R$ 4,8 mi/ano)</option>
                       </select>
                     </div>
                   </div>
@@ -1267,28 +1264,39 @@ export const EmpresasModule: React.FC<EmpresasModuleProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">Regime Tributário *</label>
+                <label className="block text-xs font-medium text-neutral-300 mb-1">Regime Tributário (EFPARAMETRO_VIGENCIA) *</label>
                 <select
                   value={novaVigencia.regimeTributario}
                   onChange={e => setNovaVigencia({ ...novaVigencia, regimeTributario: e.target.value as RegimeTributario })}
                   className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
                 >
-                  <option value="SIMPLES_NACIONAL">Simples Nacional</option>
-                  <option value="LUCRO_PRESUMIDO">Lucro Presumido</option>
-                  <option value="LUCRO_REAL">Lucro Real</option>
+                  <option value="SIMPLES_NACIONAL">Simples Nacional (ME / EPP / SIMEI-MEI)</option>
                   <option value="IMUNE_ISENTA">Imune / Isenta</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300 mb-1">Regime de Apuração *</label>
+                <label className="block text-xs font-medium text-neutral-300 mb-1">Enquadramento Simples / MEI (SIMPLESN_MEI_PAR) *</label>
+                <select
+                  value={novaVigencia.enquadramentoSimples || 'MICROEMPRESA'}
+                  onChange={e => setNovaVigencia({ ...novaVigencia, enquadramentoSimples: e.target.value as any })}
+                  className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
+                >
+                  <option value="MICROEMPRESA">Microempresa (ME - Simples Nacional)</option>
+                  <option value="EPP">Empresa de Pequeno Porte (EPP - Simples Nacional)</option>
+                  <option value="MEI">Microempreendedor Individual (SIMEI / MEI)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-300 mb-1">Regime de Apuração de Receitas *</label>
                 <select
                   value={novaVigencia.regimeApuracao}
                   onChange={e => setNovaVigencia({ ...novaVigencia, regimeApuracao: e.target.value as any })}
                   className="w-full px-3 py-2 bg-[#141414] border border-white/10 rounded-lg text-xs text-white focus:outline-none focus:border-blue-500"
                 >
-                  <option value="COMPETENCIA">Regime de Competência</option>
-                  <option value="CAIXA">Regime de Caixa</option>
+                  <option value="COMPETENCIA">Regime de Competência (Faturamento NF-e / NFS-e)</option>
+                  <option value="CAIXA">Regime de Caixa (Recebimento Efetivo)</option>
                 </select>
               </div>
 

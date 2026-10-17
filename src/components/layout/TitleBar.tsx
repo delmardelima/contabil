@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Empresa, ModuloSistema, SessaoUsuario } from '../../types/contabil';
 import { 
   Building2, 
@@ -9,6 +10,7 @@ import {
   Sun, 
   Minus, 
   Square, 
+  Copy,
   X,
   Command,
   BookOpen,
@@ -46,6 +48,74 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   sessao,
   onLogout
 }) => {
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  // Inicialização do estado da janela Tauri e atalhos F11 / redimensionamento
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const setupTauri = async () => {
+      try {
+        const appWindow = getCurrentWindow();
+        const max = await appWindow.isMaximized();
+        setIsMaximized(max);
+        unlisten = await appWindow.onResized(async () => {
+          try {
+            const isMax = await appWindow.isMaximized();
+            setIsMaximized(isMax);
+          } catch {
+            // Ignora erro se executando fora do runtime Tauri
+          }
+        });
+      } catch {
+        // Ignora se estiver fora do Tauri (ex: browser puro)
+      }
+    };
+    setupTauri();
+
+    const handleWindowKeyDown = async (e: KeyboardEvent) => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        try {
+          const appWindow = getCurrentWindow();
+          const isFullscreen = await appWindow.isFullscreen();
+          await appWindow.setFullscreen(!isFullscreen);
+        } catch {}
+      }
+    };
+    window.addEventListener('keydown', handleWindowKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleWindowKeyDown);
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+  const handleMinimize = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.minimize();
+    } catch {}
+  };
+
+  const handleToggleMaximize = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.toggleMaximize();
+      const max = await appWindow.isMaximized();
+      setIsMaximized(max);
+    } catch {}
+  };
+
+  const handleClose = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const appWindow = getCurrentWindow();
+      await appWindow.close();
+    } catch {}
+  };
+
   // Atalhos Globais Alt+1 a Alt+4 para troca rápida de módulo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -77,10 +147,15 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   ];
 
   return (
-    <header className="no-print h-10 bg-[#181818] border-b border-white/10 flex items-center justify-between px-3 select-none text-xs text-neutral-300 z-50" data-no-print="true">
+    <header 
+      data-tauri-drag-region
+      onDoubleClick={() => handleToggleMaximize()}
+      className="no-print h-10 bg-[#181818] border-b border-white/10 flex items-center justify-between px-3 select-none text-xs text-neutral-300 z-50 cursor-default" 
+      data-no-print="true"
+    >
       {/* Esquerda: Logo + Seletor de Módulos Oficiais */}
-      <div className="flex items-center space-x-2.5">
-        <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2.5" data-tauri-drag-region>
+        <div className="flex items-center space-x-2 cursor-pointer" data-tauri-drag-region>
           <div className="w-5 h-5 rounded bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-[10px] shadow-sm">
             C
           </div>
@@ -92,7 +167,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <div className="h-4 w-px bg-white/10" />
 
         {/* 4 Módulos Oficiais da Suíte Contábil */}
-        <div className="flex items-center bg-neutral-900/90 rounded-lg p-0.5 border border-white/10 space-x-0.5">
+        <div className="flex items-center bg-neutral-900/90 rounded-lg p-0.5 border border-white/10 space-x-0.5" data-tauri-drag-region="false">
           {modulos.map(m => {
             const Icon = m.icon;
             const isActive = moduloAtivo === m.id;
@@ -119,7 +194,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         <div className="h-4 w-px bg-white/10" />
 
         {/* Seletor Rápido de Empresa Ativa */}
-        <div className="flex items-center space-x-1.5 bg-neutral-900/80 px-2 py-1 rounded border border-white/5 hover:border-white/20 transition-colors cursor-pointer">
+        <div className="flex items-center space-x-1.5 bg-neutral-900/80 px-2 py-1 rounded border border-white/5 hover:border-white/20 transition-colors cursor-pointer" data-tauri-drag-region="false">
           <Building2 className="w-3.5 h-3.5 text-blue-400" />
           <select
             value={empresa.id}
@@ -142,7 +217,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       </div>
 
       {/* Centro: Command Palette shortcut button */}
-      <div className="flex items-center">
+      <div className="flex items-center" data-tauri-drag-region="false">
         <button
           onClick={onOpenCommandPalette}
           className="flex items-center space-x-2 px-3 py-1 bg-neutral-900/90 hover:bg-neutral-800 rounded-md border border-white/10 text-neutral-400 hover:text-neutral-200 transition-all text-xs"
@@ -180,7 +255,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
         {/* Badge do Usuário Autenticado e Botão de Logout */}
         {sessao && (
-          <div className="hidden lg:flex items-center space-x-1.5 bg-neutral-900/80 px-2 py-0.5 rounded border border-white/10">
+          <div className="hidden lg:flex items-center space-x-1.5 bg-neutral-900/80 px-2 py-0.5 rounded border border-white/10" data-tauri-drag-region="false">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-[11px] font-medium text-neutral-200 max-w-[120px] truncate">
               {sessao.usuarioNome}
@@ -205,19 +280,36 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           onClick={onToggleTheme}
           className="p-1 hover:bg-white/10 rounded transition-colors text-neutral-400 hover:text-white"
           title={isDark ? "Alternar para Modo Claro" : "Alternar para Modo Escuro"}
+          data-tauri-drag-region="false"
         >
           {isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
         </button>
 
-        {/* Window Controls */}
-        <div className="flex items-center space-x-1 ml-1">
-          <button className="w-7 h-6 hover:bg-white/10 flex items-center justify-center rounded transition-colors text-neutral-400 hover:text-white">
+        {/* Window Controls (Tauri Desktop Frameless) */}
+        <div className="flex items-center space-x-1 ml-1" data-tauri-drag-region="false">
+          <button 
+            onClick={handleMinimize}
+            className="w-7 h-6 hover:bg-white/10 flex items-center justify-center rounded transition-colors text-neutral-400 hover:text-white"
+            title="Minimizar Janela"
+          >
             <Minus className="w-3 h-3" />
           </button>
-          <button className="w-7 h-6 hover:bg-white/10 flex items-center justify-center rounded transition-colors text-neutral-400 hover:text-white">
-            <Square className="w-2.5 h-2.5" />
+          <button 
+            onClick={handleToggleMaximize}
+            className="w-7 h-6 hover:bg-white/10 flex items-center justify-center rounded transition-colors text-neutral-400 hover:text-white"
+            title={isMaximized ? "Restaurar Janela" : "Maximizar Janela (F11 para Tela Cheia)"}
+          >
+            {isMaximized ? (
+              <Copy className="w-2.5 h-2.5 rotate-180" />
+            ) : (
+              <Square className="w-2.5 h-2.5" />
+            )}
           </button>
-          <button className="w-7 h-6 hover:bg-red-600 flex items-center justify-center rounded transition-colors text-neutral-400 hover:text-white">
+          <button 
+            onClick={handleClose}
+            className="w-7 h-6 hover:bg-red-600 flex items-center justify-center rounded transition-colors text-neutral-400 hover:text-white"
+            title="Fechar Aplicação"
+          >
             <X className="w-3 h-3" />
           </button>
         </div>

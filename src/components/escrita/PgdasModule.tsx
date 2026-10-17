@@ -30,12 +30,24 @@ export const PgdasModule: React.FC = () => {
   const [apuracao, setApuracao] = useState<ApuracaoPgdas | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<'apuracao' | 'segregacoes' | 'das' | 'tabelas'>('apuracao');
 
-  // Modais
+  // Modais e Opções de Contabilização (Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm)
   const [showDasModal, setShowDasModal] = useState(false);
   const [showMemoriaModal, setShowMemoriaModal] = useState(false);
   const [copiadoPix, setCopiadoPix] = useState(false);
   const [copiadoCodigo, setCopiadoCodigo] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null);
+  const [modoContabilizacao, setModoContabilizacao] = useState<'APENAS_MOSTRA' | 'NAO_GERA' | 'MOSTRA_E_GRAVA'>('MOSTRA_E_GRAVA');
+  const [incluirQuitacaoGuia, setIncluirQuitacaoGuia] = useState<boolean>(true);
+  const [partidasPreview, setPartidasPreview] = useState<Array<{
+    tipoOrigem: string;
+    data: string;
+    contaDebitoCodigo: number;
+    contaDebitoNome: string;
+    contaCreditoCodigo: number;
+    contaCreditoNome: string;
+    valor: number;
+    historico: string;
+  }>>([]);
 
   const carregarDados = () => {
     const emp = dbService.getActiveEmpresa();
@@ -48,13 +60,19 @@ export const PgdasModule: React.FC = () => {
 
   useEffect(() => {
     carregarDados();
+    setPartidasPreview([]);
   }, [competencia]);
 
-  const handleIntegrarContabil = () => {
+  const handleIntegrarContabil = (modoForcado?: 'APENAS_MOSTRA' | 'NAO_GERA' | 'MOSTRA_E_GRAVA') => {
     if (!apuracao) return;
-    const res = dbService.integrarPgdasContabil(apuracao.id);
+    const modo = modoForcado || modoContabilizacao;
+    const res = dbService.integrarPgdasContabil(apuracao.id, modo, incluirQuitacaoGuia);
+    setPartidasPreview(res.partidasGeradas || []);
     if (res.sucesso) {
-      setFeedbackMsg({ tipo: 'success', texto: `${res.mensagem} (Lote Contábil nº ${res.loteId})` });
+      setFeedbackMsg({
+        tipo: 'success',
+        texto: res.loteId > 0 ? `${res.mensagem} (Lote Contábil nº ${res.loteId})` : res.mensagem
+      });
       carregarDados();
     } else {
       setFeedbackMsg({ tipo: 'error', texto: res.mensagem });
@@ -87,13 +105,13 @@ export const PgdasModule: React.FC = () => {
           </div>
           <div>
             <h1 className="text-sm font-semibold text-neutral-100 flex items-center gap-2">
-              PGDAS-D 2026 & Simples Nacional Avançado
+              PGDAS-D 2026 & Simples Nacional (MEI / ME / EPP)
               <span className="text-[10px] font-mono bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30">
                 LC 123/2006 & CGSN 140/2018
               </span>
             </h1>
             <p className="text-xs text-neutral-400">
-              Segregação por Anexos I a V, Cálculo da Alíquota Efetiva, Fator R Dinâmico e Emissão da Guia DAS
+              Segregação por Anexos I a V, Cálculo da Alíquota Efetiva, Fator R, Guia DAS e Contabilização Automática
             </p>
           </div>
         </div>
@@ -255,15 +273,154 @@ export const PgdasModule: React.FC = () => {
                     </span>
                   ) : (
                     <button
-                      onClick={handleIntegrarContabil}
+                      onClick={() => handleIntegrarContabil()}
                       className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-medium transition"
                     >
-                      Integrar ao Diário
+                      Executar Contabilização
                     </button>
                   )}
                 </div>
-                <p className="text-[10px] text-neutral-500">Partidas dobradas D: 4.1.02 / C: 2.1.04</p>
+                <p className="text-[10px] text-neutral-500">D: 611 (Simples) / C: 311 (DAS a Recolher)</p>
               </div>
+            </div>
+
+            {/* Assistente de Contabilização na Apuração (3 Opções de Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm) */}
+            <div className="bg-[#181818] border border-blue-500/20 rounded-xl p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-neutral-100 flex items-center gap-2">
+                    <Zap size={16} className="text-blue-400" />
+                    <span>Opções de Contabilização da Apuração (Integração Escrita Fiscal → Contabilidade)</span>
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    Escolha se deseja apenas conferir as partidas na tela antes de gravar ou enviar diretamente para o Livro Diário e Livro Caixa
+                  </p>
+                </div>
+
+                <label className="flex items-center space-x-2 bg-neutral-900 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs text-emerald-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={incluirQuitacaoGuia}
+                    onChange={(e) => setIncluirQuitacaoGuia(e.target.checked)}
+                    className="rounded border-neutral-700 bg-neutral-950 text-emerald-500"
+                  />
+                  <span>Gerar também Baixa de Pagamento da Guia DAS no Banco (`Pagto Guia EF`)</span>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModoContabilizacao('APENAS_MOSTRA');
+                    handleIntegrarContabil('APENAS_MOSTRA');
+                  }}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    modoContabilizacao === 'APENAS_MOSTRA'
+                      ? 'bg-blue-950/30 border-blue-500/50 text-blue-200'
+                      : 'bg-[#1c1c1c] border-white/10 text-neutral-300 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-blue-400">1. Apenas mostra lançamentos contábeis</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">Conferência</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400">
+                    Não grava no Diário. Exibe na tela os lançamentos de provisão (e pagamento) para conferência do contador iniciante.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModoContabilizacao('NAO_GERA');
+                    handleIntegrarContabil('NAO_GERA');
+                  }}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    modoContabilizacao === 'NAO_GERA'
+                      ? 'bg-neutral-800 border-neutral-500 text-neutral-200'
+                      : 'bg-[#1c1c1c] border-white/10 text-neutral-300 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-neutral-300">2. Não gera lançamentos contábeis</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-neutral-700 text-neutral-300">Somente Fiscal</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400">
+                    Apenas apura o imposto e emite a Guia DAS sem gerar nem exibir partidas contábeis.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModoContabilizacao('MOSTRA_E_GRAVA');
+                    handleIntegrarContabil('MOSTRA_E_GRAVA');
+                  }}
+                  className={`p-3 rounded-xl border text-left transition ${
+                    modoContabilizacao === 'MOSTRA_E_GRAVA'
+                      ? 'bg-emerald-950/30 border-emerald-500/50 text-emerald-200'
+                      : 'bg-[#1c1c1c] border-white/10 text-neutral-300 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-emerald-400">3. Mostra e grava lançamentos contábeis</span>
+                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Gravar no Diário</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-400">
+                    Exibe as partidas na tela e grava automaticamente no Livro Diário e no Livro Caixa Contábil.
+                  </p>
+                </button>
+              </div>
+
+              {partidasPreview.length > 0 && (
+                <div className="border border-white/10 rounded-lg overflow-hidden bg-[#141414]">
+                  <div className="px-3 py-2 bg-neutral-900 border-b border-white/10 flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-neutral-300">
+                      ESPELHO DAS PARTIDAS CONTÁBEIS DA APURAÇÃO ({modoContabilizacao === 'APENAS_MOSTRA' ? 'SIMULAÇÃO / CONFERÊNCIA' : 'GRAVADAS NO DIÁRIO'})
+                    </span>
+                    <span className="font-mono text-emerald-400">
+                      Total: R$ {partidasPreview.reduce((s, p) => s + p.valor, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-[#1c1c1c] text-neutral-400 font-mono text-[10px]">
+                      <tr>
+                        <th className="py-2 px-3">Data</th>
+                        <th className="py-2 px-3">Origem</th>
+                        <th className="py-2 px-3">Conta Débito</th>
+                        <th className="py-2 px-3">Conta Crédito</th>
+                        <th className="py-2 px-3">Histórico Contábil</th>
+                        <th className="py-2 px-3 text-right">Valor (R$)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5 font-mono">
+                      {partidasPreview.map((p, idx) => (
+                        <tr key={idx} className="hover:bg-white/[0.02]">
+                          <td className="py-2 px-3 text-neutral-300">{p.data.split('-').reverse().join('/')}</td>
+                          <td className="py-2 px-3">
+                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-300 border border-blue-500/20 text-[10px]">
+                              {p.tipoOrigem}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-blue-400 font-sans">
+                            <span className="font-mono text-[10px] text-neutral-400 mr-1">{p.contaDebitoCodigo}</span>
+                            {p.contaDebitoNome}
+                          </td>
+                          <td className="py-2 px-3 text-indigo-400 font-sans">
+                            <span className="font-mono text-[10px] text-neutral-400 mr-1">{p.contaCreditoCodigo}</span>
+                            {p.contaCreditoNome}
+                          </td>
+                          <td className="py-2 px-3 font-sans text-neutral-300">{p.historico}</td>
+                          <td className="py-2 px-3 text-right font-bold text-emerald-400">
+                            R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Resumo da Apuração do Período */}

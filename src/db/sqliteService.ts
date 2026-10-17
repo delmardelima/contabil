@@ -710,7 +710,7 @@ const SEED_EMPRESA: Empresa = {
   fap: 1.0,
   telefone: '',
   email: '',
-  regimeTributario: 'LUCRO_PRESUMIDO',
+  regimeTributario: 'SIMPLES_NACIONAL',
   responsavelLegal: '',
   cpfResponsavel: '',
   contadorNome: '',
@@ -721,7 +721,15 @@ const SEED_EMPRESA: Empresa = {
   exercicioAtivo: new Date().getFullYear(),
   competenciaAtiva: new Date().toISOString().slice(0, 7),
   socios: [],
-  vigencias: []
+  vigencias: [
+    {
+      id: 1,
+      inicioCompetencia: `${new Date().getFullYear()}-01`,
+      regimeTributario: 'SIMPLES_NACIONAL',
+      regimeApuracao: 'COMPETENCIA',
+      enquadramentoSimples: 'MICROEMPRESA'
+    }
+  ]
 };
 
 export function gerarParametrosPadrao(empresaId: number, offsetId = (empresaId - 1) * 100): ParametrosEmpresa {
@@ -748,8 +756,8 @@ export function gerarCentrosCustoPadrao(empresaId: number, baseId = (empresaId -
     { id: baseId + 2, empresaId, codigo: '01.01', nome: 'Diretoria e Administrativo', tipo: 'A' },
     { id: baseId + 3, empresaId, codigo: '01.02', nome: 'Financeiro e Contabilidade', tipo: 'A' },
     { id: baseId + 4, empresaId, codigo: '02', nome: 'OPERAÇÕES E COMERCIAL', tipo: 'S' },
-    { id: baseId + 5, empresaId, codigo: '02.01', nome: 'Operações e Produção', tipo: 'A' },
-    { id: baseId + 6, empresaId, codigo: '02.02', nome: 'Comercial e Atendimento', tipo: 'A' }
+    { id: baseId + 5, empresaId, codigo: '02.01', nome: 'Comércio de Mercadorias', tipo: 'A' },
+    { id: baseId + 6, empresaId, codigo: '02.02', nome: 'Prestação de Serviços', tipo: 'A' }
   ];
 }
 
@@ -763,11 +771,11 @@ export function gerarLancamentosPadraoIniciais(empresaId: number, offsetConta = 
       id: (empresaId - 1) * 20 + 1,
       empresaId,
       codigo: 101,
-      descricao: 'Recebimento de Cliente via Banco',
+      descricao: 'Recebimento de Cliente via Banco / PIX',
       contaDebitoId: offsetConta + 6, // Banco Conta Movimento
       contaCreditoId: offsetConta + 11, // Duplicatas a Receber
       historicoId: offsetHist + 1,
-      complemento: 'Ref. liquidação de títulos de clientes'
+      complemento: 'Ref. recebimento de NF-e / NFS-e de cliente'
     },
     {
       id: (empresaId - 1) * 20 + 2,
@@ -777,17 +785,67 @@ export function gerarLancamentosPadraoIniciais(empresaId: number, offsetConta = 
       contaDebitoId: offsetConta + 30, // Fornecedores
       contaCreditoId: offsetConta + 6, // Banco Conta Movimento
       historicoId: offsetHist + 2,
-      complemento: 'Ref. quitação de duplicata fornecedor'
+      complemento: 'Ref. quitação de nota fiscal de fornecedor'
     },
     {
       id: (empresaId - 1) * 20 + 3,
       empresaId,
       codigo: 103,
-      descricao: 'Apropriação da Folha Salarial',
-      contaDebitoId: offsetConta + 56, // Despesas com Salários
-      contaCreditoId: offsetConta + 26, // Salários a Pagar
+      descricao: 'Venda de Mercadorias à Vista (Caixa Geral)',
+      contaDebitoId: offsetConta + 5, // Caixa Geral Matriz
+      contaCreditoId: offsetConta + 43, // Receita Bruta com Venda de Mercadorias
+      historicoId: offsetHist + 5,
+      complemento: 'Ref. vendas de mercadorias à vista no balcão'
+    },
+    {
+      id: (empresaId - 1) * 20 + 4,
+      empresaId,
+      codigo: 104,
+      descricao: 'Prestação de Serviços à Vista (Banco / PIX)',
+      contaDebitoId: offsetConta + 6, // Banco Conta Movimento
+      contaCreditoId: offsetConta + 44, // Receita com Prestação de Serviços
+      historicoId: offsetHist + 6,
+      complemento: 'Ref. NFS-e de serviços prestados recebida à vista'
+    },
+    {
+      id: (empresaId - 1) * 20 + 5,
+      empresaId,
+      codigo: 105,
+      descricao: 'Provisão Mensal Guia DAS - Simples Nacional / MEI',
+      contaDebitoId: offsetConta + 45, // (-) Tributos Incidentes sobre Vendas e Serviços
+      contaCreditoId: offsetConta + 29, // Tributos e Contribuições a Recolher
+      historicoId: offsetHist + 7,
+      complemento: 'Ref. apuração PGDAS-D / DAS-MEI da competência'
+    },
+    {
+      id: (empresaId - 1) * 20 + 6,
+      empresaId,
+      codigo: 106,
+      descricao: 'Pagamento de Guia DAS (Simples Nacional / SIMEI)',
+      contaDebitoId: offsetConta + 29, // Tributos e Contribuições a Recolher
+      contaCreditoId: offsetConta + 6, // Banco Conta Movimento
+      historicoId: offsetHist + 8,
+      complemento: 'Ref. recolhimento de Documento de Arrecadação do Simples Nacional (DAS)'
+    },
+    {
+      id: (empresaId - 1) * 20 + 7,
+      empresaId,
+      codigo: 107,
+      descricao: 'Apropriação de Pró-Labore e Folha Salarial',
+      contaDebitoId: offsetConta + 56, // Despesas com Salários e Pró-Labore
+      contaCreditoId: offsetConta + 26, // Salários e Pró-Labore a Pagar
       historicoId: offsetHist + 3,
-      complemento: 'Competência mensal folha'
+      complemento: 'Ref. folha mensal e retirada de pró-labore'
+    },
+    {
+      id: (empresaId - 1) * 20 + 8,
+      empresaId,
+      codigo: 108,
+      descricao: 'Despesa com Tarifa Bancária / Manutenção de Conta',
+      contaDebitoId: offsetConta + 58, // Despesas com Tarifas e Encargos Bancários
+      contaCreditoId: offsetConta + 6, // Banco Conta Movimento
+      historicoId: offsetHist + 4,
+      complemento: 'Ref. tarifa de manutenção e pacote bancário PJ'
     }
   ];
 }
@@ -825,7 +883,7 @@ export function gerarPlanoContasReferencialPadrao(empresaId: number, offset = (e
     { id: offset + 26, empresaId, classificacao: '2.01.01.001.0001', codigoReduzido: 301, nome: 'Salários e Ordenados a Pagar', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
     { id: offset + 27, empresaId, classificacao: '2.01.01.002.0001', codigoReduzido: 302, nome: 'INSS e Previdência Social a Recolher', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
     { id: offset + 28, empresaId, classificacao: '2.01.01.003.0001', codigoReduzido: 303, nome: 'FGTS a Recolher', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
-    { id: offset + 29, empresaId, classificacao: '2.01.02.001.0001', codigoReduzido: 311, nome: 'Tributos e Contribuições a Recolher', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
+    { id: offset + 29, empresaId, classificacao: '2.01.02.001.0001', codigoReduzido: 311, nome: 'DAS Simples Nacional e Tributos a Recolher', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
     { id: offset + 30, empresaId, classificacao: '2.01.03.001.0001', codigoReduzido: 321, nome: 'Fornecedores Nacionais a Pagar', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
     { id: offset + 35, empresaId, classificacao: '2.03', codigoReduzido: 23, nome: 'PATRIMÔNIO LÍQUIDO', tipo: 'S', natureza: 'C', grau: 2, saldoAnterior: 0 },
     { id: offset + 36, empresaId, classificacao: '2.03.01.001.0001', codigoReduzido: 501, nome: 'Capital Social Integralizado', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
@@ -837,15 +895,15 @@ export function gerarPlanoContasReferencialPadrao(empresaId: number, offset = (e
     { id: offset + 42, empresaId, classificacao: '3', codigoReduzido: 3, nome: 'RECEITAS OPERACIONAIS', tipo: 'S', natureza: 'C', grau: 1, saldoAnterior: 0 },
     { id: offset + 43, empresaId, classificacao: '3.01.01.001.0001', codigoReduzido: 601, nome: 'Receita Bruta com Venda de Mercadorias', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
     { id: offset + 44, empresaId, classificacao: '3.01.01.002.0001', codigoReduzido: 602, nome: 'Receita com Prestação de Serviços', tipo: 'A', natureza: 'C', grau: 5, saldoAnterior: 0 },
-    { id: offset + 45, empresaId, classificacao: '3.01.02.001.0001', codigoReduzido: 611, nome: '(-) Tributos Incidentes sobre Vendas e Serviços', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+    { id: offset + 45, empresaId, classificacao: '3.01.02.001.0001', codigoReduzido: 611, nome: '(-) Simples Nacional (DAS) e Tributos s/ Faturamento', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
 
     // 4. DESPESAS E CUSTOS
     { id: offset + 50, empresaId, classificacao: '4', codigoReduzido: 4, nome: 'CUSTOS E DESPESAS OPERACIONAIS', tipo: 'S', natureza: 'D', grau: 1, saldoAnterior: 0 },
     { id: offset + 55, empresaId, classificacao: '4.01.01.001.0001', codigoReduzido: 701, nome: 'Custo das Mercadorias Vendidas (CMV)', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
-    { id: offset + 56, empresaId, classificacao: '4.01.02.001.0001', codigoReduzido: 711, nome: 'Despesas com Salários e Ordenados', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
-    { id: offset + 57, empresaId, classificacao: '4.01.02.002.0001', codigoReduzido: 712, nome: 'Despesas com Serviços de Terceiros e TI', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+    { id: offset + 56, empresaId, classificacao: '4.01.02.001.0001', codigoReduzido: 711, nome: 'Despesas com Salários e Pró-Labore', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
+    { id: offset + 57, empresaId, classificacao: '4.01.02.002.0001', codigoReduzido: 712, nome: 'Despesas com Serviços de Terceiros e Contabilidade', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
     { id: offset + 58, empresaId, classificacao: '4.01.03.001.0001', codigoReduzido: 721, nome: 'Despesas com Tarifas e Encargos Bancários', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 },
-    { id: offset + 59, empresaId, classificacao: '4.01.04.001.0001', codigoReduzido: 731, nome: 'Despesas de Aluguel, Condomínio e Instalações', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 }
+    { id: offset + 59, empresaId, classificacao: '4.01.04.001.0001', codigoReduzido: 731, nome: 'Despesas de Aluguel, Energia e Internet', tipo: 'A', natureza: 'D', grau: 5, saldoAnterior: 0 }
   ];
 }
 
@@ -859,14 +917,18 @@ export function gerarHistoricosPadrao(empresaId: number, baseId = (empresaId - 1
   return [
     { id: baseId + 1, empresaId, codigo: 1, descricao: 'Recebimento de cliente referente a documentos fiscais emitidos' },
     { id: baseId + 2, empresaId, codigo: 2, descricao: 'Pagamento efetuado a fornecedores via banco' },
-    { id: baseId + 3, empresaId, codigo: 3, descricao: 'Valor referente à apropriação da folha de pagamento mensal' },
-    { id: baseId + 4, empresaId, codigo: 4, descricao: 'Despesa com tarifa bancária e manutenção de conta' }
+    { id: baseId + 3, empresaId, codigo: 3, descricao: 'Valor referente à apropriação da folha e pró-labore mensal' },
+    { id: baseId + 4, empresaId, codigo: 4, descricao: 'Despesa com tarifa bancária e manutenção de conta' },
+    { id: baseId + 5, empresaId, codigo: 5, descricao: 'Venda de mercadorias à vista conforme movimento de caixa' },
+    { id: baseId + 6, empresaId, codigo: 6, descricao: 'Receita de prestação de serviços conforme NFS-e emitida' },
+    { id: baseId + 7, empresaId, codigo: 7, descricao: 'Provisão mensal de guia DAS do Simples Nacional / SIMEI' },
+    { id: baseId + 8, empresaId, codigo: 8, descricao: 'Pagamento de guia DAS do Simples Nacional / MEI' }
   ];
 }
 
 const SEED_HISTORICOS: HistoricoPadrao[] = gerarHistoricosPadrao(1, 0);
 
-// Catálogo Normativo Fiscal — Acumuladores CFOP Padrão
+// Catálogo Normativo Fiscal — Acumuladores CFOP Padrão (Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm)
 export function gerarAcumuladoresPadrao(empresaId: number, offsetConta = (empresaId - 1) * 100, offsetHist = (empresaId - 1) * 20): AcumuladorFiscal[] {
   const baseId = (empresaId - 1) * 20;
   return [
@@ -874,77 +936,133 @@ export function gerarAcumuladoresPadrao(empresaId: number, offsetConta = (empres
       id: baseId + 1,
       empresaId,
       codigo: 1,
-      descricao: 'Compra de Mercadorias para Comercialização',
-      cfopPadrao: '1.102',
-      tipoOperacao: 'ENTRADA',
-      incideICMS: true,
-      aliquotaICMS: 18.0,
-      incidePIS: true,
-      aliquotaPIS: 1.65,
-      incideCOFINS: true,
-      aliquotaCOFINS: 7.6,
+      descricao: 'Venda de Mercadorias à Vista (Caixa Geral)',
+      cfopPadrao: '5.102',
+      cfopsPermitidos: ['5.102', '5.405', '6.102'],
+      tipoOperacao: 'SAIDA',
+      incideICMS: false,
+      aliquotaICMS: 0,
+      incidePIS: false,
+      aliquotaPIS: 0,
+      incideCOFINS: false,
+      aliquotaCOFINS: 0,
       incideISS: false,
-      incideSimples: false,
-      contaContabilDebitoId: offsetConta + 15, // Estoque
-      contaContabilCreditoId: offsetConta + 30, // Fornecedores
-      contaICMSDebitoId: offsetConta + 16, // ICMS a Recuperar
-      contaICMSCreditoId: offsetConta + 30,
-      historicoId: offsetHist + 2
+      incideSimples: true,
+      contaDebitoValor: offsetConta + 5, // 101 - Caixa Geral Matriz
+      contaCreditoValor: offsetConta + 43, // 601 - Receita Bruta com Venda de Mercadorias
+      contaContabilDebitoId: offsetConta + 5,
+      contaContabilCreditoId: offsetConta + 43,
+      historicoId: offsetHist + 5
     },
     {
       id: baseId + 2,
       empresaId,
       codigo: 2,
-      descricao: 'Venda de Mercadorias no Estado',
+      descricao: 'Venda de Mercadorias a Prazo (Conta do Cliente)',
       cfopPadrao: '5.102',
+      cfopsPermitidos: ['5.102', '5.405', '6.102'],
       tipoOperacao: 'SAIDA',
-      incideICMS: true,
-      aliquotaICMS: 18.0,
-      incidePIS: true,
-      aliquotaPIS: 0.65,
-      incideCOFINS: true,
-      aliquotaCOFINS: 3.0,
+      incideICMS: false,
+      aliquotaICMS: 0,
+      incidePIS: false,
+      aliquotaPIS: 0,
+      incideCOFINS: false,
+      aliquotaCOFINS: 0,
       incideISS: false,
       incideSimples: true,
-      contaContabilDebitoId: offsetConta + 11, // Clientes
-      contaContabilCreditoId: offsetConta + 43, // Receita Vendas
+      contaDebitoValor: offsetConta + 11, // 111 - Clientes - Duplicatas a Receber (ou conta do cadastro do cliente)
+      contaCreditoValor: offsetConta + 43, // 601 - Receita Bruta com Venda de Mercadorias
+      contaContabilDebitoId: offsetConta + 11,
+      contaContabilCreditoId: offsetConta + 43,
       historicoId: offsetHist + 1
     },
     {
       id: baseId + 3,
       empresaId,
       codigo: 3,
-      descricao: 'Prestação de Serviços Tributados pelo ISSQN',
-      cfopPadrao: '5.933',
-      tipoOperacao: 'SERVICO',
+      descricao: 'Compra de Mercadorias à Vista (Caixa Geral)',
+      cfopPadrao: '1.102',
+      cfopsPermitidos: ['1.102', '1.403', '2.102'],
+      tipoOperacao: 'ENTRADA',
       incideICMS: false,
-      incidePIS: true,
-      aliquotaPIS: 0.65,
-      incideCOFINS: true,
-      aliquotaCOFINS: 3.0,
-      incideISS: true,
-      aliquotaISS: 5.0,
-      incideSimples: true,
-      contaContabilDebitoId: offsetConta + 11, // Clientes
-      contaContabilCreditoId: offsetConta + 44, // Receita Serviços
-      historicoId: offsetHist + 1
+      aliquotaICMS: 0,
+      incidePIS: false,
+      aliquotaPIS: 0,
+      incideCOFINS: false,
+      aliquotaCOFINS: 0,
+      incideISS: false,
+      incideSimples: false,
+      contaDebitoValor: offsetConta + 15, // 121 - Estoque de Mercadorias para Revenda
+      contaCreditoValor: offsetConta + 5, // 101 - Caixa Geral Matriz
+      contaContabilDebitoId: offsetConta + 15,
+      contaContabilCreditoId: offsetConta + 5,
+      historicoId: offsetHist + 2
     },
     {
       id: baseId + 4,
       empresaId,
       codigo: 4,
-      descricao: 'Aquisição de Serviços Tomados de Terceiros',
-      cfopPadrao: '1.933',
+      descricao: 'Compra de Mercadorias a Prazo (Conta do Fornecedor)',
+      cfopPadrao: '1.102',
+      cfopsPermitidos: ['1.102', '1.403', '2.102'],
       tipoOperacao: 'ENTRADA',
       incideICMS: false,
+      aliquotaICMS: 0,
       incidePIS: false,
+      aliquotaPIS: 0,
       incideCOFINS: false,
+      aliquotaCOFINS: 0,
+      incideISS: false,
+      incideSimples: false,
+      contaDebitoValor: offsetConta + 15, // 121 - Estoque de Mercadorias para Revenda
+      contaCreditoValor: offsetConta + 30, // 321 - Fornecedores Nacionais a Pagar (ou conta do cadastro do fornecedor)
+      contaContabilDebitoId: offsetConta + 15,
+      contaContabilCreditoId: offsetConta + 30,
+      historicoId: offsetHist + 2
+    },
+    {
+      id: baseId + 5,
+      empresaId,
+      codigo: 5,
+      descricao: 'Prestação de Serviços à Vista (Banco / PIX)',
+      cfopPadrao: '5.933',
+      cfopsPermitidos: ['5.933', '6.933'],
+      tipoOperacao: 'SERVICO',
+      incideICMS: false,
+      incidePIS: false,
+      aliquotaPIS: 0,
+      incideCOFINS: false,
+      aliquotaCOFINS: 0,
       incideISS: true,
       aliquotaISS: 5.0,
-      incideSimples: false,
-      contaContabilDebitoId: offsetConta + 57, // Despesas Serviços
-      contaContabilCreditoId: offsetConta + 30, // Fornecedores
-      historicoId: offsetHist + 2
+      incideSimples: true,
+      contaDebitoValor: offsetConta + 6, // 102 - Bancos Conta Movimento - Principal
+      contaCreditoValor: offsetConta + 44, // 602 - Receita com Prestação de Serviços
+      contaContabilDebitoId: offsetConta + 6,
+      contaContabilCreditoId: offsetConta + 44,
+      historicoId: offsetHist + 6
+    },
+    {
+      id: baseId + 6,
+      empresaId,
+      codigo: 6,
+      descricao: 'Prestação de Serviços a Prazo (Conta do Cliente)',
+      cfopPadrao: '5.933',
+      cfopsPermitidos: ['5.933', '6.933'],
+      tipoOperacao: 'SERVICO',
+      incideICMS: false,
+      incidePIS: false,
+      aliquotaPIS: 0,
+      incideCOFINS: false,
+      aliquotaCOFINS: 0,
+      incideISS: true,
+      aliquotaISS: 5.0,
+      incideSimples: true,
+      contaDebitoValor: offsetConta + 11, // 111 - Clientes - Duplicatas a Receber
+      contaCreditoValor: offsetConta + 44, // 602 - Receita com Prestação de Serviços
+      contaContabilDebitoId: offsetConta + 11,
+      contaContabilCreditoId: offsetConta + 44,
+      historicoId: offsetHist + 6
     }
   ];
 }
@@ -19040,42 +19158,316 @@ export class DatabaseService {
     return apuracao;
   }
 
-  public integrarPgdasContabil(apuracaoId: number): { sucesso: boolean; loteId: number; mensagem: string } {
+  public integrarPgdasContabil(
+    apuracaoId: number,
+    modoContabilizacao: 'MOSTRA_E_GRAVA' | 'APENAS_MOSTRA' | 'NAO_GERA' = 'MOSTRA_E_GRAVA',
+    incluirQuitacaoGuia: boolean = false,
+    contaCaixaBancoId?: number
+  ): {
+    sucesso: boolean;
+    loteId: number;
+    mensagem: string;
+    partidasGeradas: Array<{
+      tipoOrigem: TipoOrigemLancamentoCaixa;
+      data: string;
+      contaDebitoCodigo: number;
+      contaDebitoNome: string;
+      contaCreditoCodigo: number;
+      contaCreditoNome: string;
+      valor: number;
+      historico: string;
+    }>;
+  } {
     const apuracao = this.apuracoesPgdas.find(a => a.id === apuracaoId);
     if (!apuracao) {
-      return { sucesso: false, loteId: 0, mensagem: 'Apuração PGDAS-D não encontrada.' };
+      return { sucesso: false, loteId: 0, mensagem: 'Apuração PGDAS-D não encontrada.', partidasGeradas: [] };
     }
-    if (apuracao.statusIntegracaoContabil) {
-      return { sucesso: true, loteId: apuracao.loteContabilId || 0, mensagem: 'Apuração já integrada na contabilidade.' };
+
+    if (modoContabilizacao === 'NAO_GERA') {
+      return {
+        sucesso: true,
+        loteId: 0,
+        mensagem: 'Apuração concluída com a opção "Não gera lançamentos contábeis" (nenhuma partida enviada ao Diário).',
+        partidasGeradas: []
+      };
+    }
+
+    const contasEmp = this.getContas(apuracao.empresaId).filter(c => c.tipo === 'A');
+    const contaDespesa =
+      contasEmp.find(c => c.codigoReduzido === 611 || c.nome.toLowerCase().includes('simples nacional')) ||
+      contasEmp.find(c => c.classificacao.startsWith('3.01.02') || c.classificacao.startsWith('4')) ||
+      contasEmp[0];
+    const contaPassivo =
+      contasEmp.find(c => c.codigoReduzido === 311 || c.nome.toLowerCase().includes('tributos a recolher') || c.nome.toLowerCase().includes('simples nacional a recolher')) ||
+      contasEmp.find(c => c.classificacao.startsWith('2.01.02')) ||
+      contasEmp[1];
+    const contaBanco =
+      (contaCaixaBancoId ? contasEmp.find(c => c.id === contaCaixaBancoId) : undefined) ||
+      contasEmp.find(c => c.codigoReduzido === 102 || c.nome.toLowerCase().includes('banco')) ||
+      contasEmp.find(c => c.codigoReduzido === 101 || c.nome.toLowerCase().includes('caixa')) ||
+      contasEmp[0];
+
+    const ultimoDiaComp = `${apuracao.competencia}-28`;
+    const partidasGeradas: Array<{
+      tipoOrigem: TipoOrigemLancamentoCaixa;
+      data: string;
+      contaDebitoCodigo: number;
+      contaDebitoNome: string;
+      contaCreditoCodigo: number;
+      contaCreditoNome: string;
+      valor: number;
+      historico: string;
+    }> = [];
+
+    if (contaDespesa && contaPassivo && apuracao.totalDevidoDas > 0) {
+      partidasGeradas.push({
+        tipoOrigem: 'Escrita',
+        data: ultimoDiaComp,
+        contaDebitoCodigo: contaDespesa.codigoReduzido,
+        contaDebitoNome: contaDespesa.nome,
+        contaCreditoCodigo: contaPassivo.codigoReduzido,
+        contaCreditoNome: contaPassivo.nome,
+        valor: apuracao.totalDevidoDas,
+        historico: `Provisão mensal Guia DAS Simples Nacional (PGDAS-D nº ${apuracao.numeroDas || apuracao.competencia}) ref. comp. ${apuracao.competencia}`
+      });
+    }
+
+    if (incluirQuitacaoGuia && contaPassivo && contaBanco && apuracao.totalDevidoDas > 0) {
+      partidasGeradas.push({
+        tipoOrigem: 'Pagto Guia EF',
+        data: apuracao.dataVencimento,
+        contaDebitoCodigo: contaPassivo.codigoReduzido,
+        contaDebitoNome: contaPassivo.nome,
+        contaCreditoCodigo: contaBanco.codigoReduzido,
+        contaCreditoNome: contaBanco.nome,
+        valor: apuracao.totalDevidoDas,
+        historico: `Pagamento Guia DAS Simples Nacional ref. comp. ${apuracao.competencia} via ${contaBanco.nome}`
+      });
+    }
+
+    if (modoContabilizacao === 'APENAS_MOSTRA') {
+      return {
+        sucesso: true,
+        loteId: 0,
+        mensagem: 'Modo Conferência ("Apenas mostra lançamentos contábeis"): confira as partidas abaixo antes de gravar no Livro Diário.',
+        partidasGeradas
+      };
+    }
+
+    if (apuracao.statusIntegracaoContabil && !incluirQuitacaoGuia) {
+      return {
+        sucesso: true,
+        loteId: apuracao.loteContabilId || 0,
+        mensagem: 'Apuração já integrada na contabilidade.',
+        partidasGeradas
+      };
     }
 
     const novoLoteId = this.lotes.length > 0 ? Math.max(...this.lotes.map(l => l.id)) + 1 : 1;
-    const contaDespesa = this.contas.find(c => c.nome.toLowerCase().includes('simples nacional') && (c.classificacao.startsWith('3') || c.classificacao.startsWith('4'))) || this.contas[15] || this.contas[0];
-    const contaPassivo = this.contas.find(c => c.nome.toLowerCase().includes('simples nacional a recolher')) || this.contas[16] || this.contas[1];
+    let proxLancId = this.lancamentos.length > 0 ? Math.max(...this.lancamentos.map(l => l.id)) + 1 : 1;
+    let proxNumPartida =
+      this.lancamentos.filter(l => l.empresaId === apuracao.empresaId).reduce((m, l) => Math.max(m, l.numeroPartida), 0) + 1;
 
-    const novoLancId = this.lancamentos.length > 0 ? Math.max(...this.lancamentos.map(l => l.id)) + 1 : 1;
-    const lanc: LancamentoContabil = {
-      id: novoLancId,
-      empresaId: apuracao.empresaId,
-      numeroPartida: 1,
-      loteId: novoLoteId,
-      dataLancamento: apuracao.dataVencimento,
-      tipoPartida: 'SIMPLES',
-      contaDebitoId: contaDespesa.id,
-      contaCreditoId: contaPassivo.id,
-      valor: apuracao.totalDevidoDas,
-      historicoId: 1,
-      complementoHistorico: `Vlr. ref. apropriação Simples Nacional DAS PGDAS-D ref. comp. ${apuracao.competencia}`,
-      createdAt: new Date().toISOString()
-    };
+    if (!apuracao.statusIntegracaoContabil && contaDespesa && contaPassivo && apuracao.totalDevidoDas > 0) {
+      this.lancamentos.push({
+        id: proxLancId++,
+        empresaId: apuracao.empresaId,
+        numeroPartida: proxNumPartida++,
+        loteId: novoLoteId,
+        dataLancamento: ultimoDiaComp,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaDespesa.id,
+        contaCreditoId: contaPassivo.id,
+        valor: apuracao.totalDevidoDas,
+        historicoId: 7,
+        complementoHistorico: `Provisão mensal Guia DAS Simples Nacional (PGDAS-D nº ${apuracao.numeroDas || apuracao.competencia}) ref. comp. ${apuracao.competencia}`,
+        tipoOrigemCaixa: 'Escrita',
+        createdAt: new Date().toISOString()
+      });
+    }
 
-    this.lancamentos.push(lanc);
+    if (incluirQuitacaoGuia && contaPassivo && contaBanco && apuracao.totalDevidoDas > 0) {
+      this.lancamentos.push({
+        id: proxLancId++,
+        empresaId: apuracao.empresaId,
+        numeroPartida: proxNumPartida++,
+        loteId: novoLoteId,
+        dataLancamento: apuracao.dataVencimento,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaPassivo.id,
+        contaCreditoId: contaBanco.id,
+        valor: apuracao.totalDevidoDas,
+        historicoId: 8,
+        complementoHistorico: `Pagamento Guia DAS Simples Nacional ref. comp. ${apuracao.competencia} via ${contaBanco.nome}`,
+        tipoOrigemCaixa: 'Pagto Guia EF',
+        contaCaixaId: contaBanco.id,
+        operacaoCaixa: 'SAIDA',
+        createdAt: new Date().toISOString()
+      });
+    }
+
     apuracao.statusIntegracaoContabil = true;
     apuracao.loteContabilId = novoLoteId;
 
     this.persistSnapshot();
     this.registrarAuditoria('PGDAS_D', 'INTEGRACAO_CONTABIL', `Lote nº ${novoLoteId} gerado para apuração PGDAS-D comp. ${apuracao.competencia}.`);
-    return { sucesso: true, loteId: novoLoteId, mensagem: 'Integração contábil do Simples Nacional realizada com sucesso!' };
+    return {
+      sucesso: true,
+      loteId: novoLoteId,
+      mensagem: incluirQuitacaoGuia
+        ? 'Provisão e Baixa Bancária da Guia DAS gravadas na Contabilidade com sucesso!'
+        : 'Integração contábil da Provisão do Simples Nacional realizada com sucesso!',
+      partidasGeradas
+    };
+  }
+
+  public simularOuGravarContabilizacaoNotaFiscal(
+    notaId: number,
+    gravarNoDiario: boolean = true
+  ): {
+    sucesso: boolean;
+    mensagem: string;
+    partida?: {
+      notaNumero: string;
+      tipoNota: string;
+      modalidadePagamento: 'A_VISTA' | 'A_PRAZO';
+      acumuladorDescricao: string;
+      dataLancamento: string;
+      contaDebitoId: number;
+      contaDebitoCodigo: number;
+      contaDebitoNome: string;
+      contaCreditoId: number;
+      contaCreditoCodigo: number;
+      contaCreditoNome: string;
+      valor: number;
+      historico: string;
+      tipoOrigemCaixa: TipoOrigemLancamentoCaixa;
+    };
+  } {
+    const nota = this.notasFiscais.find(n => n.id === notaId);
+    if (!nota) {
+      return { sucesso: false, mensagem: 'Nota Fiscal não localizada.' };
+    }
+
+    const contasEmp = this.getContas(nota.empresaId).filter(c => c.tipo === 'A');
+    const acumuladoresEmp = this.getAcumuladores(nota.empresaId);
+    const participantesEmp = this.getParticipantes(nota.empresaId);
+
+    const acum = acumuladoresEmp.find(a => a.id === nota.acumuladorId) || acumuladoresEmp[0];
+    const part = participantesEmp.find(p => p.id === nota.participanteId);
+
+    // Regra de Configurando_a_Escrita_para_fazer_os_lan_amentos_na_Contabilidade.htm:
+    // Verifica se é À Vista (sem parcelas futuras ou acumulador "à Vista") ou A Prazo
+    const temParcelaPrazo =
+      (nota.parcelas && nota.parcelas.some(p => p.dataVencimento > nota.dataEmissao)) ||
+      (acum && acum.descricao.toLowerCase().includes('prazo'));
+    const modalidadePagamento: 'A_VISTA' | 'A_PRAZO' = temParcelaPrazo ? 'A_PRAZO' : 'A_VISTA';
+
+    const contaCaixa = contasEmp.find(c => c.codigoReduzido === 101 || c.nome.toLowerCase().includes('caixa')) || contasEmp[0];
+    const contaBanco = contasEmp.find(c => c.codigoReduzido === 102 || c.nome.toLowerCase().includes('banco')) || contaCaixa;
+    const contaClientePadrao = contasEmp.find(c => c.codigoReduzido === 111 || c.nome.toLowerCase().includes('cliente')) || contasEmp[0];
+    const contaFornecedorPadrao = contasEmp.find(c => c.codigoReduzido === 321 || c.nome.toLowerCase().includes('fornecedor')) || contasEmp[1];
+    const contaEstoque = contasEmp.find(c => c.codigoReduzido === 121 || c.nome.toLowerCase().includes('estoque')) || contasEmp[0];
+    const contaReceitaVenda = contasEmp.find(c => c.codigoReduzido === 601 || c.nome.toLowerCase().includes('venda de mercadoria')) || contasEmp[2];
+    const contaReceitaServico = contasEmp.find(c => c.codigoReduzido === 602 || c.nome.toLowerCase().includes('prestação de serviço')) || contaReceitaVenda;
+
+    const contaParticipante = part?.contaContabilId ? contasEmp.find(c => c.id === part.contaContabilId) : undefined;
+
+    let contaDebito = contaCaixa;
+    let contaCredito = contaReceitaVenda;
+    let tipoOrigemCaixa: TipoOrigemLancamentoCaixa = 'Saídas EF';
+
+    if (nota.tipo === 'SAIDA') {
+      tipoOrigemCaixa = 'Saídas EF';
+      contaDebito =
+        modalidadePagamento === 'A_VISTA'
+          ? (contasEmp.find(c => c.id === (acum?.contaDebitoValor || acum?.contaContabilDebitoId)) || contaCaixa)
+          : (contaParticipante || contaClientePadrao);
+      contaCredito =
+        contasEmp.find(c => c.id === (acum?.contaCreditoValor || acum?.contaContabilCreditoId)) || contaReceitaVenda;
+    } else if (nota.tipo === 'SERVICO') {
+      tipoOrigemCaixa = 'Serviços EF';
+      contaDebito =
+        modalidadePagamento === 'A_VISTA'
+          ? (contasEmp.find(c => c.id === (acum?.contaDebitoValor || acum?.contaContabilDebitoId)) || contaBanco)
+          : (contaParticipante || contaClientePadrao);
+      contaCredito =
+        contasEmp.find(c => c.id === (acum?.contaCreditoValor || acum?.contaContabilCreditoId)) || contaReceitaServico;
+    } else {
+      // ENTRADA / COMPRA
+      tipoOrigemCaixa = 'Entradas EF';
+      contaDebito =
+        contasEmp.find(c => c.id === (acum?.contaDebitoValor || acum?.contaContabilDebitoId)) || contaEstoque;
+      contaCredito =
+        modalidadePagamento === 'A_VISTA'
+          ? (contasEmp.find(c => c.id === (acum?.contaCreditoValor || acum?.contaContabilCreditoId)) || contaCaixa)
+          : (contaParticipante || contaFornecedorPadrao);
+    }
+
+    const historico = `Vlr. ref. ${
+      nota.tipo === 'SAIDA' ? 'Venda NF-e' : nota.tipo === 'SERVICO' ? 'Prestação de Serviço NFS-e' : 'Compra NF-e'
+    } nº ${nota.numero}/${nota.serie || '1'} (${modalidadePagamento === 'A_VISTA' ? 'À Vista' : 'A Prazo'}) - ${
+      nota.destinatarioOuRemetente || 'Participante'
+    }`;
+
+    const partida = {
+      notaNumero: `${nota.numero}/${nota.serie || '1'}`,
+      tipoNota: nota.tipo,
+      modalidadePagamento,
+      acumuladorDescricao: acum ? `${acum.codigo} - ${acum.descricao}` : 'Acumulador Padrão',
+      dataLancamento: nota.dataEmissao,
+      contaDebitoId: contaDebito.id,
+      contaDebitoCodigo: contaDebito.codigoReduzido,
+      contaDebitoNome: contaDebito.nome,
+      contaCreditoId: contaCredito.id,
+      contaCreditoCodigo: contaCredito.codigoReduzido,
+      contaCreditoNome: contaCredito.nome,
+      valor: nota.valorTotal,
+      historico,
+      tipoOrigemCaixa
+    };
+
+    if (gravarNoDiario && !nota.integradaContabil) {
+      const novoLancId = this.lancamentos.length > 0 ? Math.max(...this.lancamentos.map(l => l.id)) + 1 : 1;
+      const proxNumPartida =
+        this.lancamentos.filter(l => l.empresaId === nota.empresaId).reduce((m, l) => Math.max(m, l.numeroPartida), 0) + 1;
+
+      const envolveDisponibilidade =
+        contaDebito.classificacao.startsWith('1.01.01') || contaCredito.classificacao.startsWith('1.01.01');
+
+      this.lancamentos.push({
+        id: novoLancId,
+        empresaId: nota.empresaId,
+        numeroPartida: proxNumPartida,
+        dataLancamento: nota.dataEmissao,
+        tipoPartida: 'SIMPLES',
+        contaDebitoId: contaDebito.id,
+        contaCreditoId: contaCredito.id,
+        valor: nota.valorTotal,
+        historicoId: acum?.historicoId || 1,
+        complementoHistorico: historico,
+        tipoOrigemCaixa,
+        contaCaixaId: envolveDisponibilidade
+          ? (contaDebito.classificacao.startsWith('1.01.01') ? contaDebito.id : contaCredito.id)
+          : undefined,
+        operacaoCaixa: envolveDisponibilidade
+          ? (contaDebito.classificacao.startsWith('1.01.01') ? 'ENTRADA' : 'SAIDA')
+          : undefined,
+        createdAt: new Date().toISOString()
+      });
+
+      nota.integradaContabil = true;
+      this.persistSnapshot();
+      this.registrarAuditoria('ESCRITA_FISCAL', 'CONTABILIZACAO_NF', `NF ${nota.numero} contabilizada (${historico}).`);
+    }
+
+    return {
+      sucesso: true,
+      mensagem: gravarNoDiario
+        ? `Nota Fiscal nº ${nota.numero} contabilizada no Livro Diário / Caixa!`
+        : `Simulação da Nota Fiscal nº ${nota.numero} gerada.`,
+      partida
+    };
   }
 
   // ==========================================

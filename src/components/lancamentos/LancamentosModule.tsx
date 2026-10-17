@@ -7,7 +7,8 @@ import {
   CentroCusto, 
   LoteContabil, 
   LancamentoPadrao,
-  RateioCentroCusto 
+  RateioCentroCusto,
+  TipoOrigemLancamentoCaixa
 } from '../../types/contabil';
 import { dbService } from '../../db/sqliteService';
 import { 
@@ -33,7 +34,10 @@ import {
   ChevronRight,
   Info,
   X,
-  ExternalLink
+  ExternalLink,
+  Wallet,
+  ArrowDownLeft,
+  ArrowUpRight
 } from 'lucide-react';
 import { exportToCSV } from '../../utils/exportUtils';
 import { formatCurrency, formatPercent } from '../../utils/formatters';
@@ -61,13 +65,63 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
   onEditLancamento,
   onEstornoLancamento
 }) => {
-  // Modo de Partida: Simples (1D x 1C) vs Composta/Múltipla (1:N, N:N)
-  const [modo, setModo] = useState<'SIMPLES' | 'MULTIPLA'>('SIMPLES');
+  // Modo de Partida: CAIXA (w_cadlancxa - Simplificado Entrada/Saída), SIMPLES (w_cadlan - 1D x 1C) ou MULTIPLA (1:N, N:N)
+  const [modo, setModo] = useState<'CAIXA' | 'SIMPLES' | 'MULTIPLA'>('CAIXA');
 
   // Centros de custo, lotes e lançamentos padrão da empresa
   const centrosCusto = dbService.getCentrosCusto(empresaId);
   const lotes = dbService.getLotes(empresaId);
   const lancamentosPadrao = dbService.getLancamentosPadrao(empresaId);
+
+  // Contas analíticas
+  const contasAnaliticas = useMemo(() => contas.filter(c => c.tipo === 'A'), [contas]);
+
+  // Contas Caixa / Bancos (w_contas_caixa / dw_sel_contas_caixa - Disponibilidades 1.01.01)
+  const contasCaixaDisponiveis = useMemo(() => {
+    const disp = contasAnaliticas.filter(
+      c => c.classificacao.startsWith('1.01.01') || c.nome.toLowerCase().includes('caixa') || c.nome.toLowerCase().includes('banco')
+    );
+    return disp.length > 0 ? disp : contasAnaliticas.slice(0, 2);
+  }, [contasAnaliticas]);
+
+  // Estado para Lançamentos no Caixa (w_cadlancxa)
+  const [contaCaixaSelecionadaId, setContaCaixaSelecionadaId] = useState<number>(
+    () => contasCaixaDisponiveis[0]?.id || 0
+  );
+  const [operacaoCaixa, setOperacaoCaixa] = useState<'ENTRADA' | 'SAIDA'>('ENTRADA');
+  const [codContrapartidaCaixa, setCodContrapartidaCaixa] = useState<string>('');
+  const [tipoOrigemCaixa, setTipoOrigemCaixa] = useState<TipoOrigemLancamentoCaixa>('Normal');
+  const [filtroContaCaixaGrid, setFiltroContaCaixaGrid] = useState<boolean>(false);
+
+  useEffect(() => {
+    if ((!contaCaixaSelecionadaId || !contasCaixaDisponiveis.some(c => c.id === contaCaixaSelecionadaId)) && contasCaixaDisponiveis.length > 0) {
+      setContaCaixaSelecionadaId(contasCaixaDisponiveis[0].id);
+    }
+  }, [contasCaixaDisponiveis, contaCaixaSelecionadaId]);
+
+  const contaCaixaAtual = useMemo(
+    () => contas.find(c => c.id === contaCaixaSelecionadaId) || contasCaixaDisponiveis[0],
+    [contas, contaCaixaSelecionadaId, contasCaixaDisponiveis]
+  );
+
+  const contaContrapartidaObj = useMemo(
+    () => contasAnaliticas.find(c => c.codigoReduzido.toString() === codContrapartidaCaixa || c.classificacao === codContrapartidaCaixa),
+    [contasAnaliticas, codContrapartidaCaixa]
+  );
+
+  // Saldo em tempo real da Conta Caixa selecionada (dw_sel_contas_caixa)
+  const resumoCaixaSelecionado = useMemo(() => {
+    if (!contaCaixaAtual) return { saldoAnterior: 0, totalEntradas: 0, totalSaidas: 0, saldoAtual: 0 };
+    const saldoAnterior = contaCaixaAtual.saldoAnterior || 0;
+    let totalEntradas = 0;
+    let totalSaidas = 0;
+    for (const l of lancamentos) {
+      if (l.contaDebitoId === contaCaixaAtual.id) totalEntradas += l.valor;
+      if (l.contaCreditoId === contaCaixaAtual.id) totalSaidas += l.valor;
+    }
+    const saldoAtual = saldoAnterior + totalEntradas - totalSaidas;
+    return { saldoAnterior, totalEntradas, totalSaidas, saldoAtual };
+  }, [contaCaixaAtual, lancamentos]);
 
   // Form Partida Simples
   const [dataLanc, setDataLanc] = useState(new Date().toISOString().split('T')[0]);
@@ -133,12 +187,10 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
   // Refs para navegação fluida por Enter
   const inputDebitoRef = useRef<HTMLInputElement>(null);
   const inputCreditoRef = useRef<HTMLInputElement>(null);
+  const inputContrapartidaRef = useRef<HTMLInputElement>(null);
   const inputValorRef = useRef<HTMLInputElement>(null);
   const inputHistRef = useRef<HTMLInputElement>(null);
   const inputComplRef = useRef<HTMLInputElement>(null);
-
-  // Contas analíticas
-  const contasAnaliticas = useMemo(() => contas.filter(c => c.tipo === 'A'), [contas]);
 
   // Encontrar conta selecionada no form
   const contaDebitoObj = contas.find(c => c.codigoReduzido.toString() === codDebito || c.classificacao === codDebito);
@@ -225,7 +277,17 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
   }, [f2Tipo, f2Query, historicos, contasAnaliticas]);
 
   const handleSelectF2Item = (item: ContaContabil | HistoricoPadrao) => {
-    if (f2Tipo === 'DEBITO') {
+    if (f2Tipo === 'HISTORICO') {
+      const h = item as HistoricoPadrao;
+      setCodHistorico(h.codigo.toString());
+      setShowF2Modal(false);
+      setTimeout(() => inputComplRef.current?.focus(), 50);
+    } else if (modo === 'CAIXA') {
+      const c = item as ContaContabil;
+      setCodContrapartidaCaixa(c.codigoReduzido.toString());
+      setShowF2Modal(false);
+      setTimeout(() => inputValorRef.current?.focus(), 50);
+    } else if (f2Tipo === 'DEBITO') {
       const c = item as ContaContabil;
       setCodDebito(c.codigoReduzido.toString());
       setShowF2Modal(false);
@@ -235,11 +297,6 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
       setCodCredito(c.codigoReduzido.toString());
       setShowF2Modal(false);
       setTimeout(() => inputValorRef.current?.focus(), 50);
-    } else if (f2Tipo === 'HISTORICO') {
-      const h = item as HistoricoPadrao;
-      setCodHistorico(h.codigo.toString());
-      setShowF2Modal(false);
-      setTimeout(() => inputComplRef.current?.focus(), 50);
     }
   };
 
@@ -255,7 +312,86 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
     if (cDeb) setCodDebito(cDeb.codigoReduzido.toString());
     if (cCred) setCodCredito(cCred.codigoReduzido.toString());
     if (h) setCodHistorico(h.codigo.toString());
-    if (p.complementoPadrao) setComplemento(p.complementoPadrao);
+    if (p.complemento || p.complementoPadrao) setComplemento(p.complemento || p.complementoPadrao || '');
+
+    // Se estiver no modo CAIXA (w_cadlancxa), identifica automaticamente se a conta Caixa/Banco foi debitada (Entrada) ou creditada (Saída)
+    if (cDeb && contasCaixaDisponiveis.some(cx => cx.id === cDeb.id)) {
+      setContaCaixaSelecionadaId(cDeb.id);
+      setOperacaoCaixa('ENTRADA');
+      if (cCred) setCodContrapartidaCaixa(cCred.codigoReduzido.toString());
+    } else if (cCred && contasCaixaDisponiveis.some(cx => cx.id === cCred.id)) {
+      setContaCaixaSelecionadaId(cCred.id);
+      setOperacaoCaixa('SAIDA');
+      if (cDeb) setCodContrapartidaCaixa(cDeb.codigoReduzido.toString());
+    }
+  };
+
+  // Gravar Lançamento Rápido no Caixa (w_cadlancxa - Entrada / Saída)
+  const handleGravarCaixa = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErroMsg('');
+
+    if (!contaCaixaAtual || contaCaixaAtual.tipo !== 'A') {
+      setErroMsg('Selecione uma Conta Caixa ou Banco válida (w_contas_caixa).');
+      return;
+    }
+    if (!contaContrapartidaObj || contaContrapartidaObj.tipo !== 'A') {
+      setErroMsg('Selecione a Conta Contrapartida analítica (ex: Clientes, Receita de Vendas, Fornecedores, DAS Simples).');
+      inputContrapartidaRef.current?.focus();
+      return;
+    }
+    if (contaCaixaAtual.id === contaContrapartidaObj.id) {
+      setErroMsg('A Conta Contrapartida não pode ser igual à própria Conta Caixa/Banco selecionada.');
+      return;
+    }
+    const numValor = parseFloat(valor.replace(/\./g, '').replace(',', '.'));
+    if (isNaN(numValor) || numValor <= 0) {
+      setErroMsg('Informe um valor monetário positivo válido para o movimento de Caixa.');
+      inputValorRef.current?.focus();
+      return;
+    }
+
+    // Validação de Rateio se ativo
+    if (habilitarRateio) {
+      if (rateios.length === 0) {
+        setErroMsg('Adicione ao menos um Centro de Custo no rateio.');
+        return;
+      }
+      if (!rateioBalanceado) {
+        setErroMsg(`O rateio de Centros de Custo deve somar 100% (atual: ${totalPercRateio.toFixed(2)}%).`);
+        return;
+      }
+    }
+
+    // Regra w_cadlancxa (contabil.exe):
+    // ENTRADA no Caixa/Banco -> Debita Conta Caixa/Banco, Credita Conta Contrapartida
+    // SAÍDA do Caixa/Banco   -> Debita Conta Contrapartida, Credita Conta Caixa/Banco
+    const debitoFinalId = operacaoCaixa === 'ENTRADA' ? contaCaixaAtual.id : contaContrapartidaObj.id;
+    const creditoFinalId = operacaoCaixa === 'ENTRADA' ? contaContrapartidaObj.id : contaCaixaAtual.id;
+
+    onAddLancamento({
+      empresaId,
+      numeroPartida: lancamentos.length + 1,
+      loteId: loteId || undefined,
+      dataLancamento: dataLanc,
+      tipoPartida: 'SIMPLES',
+      contaDebitoId: debitoFinalId,
+      contaCreditoId: creditoFinalId,
+      valor: numValor,
+      centroCustoId: !habilitarRateio && centroCustoId ? centroCustoId : undefined,
+      rateios: habilitarRateio ? JSON.parse(JSON.stringify(rateios)) : undefined,
+      historicoId: historicoObj?.id,
+      complementoHistorico: complemento || `${operacaoCaixa === 'ENTRADA' ? 'Entrada' : 'Saída'} Caixa/Banco - ${contaContrapartidaObj.nome}`,
+      tipoOrigemCaixa,
+      contaCaixaId: contaCaixaAtual.id,
+      operacaoCaixa
+    });
+
+    setCodContrapartidaCaixa('');
+    setValor('');
+    setCodHistorico('');
+    setComplemento('');
+    setTimeout(() => inputContrapartidaRef.current?.focus(), 50);
   };
 
   // Funções de Rateio Multi-Centros
@@ -361,7 +497,8 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
       centroCustoId: !habilitarRateio && centroCustoId ? centroCustoId : undefined,
       rateios: habilitarRateio ? JSON.parse(JSON.stringify(rateios)) : undefined,
       historicoId: historicoObj?.id,
-      complementoHistorico: complemento
+      complementoHistorico: complemento,
+      tipoOrigemCaixa: 'Normal'
     });
 
     // Limpa campos para o próximo lançamento mantendo a data e foca no débito
@@ -535,9 +672,14 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
   const totalMultiploCredito = multiplasItens.filter(i => i.tipo === 'CREDITO').reduce((acc, i) => acc + (i.valor || 0), 0);
   const diferencaMultipla = Math.abs(totalMultiploDebito - totalMultiploCredito);
 
-  // Filtragem da lista
+  // Filtragem da lista (com suporte ao filtro por Conta Caixa de w_cadlancxa)
   const lancamentosFiltrados = useMemo(() => {
     return lancamentos.filter(l => {
+      if (modo === 'CAIXA' && filtroContaCaixaGrid && contaCaixaAtual) {
+        if (l.contaDebitoId !== contaCaixaAtual.id && l.contaCreditoId !== contaCaixaAtual.id) {
+          return false;
+        }
+      }
       if (!filtroTexto) return true;
       const txt = filtroTexto.toLowerCase();
       const deb = contas.find(c => c.id === l.contaDebitoId)?.nome.toLowerCase() || '';
@@ -545,16 +687,43 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
       const compl = l.complementoHistorico.toLowerCase();
       return deb.includes(txt) || cred.includes(txt) || compl.includes(txt) || l.valor.toString().includes(txt) || l.numeroPartida.toString().includes(txt);
     });
-  }, [lancamentos, filtroTexto, contas]);
+  }, [lancamentos, filtroTexto, contas, modo, filtroContaCaixaGrid, contaCaixaAtual]);
+
+  // Helper de identificação da origem do lançamento (idêntico a w_cadlancxa em contabil.exe)
+  const obterOrigemLancamento = (l: LancamentoContabil): TipoOrigemLancamentoCaixa => {
+    if (l.tipoOrigemCaixa) return l.tipoOrigemCaixa;
+    if (l.isZeramento) return 'Zeramento';
+    const compl = (l.complementoHistorico || '').toLowerCase();
+    if (compl.includes('deprecia')) return 'Patrimônio';
+    if (compl.includes('das') || compl.includes('guia') || compl.includes('pgdas')) return 'Pagto Guia EF';
+    if (compl.includes('nfs-e') || compl.includes('serviço') || compl.includes('servico')) return 'Serviços EF';
+    if (compl.includes('venda') || compl.includes('saída') || compl.includes('nf-e')) return 'Saídas EF';
+    if (compl.includes('compra') || compl.includes('fornecedor') || compl.includes('entrada')) return 'Entradas EF';
+    return 'Normal';
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#141414] text-neutral-200 overflow-hidden select-none">
-      {/* Top Header do Módulo: Alternador Simples / Múltipla + Atalhos */}
+      {/* Top Header do Módulo: Alternador Lançamento no Caixa (w_cadlancxa) / Partida Simples (w_cadlan) / Múltipla */}
       <div className="px-4 py-2.5 bg-[#181818] border-b border-white/10 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Tipo de Partida:</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-400">Modo de Digitação:</span>
           <div className="flex items-center bg-neutral-900 rounded-lg p-0.5 border border-white/10 text-xs">
             <button
+              type="button"
+              onClick={() => setModo('CAIXA')}
+              className={`px-3 py-1 rounded-md font-medium transition-all flex items-center space-x-1.5 ${
+                modo === 'CAIXA'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-neutral-400 hover:text-neutral-200'
+              }`}
+              title="Modo Simplificado para Pequenos Escritórios (Entrada / Saída no Caixa ou Banco - w_cadlancxa)"
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              <span>Lançamento Rápido no Caixa / Banco (Entrada / Saída)</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setModo('SIMPLES')}
               className={`px-3 py-1 rounded-md font-medium transition-all ${
                 modo === 'SIMPLES'
@@ -562,9 +731,10 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                   : 'text-neutral-400 hover:text-neutral-200'
               }`}
             >
-              Partida Simples (1D x 1C)
+              Partida Dobrada (1D x 1C)
             </button>
             <button
+              type="button"
               onClick={() => setModo('MULTIPLA')}
               className={`px-3 py-1 rounded-md font-medium transition-all flex items-center space-x-1 ${
                 modo === 'MULTIPLA'
@@ -573,12 +743,12 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Partida Múltipla (1:N / N:N)</span>
+              <span>Partida Múltipla (1:N)</span>
             </button>
           </div>
 
           {/* Toggle Rateio Gerencial */}
-          {modo === 'SIMPLES' && (
+          {(modo === 'SIMPLES' || modo === 'CAIXA') && (
             <button
               type="button"
               onClick={() => setHabilitarRateio(prev => !prev)}
@@ -590,7 +760,7 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
               title="Ativar/desativar rateio multi-centros de custo (F8)"
             >
               <Split className="w-3.5 h-3.5 text-purple-400" />
-              <span>Rateio Multi-Centros</span>
+              <span>Rateio CC</span>
               <kbd className="bg-black/30 px-1 py-0.2 rounded text-[10px] font-mono border border-white/10">F8</kbd>
             </button>
           )}
@@ -604,9 +774,9 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                 if (e.target.value) handleAplicarLancamentoPadrao(Number(e.target.value));
               }}
               defaultValue=""
-              className="bg-neutral-900 border border-white/10 rounded px-2.5 py-1 text-xs text-neutral-300 outline-none max-w-[200px]"
+              className="bg-neutral-900 border border-white/10 rounded px-2.5 py-1 text-xs text-neutral-300 outline-none max-w-[220px]"
             >
-              <option value="" disabled>Lançamento Padrão...</option>
+              <option value="" disabled>Modelos Prontos (DAS, Vendas)...</option>
               {lancamentosPadrao.map(p => (
                 <option key={p.id} value={p.id}>{p.codigo} - {p.descricao}</option>
               ))}
@@ -634,8 +804,280 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
         </div>
       </div>
 
-      {/* Formulário Partida Simples */}
-      {modo === 'SIMPLES' ? (
+      {/* Formulário Modo Lançamentos no Caixa (w_cadlancxa) vs Partida Simples (w_cadlan) vs Partida Múltipla */}
+      {modo === 'CAIXA' ? (
+        <form onSubmit={handleGravarCaixa} className="p-4 bg-[#1c1c1c] border-b border-white/10 space-y-3">
+          {erroMsg && (
+            <div className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded text-xs flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>{erroMsg}</span>
+            </div>
+          )}
+
+          {/* Barra Superior do Caixa: Seletor de Conta Caixa/Banco (w_contas_caixa) + Saldos em Tempo Real */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-lg bg-[#141414] border border-white/10 text-xs">
+            <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-1.5 text-emerald-400 font-semibold">
+                <Wallet className="w-4 h-4" />
+                <span>Conta Caixa / Banco Ativa:</span>
+              </div>
+              <select
+                value={contaCaixaAtual?.id || ''}
+                onChange={(e) => setContaCaixaSelecionadaId(Number(e.target.value))}
+                className="bg-[#1c1c1c] border border-emerald-500/30 rounded px-2.5 py-1 text-neutral-100 font-mono font-semibold outline-none focus:border-emerald-500"
+              >
+                {contasCaixaDisponiveis.map(cx => (
+                  <option key={cx.id} value={cx.id}>
+                    {cx.codigoReduzido} - {cx.nome} ({cx.classificacao})
+                  </option>
+                ))}
+              </select>
+
+              <label className="flex items-center space-x-1.5 text-[11px] text-neutral-400 cursor-pointer ml-2">
+                <input
+                  type="checkbox"
+                  checked={filtroContaCaixaGrid}
+                  onChange={(e) => setFiltroContaCaixaGrid(e.target.checked)}
+                  className="rounded bg-neutral-900 border-white/20 text-emerald-600 focus:ring-0"
+                />
+                <span>Filtrar grade abaixo apenas por esta conta</span>
+              </label>
+            </div>
+
+            {/* Resumo Dinâmico de Entradas, Saídas e Saldo Atual do Caixa */}
+            <div className="flex items-center space-x-4 font-mono text-xs">
+              <div>
+                <span className="text-neutral-500 mr-1">Entradas (D):</span>
+                <span className="text-emerald-400 font-semibold">{formatCurrency(resumoCaixaSelecionado.totalEntradas)}</span>
+              </div>
+              <div>
+                <span className="text-neutral-500 mr-1">Saídas (C):</span>
+                <span className="text-rose-400 font-semibold">{formatCurrency(resumoCaixaSelecionado.totalSaidas)}</span>
+              </div>
+              <div className="px-2.5 py-0.5 rounded bg-white/5 border border-white/10">
+                <span className="text-neutral-400 mr-1.5">Saldo Atual:</span>
+                <span className={`font-bold ${resumoCaixaSelecionado.saldoAtual >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {formatCurrency(Math.abs(resumoCaixaSelecionado.saldoAtual))} {resumoCaixaSelecionado.saldoAtual >= 0 ? 'D' : 'C'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-12 gap-3 text-xs">
+            {/* 1. Data */}
+            <div className="col-span-2">
+              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Data do Movimento</label>
+              <input
+                type="date"
+                value={dataLanc}
+                onChange={(e) => setDataLanc(e.target.value)}
+                className="w-full bg-[#121212] border border-white/10 rounded px-2.5 py-1.5 text-neutral-100 font-mono focus:border-blue-500 outline-none"
+              />
+            </div>
+
+            {/* 2. Operação no Caixa: Entrada vs Saída */}
+            <div className="col-span-3">
+              <label className="block text-[11px] font-medium text-neutral-400 mb-1">
+                Natureza do Movimento no Caixa
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setOperacaoCaixa('ENTRADA')}
+                  className={`py-1.5 px-2 rounded font-semibold flex items-center justify-center space-x-1 border transition-all ${
+                    operacaoCaixa === 'ENTRADA'
+                      ? 'bg-emerald-600/25 border-emerald-500 text-emerald-300 shadow-sm'
+                      : 'bg-[#121212] border-white/10 text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Entrada (+)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOperacaoCaixa('SAIDA')}
+                  className={`py-1.5 px-2 rounded font-semibold flex items-center justify-center space-x-1 border transition-all ${
+                    operacaoCaixa === 'SAIDA'
+                      ? 'bg-rose-600/25 border-rose-500 text-rose-300 shadow-sm'
+                      : 'bg-[#121212] border-white/10 text-neutral-400 hover:text-neutral-200'
+                  }`}
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Saída (-)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Conta Contrapartida (Cliente, Receita, Fornecedor, Despesa, Guia DAS) */}
+            <div className="col-span-4">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-medium text-blue-400">
+                  {operacaoCaixa === 'ENTRADA'
+                    ? 'Origem do Recebimento (Credita Contrapartida) [F2]'
+                    : 'Destino do Pagamento (Debita Contrapartida) [F2]'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => abrirF2(operacaoCaixa === 'ENTRADA' ? 'CREDITO' : 'DEBITO')}
+                  className="text-[10px] text-blue-400/80 hover:text-blue-300"
+                >
+                  Pesquisar (F2)
+                </button>
+              </div>
+              <div className="flex space-x-1.5">
+                <input
+                  ref={inputContrapartidaRef}
+                  type="text"
+                  placeholder="Red."
+                  value={codContrapartidaCaixa}
+                  onChange={(e) => setCodContrapartidaCaixa(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      inputValorRef.current?.focus();
+                    }
+                  }}
+                  className="w-16 bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-100 font-mono focus:border-blue-500 outline-none"
+                />
+                <select
+                  value={contaContrapartidaObj?.id || ''}
+                  onChange={(e) => {
+                    const c = contas.find(item => item.id === Number(e.target.value));
+                    if (c) setCodContrapartidaCaixa(c.codigoReduzido.toString());
+                  }}
+                  className="flex-1 bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-200 focus:border-blue-500 outline-none truncate"
+                >
+                  <option value="">Selecione a Conta (Ex: Vendas, Clientes, Fornecedores, DAS)...</option>
+                  {contasAnaliticas
+                    .filter(c => c.id !== contaCaixaAtual?.id)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>{c.codigoReduzido} - {c.nome}</option>
+                    ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 4. Valor */}
+            <div className="col-span-3">
+              <label className="block text-[11px] font-medium text-emerald-400 mb-1">Valor do Movimento (R$)</label>
+              <input
+                ref={inputValorRef}
+                type="text"
+                placeholder="0,00"
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    inputHistRef.current?.focus();
+                  }
+                }}
+                className="w-full bg-[#121212] border border-white/10 rounded px-2.5 py-1.5 text-neutral-100 font-mono font-semibold text-right focus:border-blue-500 outline-none"
+              />
+            </div>
+
+            {/* 5. Origem (Tipo w_cadlancxa) */}
+            <div className="col-span-2">
+              <label className="block text-[11px] font-medium text-neutral-400 mb-1">Tipo / Origem</label>
+              <select
+                value={tipoOrigemCaixa}
+                onChange={(e) => setTipoOrigemCaixa(e.target.value as TipoOrigemLancamentoCaixa)}
+                className="w-full bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-200 outline-none truncate"
+              >
+                <option value="Normal">Normal (Caixa/Banco)</option>
+                <option value="Saídas EF">Saídas EF (Vendas Comércio)</option>
+                <option value="Serviços EF">Serviços EF (NFS-e Prestados)</option>
+                <option value="Entradas EF">Entradas EF (Compras)</option>
+                <option value="Pagto Guia EF">Pagto Guia EF (DAS / Impostos)</option>
+              </select>
+            </div>
+
+            {/* 6. Histórico Padrão */}
+            <div className="col-span-3">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-medium text-neutral-400">Histórico Padrão (F2)</label>
+                <button
+                  type="button"
+                  onClick={() => abrirF2('HISTORICO')}
+                  className="text-[10px] text-neutral-400 hover:text-neutral-200"
+                >
+                  Pesquisar
+                </button>
+              </div>
+              <div className="flex space-x-1.5">
+                <input
+                  ref={inputHistRef}
+                  type="text"
+                  placeholder="Cód."
+                  value={codHistorico}
+                  onChange={(e) => setCodHistorico(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      inputComplRef.current?.focus();
+                    }
+                  }}
+                  className="w-14 bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-100 font-mono focus:border-blue-500 outline-none"
+                />
+                <select
+                  value={historicoObj?.id || ''}
+                  onChange={(e) => {
+                    const h = historicos.find(item => item.id === Number(e.target.value));
+                    if (h) setCodHistorico(h.codigo.toString());
+                  }}
+                  className="flex-1 bg-[#121212] border border-white/10 rounded px-2 py-1.5 text-neutral-200 focus:border-blue-500 outline-none truncate"
+                >
+                  <option value="">Histórico...</option>
+                  {historicos.map((h) => (
+                    <option key={h.id} value={h.id}>{h.codigo} - {h.descricao}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 7. Complemento */}
+            <div className="col-span-5">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[11px] font-medium text-neutral-400">Complemento / Descrição do Movimento</label>
+                {contaCaixaAtual && contaContrapartidaObj && (
+                  <span className="text-[10px] font-mono text-neutral-400">
+                    Partida Automática: <strong className="text-blue-400">D: {operacaoCaixa === 'ENTRADA' ? contaCaixaAtual.codigoReduzido : contaContrapartidaObj.codigoReduzido}</strong> • <strong className="text-indigo-400">C: {operacaoCaixa === 'ENTRADA' ? contaContrapartidaObj.codigoReduzido : contaCaixaAtual.codigoReduzido}</strong>
+                  </span>
+                )}
+              </div>
+              <input
+                ref={inputComplRef}
+                type="text"
+                placeholder="Ex: Recebimento PIX Cliente / Pagto Guia DAS Simples Nacional"
+                value={complemento}
+                onChange={(e) => setComplemento(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleGravarCaixa();
+                  }
+                }}
+                className="w-full bg-[#121212] border border-white/10 rounded px-2.5 py-1.5 text-neutral-100 focus:border-blue-500 outline-none"
+              />
+            </div>
+
+            {/* 8. Botão Gravar no Caixa */}
+            <div className="col-span-2 flex items-end">
+              <button
+                type="submit"
+                className={`w-full py-1.5 text-white font-medium rounded shadow transition-colors flex items-center justify-center space-x-1.5 ${
+                  operacaoCaixa === 'ENTRADA'
+                    ? 'bg-emerald-600 hover:bg-emerald-500'
+                    : 'bg-blue-600 hover:bg-blue-500'
+                }`}
+              >
+                <span>{operacaoCaixa === 'ENTRADA' ? 'Gravar Entrada' : 'Gravar Saída'}</span>
+                <kbd className="bg-black/30 px-1 rounded text-[10px] font-mono">↵</kbd>
+              </button>
+            </div>
+          </div>
+        </form>
+      ) : modo === 'SIMPLES' ? (
         <form onSubmit={handleGravarSimples} className="p-4 bg-[#1c1c1c] border-b border-white/10 space-y-3">
           {erroMsg && (
             <div className="px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded text-xs flex items-center space-x-2">
@@ -1171,6 +1613,7 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                 <th className="py-2 px-3 w-48">Conta Crédito</th>
                 <th className="py-2 px-3 w-32 text-right">Valor (R$)</th>
                 <th className="py-2 px-3">Histórico / Centro de Custo</th>
+                <th className="py-2 px-3 w-28 text-center">Tipo (Origem)</th>
                 <th className="py-2 px-3 w-28 text-center">Ações</th>
               </tr>
             </thead>
@@ -1181,6 +1624,9 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                 const hist = historicos.find(h => h.id === l.historicoId);
                 const ccObj = centrosCusto.find(cc => cc.id === l.centroCustoId);
                 const isSelected = selecionados.includes(l.id);
+                const origem = obterOrigemLancamento(l);
+                const isEntradaCaixa = contaCaixaAtual && l.contaDebitoId === contaCaixaAtual.id;
+                const isSaidaCaixa = contaCaixaAtual && l.contaCreditoId === contaCaixaAtual.id;
 
                 return (
                   <tr key={l.id} className={`hover:bg-white/[0.02] transition-colors group ${isSelected ? 'bg-blue-600/10' : ''}`}>
@@ -1205,7 +1651,15 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                       <div className="text-[10px] text-neutral-500 font-mono">Red: {credito?.codigoReduzido} • {credito?.classificacao}</div>
                     </td>
                     <td className="py-2 px-3 text-right font-mono font-semibold text-emerald-400">
-                      {formatCurrency(l.valor)}
+                      <div className="flex items-center justify-end space-x-1.5">
+                        {modo === 'CAIXA' && isEntradaCaixa && (
+                          <span className="text-[10px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">+E</span>
+                        )}
+                        {modo === 'CAIXA' && isSaidaCaixa && (
+                          <span className="text-[10px] px-1 py-0.2 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">-S</span>
+                        )}
+                        <span>{formatCurrency(l.valor)}</span>
+                      </div>
                     </td>
                     <td className="py-2 px-3 text-neutral-300">
                       <div className="flex items-center space-x-1.5 flex-wrap">
@@ -1228,6 +1682,19 @@ export const LancamentosModule: React.FC<LancamentosModuleProps> = ({
                           </span>
                         ) : null}
                       </div>
+                    </td>
+                    <td className="py-2 px-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono border ${
+                        origem === 'Normal'
+                          ? 'bg-neutral-800 text-neutral-300 border-white/10'
+                          : origem === 'Zeramento'
+                          ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                          : origem === 'Pagto Guia EF'
+                          ? 'bg-rose-500/15 text-rose-300 border-rose-500/30'
+                          : 'bg-blue-500/15 text-blue-300 border-blue-500/30'
+                      }`}>
+                        {origem}
+                      </span>
                     </td>
                     <td className="py-2 px-3 text-center">
                       <div className="flex items-center justify-center space-x-1 opacity-70 group-hover:opacity-100 transition-opacity">

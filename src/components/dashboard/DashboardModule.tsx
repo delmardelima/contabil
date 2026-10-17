@@ -315,8 +315,73 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
         </div>
       </div>
 
-      {/* 4. Acesso Rápido a Rotinas do Escritório */}
+      {/* 4. Fluxo Passo a Passo de Fechamento Mensal (Simples Nacional, MEI, Comércio & Serviços) */}
       <div className="pt-2">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400">
+            Roteiro Passo a Passo do Mês (Simples Nacional, MEI, Comércio e Serviços)
+          </h3>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/20">
+            Guia Rápido — Pequenos Escritórios (ITG 1000)
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <button
+            onClick={() => onNavigate('conciliacao')}
+            className="p-3.5 rounded-xl bg-[#1c1c1c] hover:bg-[#222222] border border-white/10 hover:border-blue-500/40 text-left transition flex items-start gap-3 group"
+          >
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 group-hover:bg-blue-500/20 font-mono text-xs font-bold">
+              01
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white">1. Importar Extrato / Caixa</p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">Importe o OFX bancário ou lance entradas e saídas (F2)</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('balancete')}
+            className="p-3.5 rounded-xl bg-[#1c1c1c] hover:bg-[#222222] border border-white/10 hover:border-indigo-500/40 text-left transition flex items-start gap-3 group"
+          >
+            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20 font-mono text-xs font-bold">
+              02
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white">2. Conferir Balancete (F4)</p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">Valide saldos de Caixa, Bancos, Clientes e Fornecedores</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('dre')}
+            className="p-3.5 rounded-xl bg-[#1c1c1c] hover:bg-[#222222] border border-white/10 hover:border-emerald-500/40 text-left transition flex items-start gap-3 group"
+          >
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 group-hover:bg-emerald-500/20 font-mono text-xs font-bold">
+              03
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white">3. Apurar Resultado (D.R.E.)</p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">Verifique o lucro líquido isento para distribuição aos sócios</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => onNavigate('livros')}
+            className="p-3.5 rounded-xl bg-[#1c1c1c] hover:bg-[#222222] border border-white/10 hover:border-amber-500/40 text-left transition flex items-start gap-3 group"
+          >
+            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20 font-mono text-xs font-bold">
+              04
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-white">4. Emitir Livro Diário / Caixa</p>
+              <p className="text-[10px] text-neutral-400 mt-0.5">Imprima o Livro Diário, Razão e Balanço ITG 1000 em A4</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      {/* 5. Acesso Rápido a Cadastros e Utilitários */}
+      <div className="pt-1">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-3">
           Atalhos de Trabalho do Escritório
         </h3>
@@ -330,20 +395,20 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
             </div>
             <div>
               <p className="text-xs font-semibold text-white">Plano de Contas</p>
-              <p className="text-[10px] text-neutral-400">Árvore hierárquica e contas</p>
+              <p className="text-[10px] text-neutral-400">Contas simplificadas (F3)</p>
             </div>
           </button>
 
           <button
-            onClick={() => onNavigate('livros')}
+            onClick={() => onNavigate('lancamentoPadrao')}
             className="p-3.5 rounded-xl bg-[#1c1c1c] hover:bg-[#222222] border border-white/5 hover:border-white/20 text-left transition flex items-center gap-3 group"
           >
             <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 group-hover:bg-indigo-500/20">
               <FileText size={18} />
             </div>
             <div>
-              <p className="text-xs font-semibold text-white">Livro Diário & Razão</p>
-              <p className="text-[10px] text-neutral-400">Emissão para registro e junta</p>
+              <p className="text-xs font-semibold text-white">Lançamentos Padrão</p>
+              <p className="text-[10px] text-neutral-400">Modelos automáticos (DAS, Vendas)</p>
             </div>
           </button>
 
@@ -356,7 +421,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
             </div>
             <div>
               <p className="text-xs font-semibold text-white">Balanço Patrimonial</p>
-              <p className="text-[10px] text-neutral-400">Quadro formal comparativo</p>
+              <p className="text-[10px] text-neutral-400">Quadro formal ITG 1000</p>
             </div>
           </button>
 
@@ -369,7 +434,7 @@ export const DashboardModule: React.FC<DashboardModuleProps> = ({
             </div>
             <div>
               <p className="text-xs font-semibold text-white">Backup & Rede Local</p>
-              <p className="text-[10px] text-neutral-400">Exportação .bak e sincronização</p>
+              <p className="text-[10px] text-neutral-400">Cópia de segurança .bak</p>
             </div>
           </button>
         </div>

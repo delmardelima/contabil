@@ -29,7 +29,8 @@ import {
   Layers,
   ArrowDownRight,
   ArrowUpRight,
-  FileText
+  FileText,
+  Wallet
 } from 'lucide-react';
 
 interface LivrosOficiaisModuleProps {
@@ -39,7 +40,7 @@ interface LivrosOficiaisModuleProps {
   initialContaId?: number;
 }
 
-type TipoLivro = 'DIARIO' | 'RAZAO' | 'ENTRADAS' | 'SAIDAS' | 'APURACAO_ICMS_ISS' | 'TERMOS';
+type TipoLivro = 'CAIXA' | 'DIARIO' | 'RAZAO' | 'ENTRADAS' | 'SAIDAS' | 'APURACAO_ICMS_ISS' | 'TERMOS';
 
 export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
   empresa,
@@ -47,12 +48,32 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
   lancamentos,
   initialContaId
 }) => {
-  const [tipoLivro, setTipoLivro] = useState<TipoLivro>('DIARIO');
+  const [tipoLivro, setTipoLivro] = useState<TipoLivro>('CAIXA');
   const [selectedContaId, setSelectedContaId] = useState<number>(initialContaId || 0);
   const [buscaTexto, setBuscaTexto] = useState<string>('');
   const [dataInicial, setDataInicial] = useState<string>(`${empresa.exercicioAtivo}-01-01`);
   const [dataFinal, setDataFinal] = useState<string>(`${empresa.exercicioAtivo}-12-31`);
-  const [termoAlvo, setTermoAlvo] = useState<'DIARIO' | 'RAZAO' | 'ENTRADAS' | 'SAIDAS' | 'APURACAO'>('DIARIO');
+  const [termoAlvo, setTermoAlvo] = useState<'CAIXA' | 'DIARIO' | 'RAZAO' | 'ENTRADAS' | 'SAIDAS' | 'APURACAO'>('CAIXA');
+
+  // Opções extraídas de Caixa_Contabilidade.htm e ctr01.pbd (dw_rellancxa Modelo 4 & dw_reldia_simples)
+  const contasCaixaDisponiveis = useMemo(() => {
+    const analiticas = contas.filter(c => c.tipo === 'A');
+    const disp = analiticas.filter(
+      c => c.classificacao.startsWith('1.01.01') || c.nome.toLowerCase().includes('caixa') || c.nome.toLowerCase().includes('banco')
+    );
+    return disp.length > 0 ? disp : analiticas.slice(0, 2);
+  }, [contas]);
+
+  const [contaCaixaLivroId, setContaCaixaLivroId] = useState<number>(() => contasCaixaDisponiveis[0]?.id || 0);
+  const [caixaImprimirNumLancamento, setCaixaImprimirNumLancamento] = useState<boolean>(true);
+  const [caixaSeparaDiasPorTraco, setCaixaSeparaDiasPorTraco] = useState<boolean>(true);
+  const [caixaEmitirTotalPorMes, setCaixaEmitirTotalPorMes] = useState<boolean>(true);
+  const [diarioModoSimplificadoItg1000, setDiarioModoSimplificadoItg1000] = useState<boolean>(true);
+
+  const contaCaixaSelecionadaObj = useMemo(
+    () => contas.find(c => c.id === contaCaixaLivroId) || contasCaixaDisponiveis[0],
+    [contas, contaCaixaLivroId, contasCaixaDisponiveis]
+  );
 
   // Estado da Modal de Impressão A4
   const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
@@ -60,7 +81,7 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
   const [printTitulo, setPrintTitulo] = useState<string>('');
   const [printSubtitulo, setPrintSubtitulo] = useState<string>('');
 
-  // 1. DADOS LIVRO DIÁRIO GERAL
+  // 1. DADOS LIVRO DIÁRIO GERAL & DIÁRIO SIMPLIFICADO (dw_reldia_simples)
   const lancamentosOrdenados = useMemo(() => {
     return [...lancamentos].sort((a, b) =>
       new Date(a.dataLancamento).getTime() - new Date(b.dataLancamento).getTime() || a.numeroPartida - b.numeroPartida
@@ -69,6 +90,99 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
 
   const totalDebitosDiario = useMemo(() => lancamentosOrdenados.reduce((acc, l) => acc + l.valor, 0), [lancamentosOrdenados]);
   const totalCreditosDiario = totalDebitosDiario;
+
+  // 1.B DADOS LIVRO CAIXA CONTÁBIL (dw_rellancxa - Modelo 4 de ctr01.pbd)
+  const dadosLivroCaixa = useMemo(() => {
+    const contaAlvo = contaCaixaSelecionadaObj;
+    if (!contaAlvo) {
+      return {
+        saldoAnterior: 0,
+        totalEntradas: 0,
+        totalSaidas: 0,
+        saldoFinal: 0,
+        linhas: [] as Array<{
+          lancamento: LancamentoContabil;
+          tipoMovimento: 'ENTRADA' | 'SAIDA';
+          contrapartida: ContaContabil | undefined;
+          entrada: number;
+          saida: number;
+          saldoProgressivo: number;
+          mesAno: string;
+          mudouDia: boolean;
+          mudouMes: boolean;
+        }>,
+        totaisMensais: new Map<string, { entradas: number; saidas: number; saldoMes: number }>()
+      };
+    }
+
+    const filtrados = lancamentosOrdenados.filter(l => {
+      const envolveContaCaixa = l.contaDebitoId === contaAlvo.id || l.contaCreditoId === contaAlvo.id;
+      if (!envolveContaCaixa) return false;
+      if (dataInicial && l.dataLancamento < dataInicial) return false;
+      if (dataFinal && l.dataLancamento > dataFinal) return false;
+      if (buscaTexto.trim()) {
+        const q = buscaTexto.toLowerCase();
+        const contraId = l.contaDebitoId === contaAlvo.id ? l.contaCreditoId : l.contaDebitoId;
+        const contraNome = contas.find(c => c.id === contraId)?.nome.toLowerCase() || '';
+        return (
+          l.complementoHistorico.toLowerCase().includes(q) ||
+          contraNome.includes(q) ||
+          l.numeroPartida.toString().includes(q)
+        );
+      }
+      return true;
+    });
+
+    const saldoAnterior = contaAlvo.saldoAnterior || 0;
+    let saldoProgressivo = saldoAnterior;
+    let totalEntradas = 0;
+    let totalSaidas = 0;
+    const totaisMensais = new Map<string, { entradas: number; saidas: number; saldoMes: number }>();
+
+    const linhas = filtrados.map((l, idx) => {
+      const isEntrada = l.contaDebitoId === contaAlvo.id;
+      const entrada = isEntrada ? l.valor : 0;
+      const saida = !isEntrada ? l.valor : 0;
+      totalEntradas += entrada;
+      totalSaidas += saida;
+      saldoProgressivo += entrada - saida;
+
+      const contrapartidaId = isEntrada ? l.contaCreditoId : l.contaDebitoId;
+      const contrapartida = contas.find(c => c.id === contrapartidaId);
+      const mesAno = l.dataLancamento.slice(0, 7);
+
+      const curMes = totaisMensais.get(mesAno) || { entradas: 0, saidas: 0, saldoMes: 0 };
+      curMes.entradas += entrada;
+      curMes.saidas += saida;
+      curMes.saldoMes = saldoProgressivo;
+      totaisMensais.set(mesAno, curMes);
+
+      const prox = filtrados[idx + 1];
+      const mudouDia = !!(prox && prox.dataLancamento !== l.dataLancamento);
+      const mudouMes = !prox || prox.dataLancamento.slice(0, 7) !== mesAno;
+
+      return {
+        lancamento: l,
+        tipoMovimento: (isEntrada ? 'ENTRADA' : 'SAIDA') as 'ENTRADA' | 'SAIDA',
+        contrapartida,
+        entrada,
+        saida,
+        saldoProgressivo,
+        mesAno,
+        mudouDia,
+        mudouMes
+      };
+    });
+
+    return {
+      saldoAnterior,
+      totalEntradas,
+      totalSaidas,
+      saldoFinal: saldoProgressivo,
+      linhas,
+      totaisMensais
+    };
+  }, [contaCaixaSelecionadaObj, lancamentosOrdenados, dataInicial, dataFinal, buscaTexto, contas]);
 
   // 2. DADOS LIVRO RAZÃO ANALÍTICO
   const contaSelecionada = useMemo(() => contas.find(c => c.id === selectedContaId), [contas, selectedContaId]);
@@ -160,9 +274,17 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
 
   // Abertura do Modal de Impressão A4 Paginado
   const handleAbrirPrintPreview = () => {
-    if (tipoLivro === 'DIARIO') {
-      setPrintTitulo('LIVRO DIÁRIO GERAL (TERMO OFICIAL Nº 001)');
-      setPrintSubtitulo(`Exercício Social ${empresa.exercicioAtivo} • Normas Brasileiras de Contabilidade NBC TG`);
+    if (tipoLivro === 'CAIXA') {
+      setPrintTitulo(`LIVRO CAIXA CONTÁBIL - MODELO 4 (${contaCaixaSelecionadaObj?.codigoReduzido || 101} - ${contaCaixaSelecionadaObj?.nome || 'CAIXA GERAL'})`);
+      setPrintSubtitulo(`Simples Nacional / MEI (Art. 26 LC 123/2006 & ITG 1000) • Período: ${dataInicial} a ${dataFinal}`);
+      setOrientacaoRelatorio('portrait');
+    } else if (tipoLivro === 'DIARIO') {
+      setPrintTitulo(
+        diarioModoSimplificadoItg1000
+          ? 'LIVRO DIÁRIO SIMPLIFICADO - ITG 1000 (ME / EPP / SIMPLES NACIONAL)'
+          : 'LIVRO DIÁRIO GERAL (TERMO OFICIAL Nº 001)'
+      );
+      setPrintSubtitulo(`Exercício Social ${empresa.exercicioAtivo} • Normas Brasileiras de Contabilidade CFC ITG 1000`);
       setOrientacaoRelatorio('portrait');
     } else if (tipoLivro === 'RAZAO') {
       setPrintTitulo(contaSelecionada ? `LIVRO RAZÃO ANALÍTICO - ${contaSelecionada.codigoReduzido} - ${contaSelecionada.nome}` : 'LIVRO RAZÃO ANALÍTICO GERAL');
@@ -182,7 +304,7 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
       setOrientacaoRelatorio('portrait');
     } else if (tipoLivro === 'TERMOS') {
       setPrintTitulo(`TERMOS OFICIAIS DE ABERTURA E ENCERRAMENTO - LIVRO ${termoAlvo}`);
-      setPrintSubtitulo(`Junta Comercial do Estado • Código Civil Art. 1.180 • Exercício ${empresa.exercicioAtivo}`);
+      setPrintSubtitulo(`Junta Comercial do Estado • Código Civil Art. 1.180 & LC 123/2006 • Exercício ${empresa.exercicioAtivo}`);
       setOrientacaoRelatorio('portrait');
     }
     setIsPrintModalOpen(true);
@@ -190,7 +312,19 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
 
   // Exportação CSV do Livro Selecionado
   const handleExportarCSV = () => {
-    if (tipoLivro === 'DIARIO') {
+    if (tipoLivro === 'CAIXA') {
+      const headers = ['Data', 'Lançamento', 'Conta Contrapartida', 'Histórico / Complemento', 'Entrada (R$)', 'Saída (R$)', 'Saldo Progressivo (R$)'];
+      const rows = dadosLivroCaixa.linhas.map(item => [
+        item.lancamento.dataLancamento,
+        item.lancamento.numeroPartida,
+        item.contrapartida ? `${item.contrapartida.codigoReduzido} - ${item.contrapartida.nome}` : 'Diversos',
+        item.lancamento.complementoHistorico,
+        item.entrada,
+        item.saida,
+        item.saldoProgressivo
+      ]);
+      exportToCSV(`Livro_Caixa_Mod4_${empresa.exercicioAtivo}`, rows, headers);
+    } else if (tipoLivro === 'DIARIO') {
       const headers = ['Partida', 'Data', 'Tipo', 'Conta Débito', 'Conta Crédito', 'Histórico', 'Valor (R$)'];
       const rows = lancamentosOrdenados.map(l => {
         const d = contas.find(c => c.id === l.contaDebitoId);
@@ -275,8 +409,16 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
       </div>
 
       {/* 2. Barra de Abas dos Livros Oficiais */}
-      <div className="px-5 py-2 bg-[#161616] border-b border-white/10 flex items-center justify-between overflow-x-auto text-xs">
+      <div className="px-5 py-2 bg-[#161616] border-b border-white/10 flex flex-wrap items-center justify-between gap-2 overflow-x-auto text-xs">
         <div className="flex items-center bg-[#101010] p-0.5 rounded-lg border border-white/10">
+          <button
+            onClick={() => setTipoLivro('CAIXA')}
+            className={`px-3 py-1.5 rounded-md font-medium transition flex items-center space-x-1.5 ${tipoLivro === 'CAIXA' ? 'bg-emerald-600 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
+              }`}
+          >
+            <Wallet className="w-3.5 h-3.5" />
+            <span>Livro Caixa (MEI / Simples)</span>
+          </button>
           <button
             onClick={() => setTipoLivro('DIARIO')}
             className={`px-3 py-1.5 rounded-md font-medium transition flex items-center space-x-1.5 ${tipoLivro === 'DIARIO' ? 'bg-blue-600 text-white shadow-sm' : 'text-neutral-400 hover:text-white'
@@ -328,8 +470,68 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
         </div>
 
         {/* Filtros Contextuais */}
-        <div className="flex items-center space-x-3 text-xs">
-          {(tipoLivro === 'ENTRADAS' || tipoLivro === 'SAIDAS') && (
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          {tipoLivro === 'CAIXA' && (
+            <>
+              <div className="flex items-center space-x-2">
+                <span className="text-neutral-400">Conta Caixa/Banco:</span>
+                <select
+                  value={contaCaixaLivroId}
+                  onChange={(e) => setContaCaixaLivroId(Number(e.target.value))}
+                  className="bg-neutral-900 border border-emerald-500/30 rounded px-2.5 py-1 text-emerald-300 font-medium outline-none max-w-xs truncate text-xs"
+                >
+                  {contasCaixaDisponiveis.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.codigoReduzido} - {c.nome} ({c.classificacao})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center space-x-3 bg-neutral-900/80 border border-white/10 px-2.5 py-1 rounded-md text-[11px] text-neutral-300">
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={caixaImprimirNumLancamento}
+                    onChange={(e) => setCaixaImprimirNumLancamento(e.target.checked)}
+                    className="rounded border-neutral-700 bg-neutral-950 text-emerald-500"
+                  />
+                  <span>Nº Lançamento</span>
+                </label>
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={caixaSeparaDiasPorTraco}
+                    onChange={(e) => setCaixaSeparaDiasPorTraco(e.target.checked)}
+                    className="rounded border-neutral-700 bg-neutral-950 text-emerald-500"
+                  />
+                  <span>Separa dias por traço</span>
+                </label>
+                <label className="flex items-center space-x-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={caixaEmitirTotalPorMes}
+                    onChange={(e) => setCaixaEmitirTotalPorMes(e.target.checked)}
+                    className="rounded border-neutral-700 bg-neutral-950 text-emerald-500"
+                  />
+                  <span>Emitir total por mês</span>
+                </label>
+              </div>
+            </>
+          )}
+
+          {tipoLivro === 'DIARIO' && (
+            <label className="flex items-center space-x-2 bg-neutral-900 border border-blue-500/30 px-2.5 py-1 rounded-md text-[11px] text-blue-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={diarioModoSimplificadoItg1000}
+                onChange={(e) => setDiarioModoSimplificadoItg1000(e.target.checked)}
+                className="rounded border-neutral-700 bg-neutral-950 text-blue-500"
+              />
+              <span>Modo Simplificado ITG 1000 (1 Linha / Partida)</span>
+            </label>
+          )}
+
+          {(tipoLivro === 'CAIXA' || tipoLivro === 'ENTRADAS' || tipoLivro === 'SAIDAS') && (
             <div className="flex items-center space-x-2 bg-neutral-900 border border-white/10 px-2 py-1 rounded-md">
               <Calendar className="w-3.5 h-3.5 text-neutral-400" />
               <input
@@ -370,7 +572,167 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
 
       {/* 3. Área de Conteúdo do Livro Selecionado */}
       <div className="flex-1 p-5 overflow-y-auto space-y-4">
-        {/* ABA 1: LIVRO DIÁRIO GERAL */}
+        {/* ABA 0: LIVRO CAIXA CONTÁBIL (dw_rellancxa - Modelo 4 de ctr01.pbd) */}
+        {tipoLivro === 'CAIXA' && (
+          <div className="space-y-4">
+            {/* KPI Cards do Livro Caixa */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="p-3 bg-[#181818] border border-white/10 rounded-xl">
+                <span className="text-[10px] text-neutral-400 uppercase font-semibold">Saldo Anterior</span>
+                <p className="text-xl font-bold font-mono text-neutral-200 mt-1">
+                  R$ {dadosLivroCaixa.saldoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[10px] text-neutral-500 font-mono">
+                  {contaCaixaSelecionadaObj ? `${contaCaixaSelecionadaObj.codigoReduzido} - ${contaCaixaSelecionadaObj.nome}` : 'Caixa Geral'}
+                </span>
+              </div>
+              <div className="p-3 bg-[#181818] border border-emerald-500/20 rounded-xl">
+                <span className="text-[10px] text-emerald-400 uppercase font-semibold">Total Entradas (+)</span>
+                <p className="text-xl font-bold font-mono text-emerald-400 mt-1">
+                  R$ {dadosLivroCaixa.totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[10px] text-neutral-500 font-mono">Recebimentos no período</span>
+              </div>
+              <div className="p-3 bg-[#181818] border border-rose-500/20 rounded-xl">
+                <span className="text-[10px] text-rose-400 uppercase font-semibold">Total Saídas (-)</span>
+                <p className="text-xl font-bold font-mono text-rose-400 mt-1">
+                  R$ {dadosLivroCaixa.totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[10px] text-neutral-500 font-mono">Pagamentos no período</span>
+              </div>
+              <div className="p-3 bg-[#181818] border border-blue-500/20 rounded-xl">
+                <span className="text-[10px] text-blue-400 uppercase font-semibold">Saldo Atual em Caixa/Banco</span>
+                <p className={`text-xl font-bold font-mono mt-1 ${dadosLivroCaixa.saldoFinal >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  R$ {dadosLivroCaixa.saldoFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+                <span className="text-[10px] text-neutral-500 font-mono">Art. 26 LC 123/2006 (Simples/MEI)</span>
+              </div>
+            </div>
+
+            {/* Tabela do Livro Caixa (dw_rellancxa Modelo 4) */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl overflow-hidden shadow-lg">
+              <div className="p-3 bg-neutral-900 border-b border-white/10 flex items-center justify-between text-xs font-semibold text-neutral-300">
+                <div className="flex items-center space-x-2">
+                  <Wallet className="w-4 h-4 text-emerald-400" />
+                  <span>LIVRO CAIXA CONTÁBIL E FINANCEIRO (MODELO 4) — {contaCaixaSelecionadaObj?.nome.toUpperCase()}</span>
+                </div>
+                <span className="font-mono text-neutral-400">
+                  Saldo Inicial: R$ {dadosLivroCaixa.saldoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-neutral-900/60 border-b border-white/10 text-neutral-400 font-medium">
+                  <tr>
+                    <th className="py-2.5 px-3 w-24">Data</th>
+                    {caixaImprimirNumLancamento && (
+                      <th className="py-2.5 px-3 w-16 text-center">Lanç.</th>
+                    )}
+                    <th className="py-2.5 px-3 w-56">Conta Contrapartida</th>
+                    <th className="py-2.5 px-3">Histórico / Documento</th>
+                    <th className="py-2.5 px-3 w-32 text-right text-emerald-400">Entradas (R$)</th>
+                    <th className="py-2.5 px-3 w-32 text-right text-rose-400">Saídas (R$)</th>
+                    <th className="py-2.5 px-3 w-36 text-right">Saldo (R$)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5 font-sans">
+                  {/* Linha de Saldo Anterior */}
+                  <tr className="bg-neutral-900/40 font-mono text-neutral-300">
+                    <td className="py-2 px-3">{new Date(dataInicial + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                    {caixaImprimirNumLancamento && <td className="py-2 px-3 text-center">-</td>}
+                    <td className="py-2 px-3 font-sans text-neutral-400">SALDO ANTERIOR</td>
+                    <td className="py-2 px-3 font-sans text-neutral-400">Transporte de saldo anterior da conta {contaCaixaSelecionadaObj?.codigoReduzido}</td>
+                    <td className="py-2 px-3 text-right">-</td>
+                    <td className="py-2 px-3 text-right">-</td>
+                    <td className="py-2 px-3 text-right font-bold text-neutral-200">
+                      {dadosLivroCaixa.saldoAnterior.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+
+                  {dadosLivroCaixa.linhas.map((item) => {
+                    const resumoMes = dadosLivroCaixa.totaisMensais.get(item.mesAno);
+                    return (
+                      <React.Fragment key={item.lancamento.id}>
+                        <tr
+                          className={`hover:bg-white/[0.02] ${
+                            caixaSeparaDiasPorTraco && item.mudouDia ? 'border-b-2 border-dashed border-neutral-600' : ''
+                          }`}
+                        >
+                          <td className="py-2 px-3 font-mono text-neutral-300">
+                            {new Date(item.lancamento.dataLancamento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          </td>
+                          {caixaImprimirNumLancamento && (
+                            <td className="py-2 px-3 text-center font-mono text-neutral-500">
+                              #{item.lancamento.numeroPartida}
+                            </td>
+                          )}
+                          <td className="py-2 px-3 text-neutral-200 truncate max-w-xs">
+                            <span className="font-mono text-[11px] text-neutral-400 mr-1.5">
+                              {item.contrapartida?.codigoReduzido}
+                            </span>
+                            <span>{item.contrapartida?.nome || 'Diversos'}</span>
+                          </td>
+                          <td className="py-2 px-3 text-neutral-300">
+                            {item.lancamento.complementoHistorico}
+                            {item.lancamento.tipoOrigemCaixa && item.lancamento.tipoOrigemCaixa !== 'Normal' && (
+                              <span className="ml-2 text-[10px] font-mono text-neutral-500">
+                                [Orig: {item.lancamento.tipoOrigemCaixa}]
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono font-semibold text-emerald-400">
+                            {item.entrada > 0 ? item.entrada.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono font-semibold text-rose-400">
+                            {item.saida > 0 ? item.saida.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '-'}
+                          </td>
+                          <td className={`py-2 px-3 text-right font-mono font-bold ${item.saldoProgressivo >= 0 ? 'text-neutral-100' : 'text-rose-400'}`}>
+                            {item.saldoProgressivo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+
+                        {/* Subtotal Mensal (Opção "Emitir total por mês" de Caixa_Contabilidade.htm) */}
+                        {caixaEmitirTotalPorMes && item.mudouMes && resumoMes && (
+                          <tr className="bg-emerald-950/20 border-y border-emerald-500/20 font-mono text-[11px]">
+                            <td colSpan={caixaImprimirNumLancamento ? 4 : 3} className="py-1.5 px-3 text-right font-sans font-bold text-emerald-300 uppercase">
+                              Total do Mês ({item.mesAno}):
+                            </td>
+                            <td className="py-1.5 px-3 text-right font-bold text-emerald-400">
+                              {resumoMes.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-1.5 px-3 text-right font-bold text-rose-400">
+                              {resumoMes.saidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-1.5 px-3 text-right font-bold text-emerald-300">
+                              {resumoMes.saldoMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+                <tfoot className="bg-neutral-900 border-t border-white/10 font-mono text-xs font-bold">
+                  <tr>
+                    <td colSpan={caixaImprimirNumLancamento ? 4 : 3} className="py-2.5 px-3 text-right uppercase text-neutral-300">
+                      Totais Gerais do Livro Caixa:
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-emerald-400">
+                      R$ {dadosLivroCaixa.totalEntradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-rose-400">
+                      R$ {dadosLivroCaixa.totalSaidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-2.5 px-3 text-right text-blue-400">
+                      R$ {dadosLivroCaixa.saldoFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ABA 1: LIVRO DIÁRIO GERAL & DIÁRIO SIMPLIFICADO ITG 1000 (dw_reldia_simples) */}
         {tipoLivro === 'DIARIO' && (
           <div className="space-y-4">
             {/* KPI Cards do Diário */}
@@ -407,62 +769,110 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
             {/* Tabela do Diário */}
             <div className="bg-[#181818] border border-white/10 rounded-xl overflow-hidden shadow-lg">
               <div className="p-3 bg-neutral-900 border-b border-white/10 flex items-center justify-between text-xs font-semibold text-neutral-300">
-                <span>ESCRITURAÇÃO CRONOLÓGICA DAS TRANSAÇÕES PATRIMONIAIS</span>
-                <span className="font-mono text-neutral-500">Padrão Decreto 9.580/2018 (RIR)</span>
+                <span>
+                  {diarioModoSimplificadoItg1000
+                    ? 'LIVRO DIÁRIO SIMPLIFICADO (ITG 1000 — 1 LINHA POR LANÇAMENTO)'
+                    : 'ESCRITURAÇÃO CRONOLÓGICA DAS TRANSAÇÕES PATRIMONIAIS'}
+                </span>
+                <span className="font-mono text-neutral-500">
+                  {diarioModoSimplificadoItg1000 ? 'Padrão ME/EPP (ITG 1000)' : 'Padrão Decreto 9.580/2018 (RIR)'}
+                </span>
               </div>
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-neutral-900/60 border-b border-white/10 text-neutral-400 font-medium">
-                  <tr>
-                    <th className="py-2.5 px-3 w-16 text-center">Partida</th>
-                    <th className="py-2.5 px-3 w-24">Data</th>
-                    <th className="py-2.5 px-3">Partidas Dobradas / Histórico Contábil</th>
-                    <th className="py-2.5 px-3 w-32 text-right">Débito (R$)</th>
-                    <th className="py-2.5 px-3 w-32 text-right">Crédito (R$)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 font-sans">
-                  {lancamentosOrdenados.map((l) => {
-                    const debito = contas.find(c => c.id === l.contaDebitoId);
-                    const credito = contas.find(c => c.id === l.contaCreditoId);
 
-                    return (
-                      <React.Fragment key={l.id}>
-                        <tr className="hover:bg-white/[0.02]">
-                          <td className="py-2 px-3 text-center font-mono text-neutral-500" rowSpan={2}>
-                            #{l.numeroPartida}
-                          </td>
-                          <td className="py-2 px-3 font-mono text-neutral-400" rowSpan={2}>
+              {diarioModoSimplificadoItg1000 ? (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-neutral-900/60 border-b border-white/10 text-neutral-400 font-medium">
+                    <tr>
+                      <th className="py-2.5 px-3 w-16 text-center">Nº</th>
+                      <th className="py-2.5 px-3 w-24">Data</th>
+                      <th className="py-2.5 px-3 w-56">Conta Débito</th>
+                      <th className="py-2.5 px-3 w-56">Conta Crédito</th>
+                      <th className="py-2.5 px-3">Histórico Contábil</th>
+                      <th className="py-2.5 px-3 w-32 text-right">Valor (R$)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-sans">
+                    {lancamentosOrdenados.map((l) => {
+                      const debito = contas.find(c => c.id === l.contaDebitoId);
+                      const credito = contas.find(c => c.id === l.contaCreditoId);
+                      return (
+                        <tr key={l.id} className="hover:bg-white/[0.02]">
+                          <td className="py-2 px-3 text-center font-mono text-neutral-500">#{l.numeroPartida}</td>
+                          <td className="py-2 px-3 font-mono text-neutral-300">
                             {new Date(l.dataLancamento + 'T00:00:00').toLocaleDateString('pt-BR')}
                           </td>
-                          <td className="py-1 px-3">
-                            <span className="font-semibold text-blue-400">D - {debito?.nome}</span>
-                            <span className="text-[10px] text-neutral-500 font-mono ml-2">({debito?.classificacao} • Red. {debito?.codigoReduzido})</span>
+                          <td className="py-2 px-3 text-blue-400 font-medium truncate max-w-xs">
+                            <span className="font-mono text-[10px] text-neutral-400 mr-1">{debito?.codigoReduzido}</span>
+                            {debito?.nome}
                           </td>
-                          <td className="py-1 px-3 text-right font-mono font-semibold text-blue-400">
+                          <td className="py-2 px-3 text-indigo-400 font-medium truncate max-w-xs">
+                            <span className="font-mono text-[10px] text-neutral-400 mr-1">{credito?.codigoReduzido}</span>
+                            {credito?.nome}
+                          </td>
+                          <td className="py-2 px-3 text-neutral-300">{l.complementoHistorico}</td>
+                          <td className="py-2 px-3 text-right font-mono font-bold text-neutral-100">
                             {l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="py-1 px-3 text-right font-mono text-neutral-600">-</td>
                         </tr>
-                        <tr className="hover:bg-white/[0.02] border-b border-white/10">
-                          <td className="py-1 px-3 pb-2.5">
-                            <div className="pl-4">
-                              <span className="font-semibold text-indigo-400">C - {credito?.nome}</span>
-                              <span className="text-[10px] text-neutral-500 font-mono ml-2">({credito?.classificacao} • Red. {credito?.codigoReduzido})</span>
-                              <div className="text-[11px] text-neutral-400 mt-0.5 italic">
-                                Hist: {l.complementoHistorico || 'Transação contábil ordinária'}
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-neutral-900/60 border-b border-white/10 text-neutral-400 font-medium">
+                    <tr>
+                      <th className="py-2.5 px-3 w-16 text-center">Partida</th>
+                      <th className="py-2.5 px-3 w-24">Data</th>
+                      <th className="py-2.5 px-3">Partidas Dobradas / Histórico Contábil</th>
+                      <th className="py-2.5 px-3 w-32 text-right">Débito (R$)</th>
+                      <th className="py-2.5 px-3 w-32 text-right">Crédito (R$)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 font-sans">
+                    {lancamentosOrdenados.map((l) => {
+                      const debito = contas.find(c => c.id === l.contaDebitoId);
+                      const credito = contas.find(c => c.id === l.contaCreditoId);
+
+                      return (
+                        <React.Fragment key={l.id}>
+                          <tr className="hover:bg-white/[0.02]">
+                            <td className="py-2 px-3 text-center font-mono text-neutral-500" rowSpan={2}>
+                              #{l.numeroPartida}
+                            </td>
+                            <td className="py-2 px-3 font-mono text-neutral-400" rowSpan={2}>
+                              {new Date(l.dataLancamento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="py-1 px-3">
+                              <span className="font-semibold text-blue-400">D - {debito?.nome}</span>
+                              <span className="text-[10px] text-neutral-500 font-mono ml-2">({debito?.classificacao} • Red. {debito?.codigoReduzido})</span>
+                            </td>
+                            <td className="py-1 px-3 text-right font-mono font-semibold text-blue-400">
+                              {l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-1 px-3 text-right font-mono text-neutral-600">-</td>
+                          </tr>
+                          <tr className="hover:bg-white/[0.02] border-b border-white/10">
+                            <td className="py-1 px-3 pb-2.5">
+                              <div className="pl-4">
+                                <span className="font-semibold text-indigo-400">C - {credito?.nome}</span>
+                                <span className="text-[10px] text-neutral-500 font-mono ml-2">({credito?.classificacao} • Red. {credito?.codigoReduzido})</span>
+                                <div className="text-[11px] text-neutral-400 mt-0.5 italic">
+                                  Hist: {l.complementoHistorico || 'Transação contábil ordinária'}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-1 px-3 text-right font-mono text-neutral-600">-</td>
-                          <td className="py-1 px-3 text-right font-mono font-semibold text-indigo-400">
-                            {l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            </td>
+                            <td className="py-1 px-3 text-right font-mono text-neutral-600">-</td>
+                            <td className="py-1 px-3 text-right font-mono font-semibold text-indigo-400">
+                              {l.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         )}
@@ -997,6 +1407,12 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
               <span className="text-xs text-neutral-300 font-medium">Selecione o Livro para Emissão dos Termos:</span>
               <div className="flex items-center space-x-2">
                 <button
+                  onClick={() => setTermoAlvo('CAIXA')}
+                  className={`px-3 py-1 rounded text-xs font-semibold ${termoAlvo === 'CAIXA' ? 'bg-emerald-600 text-white' : 'bg-neutral-900 text-neutral-400 hover:text-white'}`}
+                >
+                  Livro Caixa (Mod. 4)
+                </button>
+                <button
                   onClick={() => setTermoAlvo('DIARIO')}
                   className={`px-3 py-1 rounded text-xs font-semibold ${termoAlvo === 'DIARIO' ? 'bg-blue-600 text-white' : 'bg-neutral-900 text-neutral-400 hover:text-white'}`}
                 >
@@ -1037,10 +1453,10 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
                 </h3>
                 <div className="text-xs text-neutral-300 leading-relaxed text-justify space-y-3 font-serif">
                   <p>
-                    Contém este livro o número <strong>001 (um)</strong>, destinado à escrituração do <strong>LIVRO {termoAlvo === 'DIARIO' ? 'DIÁRIO GERAL' : termoAlvo === 'RAZAO' ? 'RAZÃO ANALÍTICO' : termoAlvo === 'ENTRADAS' ? 'REGISTRO DE ENTRADAS (MOD. 1)' : termoAlvo === 'SAIDAS' ? 'REGISTRO DE SAÍDAS (MOD. 2)' : 'REGISTRO DE APURAÇÃO DO ICMS (MOD. 9)'}</strong> da sociedade empresária <strong>{empresa.razaoSocial}</strong>, inscrita no CNPJ/MF sob o nº <strong>{empresa.cnpj}</strong>, Inscrição Estadual nº <strong>{empresa.inscricaoEstadual || 'ISENTO'}</strong>, com sede e foro na comarca de {(empresa.cidade || 'São Paulo')} - {empresa.uf}.
+                    Contém este livro o número <strong>001 (um)</strong>, destinado à escrituração do <strong>LIVRO {termoAlvo === 'CAIXA' ? 'CAIXA CONTÁBIL E FINANCEIRO (LC 123/2006 - ART. 26)' : termoAlvo === 'DIARIO' ? 'DIÁRIO GERAL' : termoAlvo === 'RAZAO' ? 'RAZÃO ANALÍTICO' : termoAlvo === 'ENTRADAS' ? 'REGISTRO DE ENTRADAS (MOD. 1)' : termoAlvo === 'SAIDAS' ? 'REGISTRO DE SAÍDAS (MOD. 2)' : 'REGISTRO DE APURAÇÃO DO ICMS (MOD. 9)'}</strong> da sociedade empresária <strong>{empresa.razaoSocial}</strong>, inscrita no CNPJ/MF sob o nº <strong>{empresa.cnpj}</strong>, Inscrição Estadual nº <strong>{empresa.inscricaoEstadual || 'ISENTO'}</strong>, com sede e foro na comarca de {(empresa.cidade || 'São Paulo')} - {empresa.uf}.
                   </p>
                   <p>
-                    O presente livro compõe-se de folhas numeradas tipograficamente em ordem sequencial, que servirão para o registro autêntico e fidedigno de suas operações no exercício social de <strong>{empresa.exercicioAtivo}</strong>, atendendo a todos os preceitos do Código Civil Brasileiro (Lei nº 10.406/2002, Art. 1.180) e Normas Brasileiras de Contabilidade.
+                    O presente livro compõe-se de folhas numeradas tipograficamente em ordem sequencial, que servirão para o registro autêntico e fidedigno de suas operações no exercício social de <strong>{empresa.exercicioAtivo}</strong>, atendendo a todos os preceitos do Código Civil Brasileiro (Lei nº 10.406/2002, Art. 1.180), Lei Complementar nº 123/2006 e Normas Brasileiras de Contabilidade (ITG 1000).
                   </p>
                   <div className="pt-8 text-center space-y-6">
                     <div>
@@ -1067,7 +1483,7 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
                     Aos trinta e um dias do mês de dezembro do ano de <strong>{empresa.exercicioAtivo}</strong>, encerra-se o presente livro, número <strong>001 (um)</strong>, pertencente à sociedade empresária <strong>{empresa.razaoSocial}</strong>, CNPJ/MF nº <strong>{empresa.cnpj}</strong>.
                   </p>
                   <p>
-                    Declaramos sob as penas da lei que todas as transações, débitos, créditos e obrigações foram escriturados com exatidão matemática, observando estritamente a legislação tributária, societária e o Regulamento do ICMS vigente.
+                    Declaramos sob as penas da lei que todas as transações, débitos, créditos e obrigações foram escriturados com exatidão matemática, observando estritamente a legislação tributária, societária e o Regulamento do Simples Nacional / ICMS vigente.
                   </p>
                   <div className="pt-8 text-center space-y-6">
                     <div>
@@ -1099,6 +1515,75 @@ export const LivrosOficiaisModule: React.FC<LivrosOficiaisModuleProps> = ({
         orientacaoPadrao={orientacaoRelatorio}
         numeroLivro={1}
       >
+        {tipoLivro === 'CAIXA' && (
+          <div className="space-y-4">
+            <table className="w-full text-left text-[10px] border-collapse">
+              <thead>
+                <tr className="border-b-2 border-neutral-900 font-bold uppercase text-[9px]">
+                  <th className="py-1 px-2 w-20">Data</th>
+                  {caixaImprimirNumLancamento && <th className="py-1 px-2 text-center w-12">Lanç.</th>}
+                  <th className="py-1 px-2 w-44">Conta Contrapartida</th>
+                  <th className="py-1 px-2">Histórico / Documento</th>
+                  <th className="py-1 px-2 text-right w-24">Entradas (R$)</th>
+                  <th className="py-1 px-2 text-right w-24">Saídas (R$)</th>
+                  <th className="py-1 px-2 text-right w-28">Saldo (R$)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200">
+                <tr className="bg-neutral-100 font-bold">
+                  <td className="py-1 px-2 font-mono">{new Date(dataInicial + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                  {caixaImprimirNumLancamento && <td className="py-1 px-2 text-center">-</td>}
+                  <td className="py-1 px-2">SALDO ANTERIOR</td>
+                  <td className="py-1 px-2">Transporte de saldo anterior ({contaCaixaSelecionadaObj?.nome})</td>
+                  <td className="py-1 px-2 text-right font-mono">-</td>
+                  <td className="py-1 px-2 text-right font-mono">-</td>
+                  <td className="py-1 px-2 text-right font-mono">{dadosLivroCaixa.saldoAnterior.toFixed(2)}</td>
+                </tr>
+                {dadosLivroCaixa.linhas.map((item) => {
+                  const resumoMes = dadosLivroCaixa.totaisMensais.get(item.mesAno);
+                  return (
+                    <React.Fragment key={item.lancamento.id}>
+                      <tr className={caixaSeparaDiasPorTraco && item.mudouDia ? 'border-b-2 border-dashed border-neutral-500' : ''}>
+                        <td className="py-1 px-2 font-mono">
+                          {new Date(item.lancamento.dataLancamento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                        </td>
+                        {caixaImprimirNumLancamento && (
+                          <td className="py-1 px-2 text-center font-mono">#{item.lancamento.numeroPartida}</td>
+                        )}
+                        <td className="py-1 px-2">{item.contrapartida?.nome || 'Diversos'}</td>
+                        <td className="py-1 px-2">{item.lancamento.complementoHistorico}</td>
+                        <td className="py-1 px-2 text-right font-mono">{item.entrada > 0 ? item.entrada.toFixed(2) : '-'}</td>
+                        <td className="py-1 px-2 text-right font-mono">{item.saida > 0 ? item.saida.toFixed(2) : '-'}</td>
+                        <td className="py-1 px-2 text-right font-mono font-bold">{item.saldoProgressivo.toFixed(2)}</td>
+                      </tr>
+                      {caixaEmitirTotalPorMes && item.mudouMes && resumoMes && (
+                        <tr className="bg-neutral-100 font-bold font-mono text-[9px]">
+                          <td colSpan={caixaImprimirNumLancamento ? 4 : 3} className="py-1 px-2 text-right uppercase">
+                            TOTAL DO MÊS ({item.mesAno}):
+                          </td>
+                          <td className="py-1 px-2 text-right">{resumoMes.entradas.toFixed(2)}</td>
+                          <td className="py-1 px-2 text-right">{resumoMes.saidas.toFixed(2)}</td>
+                          <td className="py-1 px-2 text-right">{resumoMes.saldoMes.toFixed(2)}</td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-neutral-900 font-bold font-mono text-[10px]">
+                  <td colSpan={caixaImprimirNumLancamento ? 4 : 3} className="py-2 px-2 text-right uppercase">
+                    TOTAIS DO LIVRO CAIXA:
+                  </td>
+                  <td className="py-2 px-2 text-right">R$ {dadosLivroCaixa.totalEntradas.toFixed(2)}</td>
+                  <td className="py-2 px-2 text-right">R$ {dadosLivroCaixa.totalSaidas.toFixed(2)}</td>
+                  <td className="py-2 px-2 text-right">R$ {dadosLivroCaixa.saldoFinal.toFixed(2)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+
         {tipoLivro === 'DIARIO' && (
           <div className="space-y-4">
             <table className="w-full text-left text-[10px] border-collapse">

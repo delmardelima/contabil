@@ -92,7 +92,7 @@ O **Contábil Studio Pro** é uma solução completa desenvolvida em **React 18*
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/contabil-studio-pro.git
+git clone https://github.com/delmardelima/contabil-studio-pro.git
 
 # Acesse a pasta do projeto
 cd contabil-studio-pro
@@ -102,6 +102,9 @@ npm install
 
 # Inicie o servidor de desenvolvimento
 npm run dev
+
+npm install --save-dev @tauri-apps/cli
+npx tauri init
 ```
 
 Abra no navegador em `http://localhost:5173` (ou a porta informada pelo terminal).

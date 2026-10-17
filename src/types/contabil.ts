@@ -23,7 +23,7 @@ export interface VigenciaTributaria {
   fimCompetencia?: string; // YYYY-MM
   regimeTributario: RegimeTributario;
   regimeApuracao: 'COMPETENCIA' | 'CAIXA';
-  enquadramentoSimples?: 'MICROEMPRESA' | 'EPP' | 'NAO_OPTANTE';
+  enquadramentoSimples?: 'MICROEMPRESA' | 'EPP' | 'MEI' | 'NAO_OPTANTE';
 }
 
 export interface Empresa {
@@ -144,6 +144,16 @@ export interface RateioCentroCusto {
   valor: number;
 }
 
+export type TipoOrigemLancamentoCaixa =
+  | 'Normal'
+  | 'Zeramento'
+  | 'Patrimônio'
+  | 'Escrita'
+  | 'Saídas EF'
+  | 'Entradas EF'
+  | 'Serviços EF'
+  | 'Pagto Guia EF';
+
 export interface LancamentoContabil {
   id: number;
   empresaId: number;
@@ -159,6 +169,9 @@ export interface LancamentoContabil {
   historicoId?: number;
   complementoHistorico: string;
   isZeramento?: boolean;
+  tipoOrigemCaixa?: TipoOrigemLancamentoCaixa;
+  contaCaixaId?: number;
+  operacaoCaixa?: 'ENTRADA' | 'SAIDA';
   usuarioId?: number;
   usuarioNome?: string;
   createdAt: string;
